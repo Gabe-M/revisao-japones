@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisão de Japonês - Frases</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9; --text-color: #333; --card-bg: #ffffff;
+            --primary-color: #2c3e50; --secondary-color: #34495e;
+            --border-color: #dddddd; --highlight-color: #d35400;
+        }
+        [data-theme="dark"] {
+            --bg-color: #121212; --text-color: #e0e0e0; --card-bg: #1e1e1e;
+            --primary-color: #34495e; --secondary-color: #4b6584;
+            --border-color: #333333; --highlight-color: #e67e22;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: 0.3s; }
+        .nav-menu { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
+        .nav-menu a { padding: 10px 20px; text-decoration: none; background: var(--primary-color); color: white; border-radius: 5px; font-weight: bold; }
+        .nav-menu a.ativo { background: var(--highlight-color); }
+        .header-container { display: flex; justify-content: space-between; max-width: 1000px; margin: 0 auto 20px; }
+        
+        .tools-panel { max-width: 1000px; margin: 0 auto 30px; background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; justify-content: center; gap: 20px; }
+        .tool-btn { background-color: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1em; }
+        .tool-btn.danger { background-color: #c0392b; }
+        
+        .list-container { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
+        .frase-card { background: var(--card-bg); border: 1px solid var(--border-color); border-left: 5px solid var(--highlight-color); border-radius: 8px; padding: 20px; transition: 0.2s; }
+        .frase-texto { font-size: 1.8em; margin: 0 0 10px 0; font-weight: 500; }
+        .frase-romaji { color: gray; font-size: 0.9em; margin-bottom: 15px; font-family: monospace; }
+        
+        .termo-link {
+            cursor: pointer;
+            border-bottom: 2px dotted var(--primary-color);
+            transition: 0.2s;
+            padding: 0 2px;
+        }
+        .termo-link:hover {
+            color: var(--highlight-color);
+            background-color: rgba(230, 126, 34, 0.15);
+            border-bottom: 2px solid var(--highlight-color);
+        }
+
+        .lacuna { display: inline-block; min-width: 30px; text-align: center; background-color: var(--text-color); color: var(--text-color); border-radius: 3px; cursor: pointer; user-select: none; transition: 0.2s; padding: 0 5px; }
+        .lacuna.revelada { background-color: transparent; color: var(--highlight-color); font-weight: bold; border-bottom: 2px solid var(--highlight-color); }
+
+        details { background-color: rgba(0,0,0,0.03); padding: 10px; border-radius: 5px; margin-top: 10px; }
+        summary { cursor: pointer; font-weight: bold; outline: none; display: none; }
+
+        /* Estilos de Paginação */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 40px; padding-bottom: 20px; }
+        .pagination button { background-color: var(--secondary-color); padding: 8px 15px; font-weight: bold; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .pagination button:disabled { background-color: var(--border-color); color: gray; cursor: not-allowed; opacity: 0.6; }
+        .page-info { font-weight: bold; font-size: 1.1em; color: var(--text-color); }
+    </style>
+</head>
+<body>
+
+    <script src="frases.js"></script>
+
+    <div class="header-container">
+        <h1>Módulo 2: Prática e Gramática</h1>
+        <button onclick="toggleTheme()" style="padding:5px 10px; cursor:pointer; background:var(--primary-color); color:white; border:none; border-radius:5px; font-weight:bold;">🌙 Tema</button>
+    </div>
+
+    <div class="nav-menu">
+        <a href="index.html">📚 Vocabulário & Kanji</a>
+        <a href="frases.html" class="ativo">💬 Frases Práticas</a>
+    </div>
+
+    <div class="tools-panel">
+        <button class="tool-btn" id="btnLacunas" onclick="toggleLacunas()">Ativar Teste de Partículas</button>
+        <button class="tool-btn danger" onclick="toggleRomaji()">Ocultar/Mostrar Romaji</button>
+    </div>
+
+    <div class="list-container" id="frases-container"></div>
+
+    <div class="pagination" id="pagination-controls"></div>
+
+    <script>
+        if (localStorage.getItem('tema') === 'dark') document.body.setAttribute('data-theme', 'dark');
+        function toggleTheme() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            document.body.toggleAttribute('data-theme', !isDark);
+            localStorage.setItem('tema', isDark ? 'light' : 'dark');
+        }
+
+        let modoTesteAtivo = false;
+        let romajiOculto = false;
+        
+        // Configurações de Paginação
+        let currentPage = 1;
+        const itemsPerPage = 5; // Limite de 5 frases por página
+
+        function toggleLacunas() {
+            modoTesteAtivo = !modoTesteAtivo;
+            document.getElementById('btnLacunas').textContent = modoTesteAtivo ? "Desativar Teste" : "Ativar Teste de Partículas";
+            document.getElementById('btnLacunas').style.backgroundColor = modoTesteAtivo ? "#e67e22" : "#27ae60";
+            renderizarPagina();
+        }
+
+        function toggleRomaji() {
+            romajiOculto = !romajiOculto;
+            renderizarPagina();
+        }
+
+        function irParaTermo(termo, event) {
+            event.stopPropagation();
+            window.location.href = `index.html?termo=${encodeURIComponent(termo)}`;
+        }
+
+        function revelarLacuna(elemento, particula, event) {
+            event.stopPropagation();
+            elemento.textContent = particula;
+            elemento.classList.add('revelada');
+            elemento.onclick = (e) => irParaTermo(particula, e);
+        }
+
+        function processarTextoComBlocos(textoOriginal, notas) {
+            let match = notas.match(/Blocos usados:\s*(.+?)\./);
+            if (!match) return textoOriginal;
+            
+            let blocos = match[1].split(/\s*\+\s*/);
+            let resultado = "";
+            let restante = textoOriginal;
+
+            for (let bloco of blocos) {
+                let index = restante.indexOf(bloco);
+                if (index !== -1) {
+                    resultado += restante.substring(0, index);
+                    
+                    if (modoTesteAtivo && /^[はをがのかね]$/.test(bloco)) {
+                        resultado += `<span class="lacuna" onclick="revelarLacuna(this, '${bloco}', event)">_</span>`;
+                    } else {
+                        resultado += `<span class="termo-link" onclick="irParaTermo('${bloco}', event)">${bloco}</span>`;
+                    }
+                    restante = restante.substring(index + bloco.length);
+                }
+            }
+            resultado += restante;
+            return resultado;
+        }
+
+        // Função principal de renderização com paginação
+        function renderizarPagina() {
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const frasesPagina = frasesPraticas.slice(startIndex, endIndex);
+
+            const container = document.getElementById('frases-container');
+            container.innerHTML = frasesPagina.map(d => `
+                <div class="frase-card" onclick="const det = this.querySelector('details'); det.open = !det.open;" style="cursor: pointer;">
+                    <p class="frase-texto">${processarTextoComBlocos(d.item, d.notas)}</p>
+                    <p class="frase-romaji" style="display: ${romajiOculto ? 'none' : 'block'}; pointer-events: none;">${d.leitura}</p>
+                    <details onclick="event.stopPropagation();">
+                        <summary>Significado e Análise</summary>
+                        <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
+                        <p style="font-size:0.9em;">${d.notas}</p>
+                    </details>
+                </div>
+            `).join('');
+
+            renderizarControlesPaginacao();
+        }
+
+        function renderizarControlesPaginacao() {
+            const container = document.getElementById('pagination-controls');
+            const totalPages = Math.ceil(frasesPraticas.length / itemsPerPage);
+            
+            if (totalPages <= 1) {
+                container.innerHTML = ''; 
+                return;
+            }
+
+            container.innerHTML = `
+                <button onclick="mudarPagina(-1)" ${currentPage === 1 ? 'disabled' : ''}>◄ Anterior</button>
+                <span class="page-info">Página ${currentPage} de ${totalPages}</span>
+                <button onclick="mudarPagina(1)" ${currentPage === totalPages ? 'disabled' : ''}>Próxima ►</button>
+            `;
+        }
+
+        function mudarPagina(direcao) {
+            currentPage += direcao;
+            renderizarPagina();
+            window.scrollTo({ top: 0, behavior: 'smooth' }); 
+        }
+
+        // Inicialização
+        renderizarPagina();
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+const frasesPraticas = [
+    { categoria: 'Frase', item: '私は日本語を勉強しています。', leitura: 'Watashi wa nihongo o benkyou shite imasu.', significado: 'Eu estou estudando japonês.', notas: 'Blocos usados: 私 + は + 日本語 + を + 勉強 + しています.' },
+    { categoria: 'Frase', item: 'これは兄のパソコンです。', leitura: 'Kore wa ani no pasokon desu.', significado: 'Isto é o computador do meu irmão mais velho.', notas: 'Blocos usados: これ + は + 兄 + の + パソコン + です.' },
+    { categoria: 'Frase', item: 'あれは何ですか。', leitura: 'Are wa nan desu ka.', significado: 'O que é aquilo?', notas: 'Blocos usados: あれ + は + 何 + です + か.' },
+    { categoria: 'Frase', item: '本が好きです。', leitura: 'Hon ga suki desu.', significado: 'Gosto de livros.', notas: 'Blocos usados: 本 + が + 好き + です.' },
+    { categoria: 'Frase', item: '毎日勉強します。', leitura: 'Mainichi benkyou shimasu.', significado: 'Estudo todos os dias.', notas: 'Blocos usados: 毎日 + 勉強 + します.' },
+    { categoria: 'Frase', item: 'いい本でしたね。', leitura: 'Ii hon deshita ne.', significado: 'Foi um bom livro, né?', notas: 'Blocos usados: いい + 本 + でした + ね.' },
+    { categoria: 'Frase', item: '兄がいます。', leitura: 'Ani ga imasu.', significado: 'Tenho um irmão mais velho.', notas: 'Blocos usados: 兄 + が + います.' },
+    { categoria: 'Frase', item: 'どれが好きですか。', leitura: 'Dore ga suki desu ka.', significado: 'De qual você gosta?', notas: 'Blocos usados: どれ + が + 好き + です + か.' },
+    { categoria: 'Frase', item: 'それは私の本です。', leitura: 'Sore wa watashi no hon desu.', significado: 'Isso é o meu livro.', notas: 'Blocos usados: それ + は + 私 + の + 本 + です.' },
+    { categoria: 'Frase', item: '私の兄は日本語を勉強しています。', leitura: 'Watashi no ani wa nihongo o benkyou shite imasu.', significado: 'Meu irmão mais velho está estudando japonês.', notas: 'Blocos usados: 私 + の + 兄 + は + 日本語 + を + 勉強 + しています.' },
+    { categoria: 'Frase', item: '兄はパソコンが好きです。', leitura: 'Ani wa pasokon ga suki desu.', significado: 'Meu irmão mais velho gosta de computadores.', notas: 'Blocos usados: 兄 + は + パソコン + が + 好き + です.' },
+    { categoria: 'Frase', item: '何が好きですか。', leitura: 'Nani ga suki desu ka.', significado: 'Do que você gosta?', notas: 'Blocos usados: 何 + が + 好き + です + か.' },
+    { categoria: 'Frase', item: 'これはいい本です。', leitura: 'Kore wa ii hon desu.', significado: 'Este é um bom livro.', notas: 'Blocos usados: これ + は + いい + 本 + です.' },
+    { categoria: 'Frase', item: '兄は何を勉強していますか。', leitura: 'Ani wa nani o benkyou shite imasu ka.', significado: 'O que o meu irmão mais velho está estudando?', notas: 'Blocos usados: 兄 + は + 何 + を + 勉強 + しています + か.' },
+    { categoria: 'Frase', item: 'あれは日本語の本ですか。', leitura: 'Are wa nihongo no hon desu ka.', significado: 'Aquilo ali é um livro de japonês?', notas: 'Blocos usados: あれ + は + 日本語 + の + 本 + です + か.' },
+    { categoria: 'Frase', item: 'いいパソコンですね。', leitura: 'Ii pasokon desu ne.', significado: 'É um bom computador, né?', notas: 'Blocos usados: いい + パソコン + です + ね.' },
+];

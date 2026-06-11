@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisão de Japonês - Vocabulário</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9; --text-color: #333; --card-bg: #ffffff;
+            --primary-color: #2c3e50; --secondary-color: #34495e;
+            --border-color: #dddddd; --highlight-color: #e67e22;
+        }
+        [data-theme="dark"] {
+            --bg-color: #121212; --text-color: #e0e0e0; --card-bg: #1e1e1e;
+            --primary-color: #34495e; --secondary-color: #4b6584;
+            --border-color: #333333; --highlight-color: #d35400;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: 0.3s; }
+        .nav-menu { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
+        .nav-menu a { padding: 10px 20px; text-decoration: none; background: var(--primary-color); color: white; border-radius: 5px; font-weight: bold; }
+        .nav-menu a.ativo { background: var(--highlight-color); }
+        .header-container { display: flex; justify-content: space-between; max-width: 1200px; margin: 0 auto 20px; }
+        .search-bar { width: 100%; max-width: 500px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-color); margin: 0 auto 20px; display: block; outline: none; }
+        .search-bar:focus { border-color: var(--highlight-color); }
+        .controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; max-width: 1200px; margin: 0 auto 30px; }
+        button { padding: 10px 15px; border: none; background: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; }
+        button.active { box-shadow: 0 0 0 3px var(--highlight-color); }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; transition: 0.2s; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 5px 10px rgba(0,0,0,0.1); }
+        .item-title { font-size: 2.2em; text-align: center; margin: 10px 0; }
+        details { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-color); }
+        summary { cursor: pointer; font-weight: bold; color: var(--highlight-color); display: none; }
+        
+        /* NOVO: Estilos de Paginação */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 40px; padding-bottom: 20px; }
+        .pagination button { background-color: var(--secondary-color); padding: 8px 15px; font-weight: bold; }
+        .pagination button:disabled { background-color: var(--border-color); color: gray; cursor: not-allowed; opacity: 0.6; }
+        .page-info { font-weight: bold; font-size: 1.1em; color: var(--text-color); }
+    </style>
+</head>
+<body>
+
+    <script src="vocabulario.js"></script>
+
+    <div class="header-container">
+        <h1>Módulo 1: Vocabulário Base</h1>
+        <button onclick="toggleTheme()" id="themeBtn" style="padding:5px 10px; cursor:pointer;">🌙 Tema</button>
+    </div>
+
+    <div class="nav-menu">
+        <a href="index.html" class="ativo">📚 Vocabulário & Kanji</a>
+        <a href="frases.html">💬 Frases Práticas</a>
+    </div>
+
+    <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo..." onkeyup="aplicarFiltros()">
+    
+    <div class="controls" id="botoes-filtro">
+        <button onclick="mudarCategoria('Todos')" class="active">Todos</button>
+        <button onclick="mudarCategoria('Kanji')">Kanjis</button>
+        <button onclick="mudarCategoria('Partícula')">Partículas</button>
+        <button onclick="mudarCategoria('Verbo')">Verbos</button>
+        <button onclick="mudarCategoria('Demonstrativo')">Demonstrativos</button>
+        <button onclick="mudarCategoria('Vocabulário')">Vocabulário</button>
+    </div>
+
+    <div class="grid-container" id="card-container"></div>
+    
+    <div class="pagination" id="pagination-controls"></div>
+
+    <script>
+        if (localStorage.getItem('tema') === 'dark') document.body.setAttribute('data-theme', 'dark');
+        function toggleTheme() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            document.body.toggleAttribute('data-theme', !isDark);
+            localStorage.setItem('tema', isDark ? 'light' : 'dark');
+        }
+
+        // NOVO: Variáveis de estado para a paginação
+        let filtroAtual = 'Todos';
+        let dadosFiltrados = [];
+        let currentPage = 1;
+        const itemsPerPage = 12; // Você pode alterar este número para exibir mais ou menos cards por página
+
+        function mudarCategoria(cat) {
+            filtroAtual = cat;
+            document.querySelectorAll('#botoes-filtro button').forEach(b => b.classList.toggle('active', b.textContent.includes(cat) || (cat === 'Todos' && b.textContent === 'Todos')));
+            aplicarFiltros();
+        }
+
+        // Modificado para armazenar os dados e reiniciar a página
+        function aplicarFiltros() {
+            const texto = document.getElementById('searchInput').value.toLowerCase();
+            dadosFiltrados = dadosRevisao.filter(d => 
+                (filtroAtual === 'Todos' || d.categoria === filtroAtual) &&
+                (d.item.toLowerCase().includes(texto) || d.leitura.toLowerCase().includes(texto) || d.significado.toLowerCase().includes(texto))
+            );
+            currentPage = 1; // Sempre volta para a página 1 ao pesquisar ou mudar categoria
+            renderizarPagina();
+        }
+
+        // NOVO: Função que corta os dados apenas para a página atual
+        function renderizarPagina() {
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const dadosPagina = dadosFiltrados.slice(startIndex, endIndex);
+            
+            renderizarCards(dadosPagina);
+            renderizarControlesPaginacao();
+        }
+
+        // NOVO: Função que gera os botões de próxima e anterior
+        function renderizarControlesPaginacao() {
+            const container = document.getElementById('pagination-controls');
+            const totalPages = Math.ceil(dadosFiltrados.length / itemsPerPage);
+            
+            if (totalPages <= 1) {
+                container.innerHTML = ''; // Oculta a paginação se houver apenas 1 página
+                return;
+            }
+
+            container.innerHTML = `
+                <button onclick="mudarPagina(-1)" ${currentPage === 1 ? 'disabled' : ''}>◄ Anterior</button>
+                <span class="page-info">Página ${currentPage} de ${totalPages}</span>
+                <button onclick="mudarPagina(1)" ${currentPage === totalPages ? 'disabled' : ''}>Próxima ►</button>
+            `;
+        }
+
+        // NOVO: Função de troca de página
+        function mudarPagina(direcao) {
+            currentPage += direcao;
+            renderizarPagina();
+            window.scrollTo({ top: 0, behavior: 'smooth' }); // Rola a tela para o topo suavemente
+        }
+
+        function renderizarCards(dados) {
+            const container = document.getElementById('card-container');
+            if (dados.length === 0) {
+                container.innerHTML = `<p style="text-align:center; grid-column: 1 / -1;">Nenhum termo encontrado.</p>`;
+                return;
+            }
+
+            container.innerHTML = dados.map(d => `
+                <div class="card" onclick="const det = this.querySelector('details'); det.open = !det.open;" style="cursor: pointer;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.8em; color:gray; pointer-events: none;">
+                        <span>${d.categoria}</span><span>${d.leitura}</span>
+                    </div>
+                    <p class="item-title" style="pointer-events: none;">${d.item}</p>
+                    <details onclick="event.stopPropagation();">
+                        <summary>Tradução e Notas</summary>
+                        <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
+                        <p style="font-size:0.9em; opacity:0.8;">${d.notas}</p>
+                    </details>
+                </div>
+            `).join('');
+        }
+
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const termoBusca = urlParams.get('termo');
+            
+            if (termoBusca) {
+                const searchInput = document.getElementById('searchInput');
+                searchInput.value = termoBusca;
+                
+                aplicarFiltros();
+                
+                setTimeout(() => {
+                    document.querySelectorAll('.card details').forEach(det => {
+                        det.open = true;
+                    });
+                }, 50);
+            } else {
+                aplicarFiltros();
+            }
+        });
+    </script>
+</body>
+</html>
