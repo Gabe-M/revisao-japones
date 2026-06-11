@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisão de Japonês - Leitura de Textos</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9; --text-color: #333; --card-bg: #ffffff;
+            --primary-color: #2c3e50; --border-color: #dddddd; 
+            --learned-color: #2980b9; --unlearned-color: #c0392b;
+        }
+        [data-theme="dark"] {
+            --bg-color: #121212; --text-color: #e0e0e0; --card-bg: #1e1e1e;
+            --primary-color: #e0e0e0; --border-color: #333333; 
+            --learned-color: #3498db; --unlearned-color: #e74c3c;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: 0.3s; }
+        
+        .nav-menu { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .nav-menu a { padding: 10px 20px; text-decoration: none; background: #2c3e50; color: white; border-radius: 5px; font-weight: bold; }
+        .nav-menu a.ativo { background: var(--learned-color); }
+        .header-container { display: flex; justify-content: space-between; max-width: 1200px; margin: 0 auto 20px; }
+
+        .layout-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: start; }
+        @media (max-width: 800px) { .layout-grid { grid-template-columns: 1fr; } }
+
+        .painel { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        textarea { width: 100%; height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); font-family: sans-serif; font-size: 1em; resize: vertical; box-sizing: border-box; }
+        .btn-processar { background-color: #27ae60; color: white; border: none; padding: 10px 20px; font-size: 1em; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
+        .btn-processar:hover { background-color: #219653; }
+
+        .area-leitura { margin-top: 20px; line-height: 2; font-size: 1.4em; border-top: 1px solid var(--border-color); padding-top: 20px; }
+        .linha-texto { margin: 0 0 10px 0; border-bottom: 1px dashed var(--border-color); padding-bottom: 5px; }
+        
+        .termo-destaque { font-weight: bold; cursor: pointer; padding: 0 2px; transition: 0.2s; border-radius: 3px; }
+        
+        /* Cores Aprendido (Azul) */
+        .termo-destaque.aprendido { color: var(--primary-color); border-bottom: 2px solid var(--learned-color); background-color: rgba(41, 128, 185, 0.1); }
+        .termo-destaque.aprendido:hover, .termo-destaque.aprendido.ativo { background-color: var(--learned-color); color: white; border-color: transparent; }
+
+        /* Cores Desconhecido (Vermelho) */
+        .termo-destaque.desconhecido { color: var(--primary-color); border-bottom: 2px solid var(--unlearned-color); background-color: rgba(192, 57, 43, 0.1); }
+        .termo-destaque.desconhecido:hover, .termo-destaque.desconhecido.ativo { background-color: var(--unlearned-color); color: white; border-color: transparent; }
+
+        .painel-dicionario { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .dic-vazio { text-align: center; color: gray; font-style: italic; margin-top: 20px; }
+        .dic-categoria { font-size: 0.8em; font-weight: bold; color: gray; text-transform: uppercase; }
+        .dic-termo { font-size: 3em; margin: 0; text-align: center; }
+        .dic-leitura { font-size: 1.2em; color: gray; font-family: monospace; text-align: center; }
+        .dic-significado { font-size: 1.5em; color: var(--learned-color); font-weight: bold; text-align: center; margin: 10px 0; }
+        .dic-notas { font-size: 0.9em; line-height: 1.5; padding-top: 10px; border-top: 1px solid var(--border-color); }
+        
+        .btn-ver-card { background-color: var(--learned-color); color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; font-weight: bold; text-align: center; margin-top: 10px; text-decoration: none; display: block; }
+        .btn-ver-card.externo { background-color: var(--unlearned-color); }
+    </style>
+</head>
+<body>
+
+    <script src="vocabulario.js"></script>
+
+    <div class="header-container">
+        <h1>Módulo 4: Leitura de Textos</h1>
+        <button onclick="toggleTheme()" style="padding:5px 10px; cursor:pointer; background:#2c3e50; color:white; border:none; border-radius:5px; font-weight:bold;">🌙 Tema</button>
+    </div>
+
+    <div class="nav-menu">
+        <a href="index.html">📚 Vocabulário & Kanji</a>
+        <a href="frases.html">💬 Frases Práticas</a>
+        <a href="minigame.html">🎮 Minigame</a>
+        <a href="textos.html" class="ativo">📄 Textos</a>
+    </div>
+
+    <div class="layout-grid">
+        <div class="painel">
+            <h3>Inserir Texto em Japonês</h3>
+            <textarea id="input-texto" placeholder="Cole aqui a letra de uma música, parágrafo de livro ou diálogo..."></textarea>
+            <button class="btn-processar" onclick="processarTexto()">Processar Texto</button>
+            <div class="area-leitura" id="output-texto"></div>
+        </div>
+
+        <div class="painel painel-dicionario">
+            <h3>Dicionário</h3>
+            <div id="dic-conteudo">
+                <p class="dic-vazio">Clique em um termo destacado no texto para ver os detalhes.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (localStorage.getItem('tema') === 'dark') document.body.setAttribute('data-theme', 'dark');
+        function toggleTheme() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            document.body.toggleAttribute('data-theme', !isDark);
+            localStorage.setItem('tema', isDark ? 'light' : 'dark');
+        }
+
+        let termoSelecionadoAtual = null;
+
+        // Instancia o segmentador nativo de palavras em japonês
+        const segmentador = new Intl.Segmenter('ja-JP', { granularity: 'word' });
+
+        function analisarLinha(linha) {
+            if (!linha.trim()) return '<br>';
+            
+            let matches = [];
+            
+            // 1. Mapeia os termos já aprendidos (dadosRevisao)
+            dadosRevisao.forEach(dado => {
+                let index = linha.indexOf(dado.item);
+                while (index !== -1) {
+                    matches.push({ start: index, end: index + dado.item.length, dado: dado });
+                    index = linha.indexOf(dado.item, index + 1);
+                }
+            });
+
+            // Resolve colisões priorizando termos mais longos
+            matches.sort((a, b) => {
+                if (a.start !== b.start) return a.start - b.start;
+                return b.end - a.end; 
+            });
+
+            let validMatches = [];
+            let lastEnd = 0;
+            for (let m of matches) {
+                if (m.start >= lastEnd) {
+                    validMatches.push(m);
+                    lastEnd = m.end;
+                }
+            }
+
+            // 2. Reconstrói a linha processando as lacunas (termos desconhecidos)
+            let result = '';
+            let curr = 0;
+
+            for (let m of validMatches) {
+                let lacuna = linha.substring(curr, m.start);
+                if (lacuna) result += processarLacuna(lacuna);
+                
+                // Injeta o termo aprendido (Azul)
+                result += `<span class="termo-destaque aprendido" onclick="exibirDetalhes('${m.dado.item}', this)">${linha.substring(m.start, m.end)}</span>`;
+                curr = m.end;
+            }
+
+            let lacunaFinal = linha.substring(curr);
+            if (lacunaFinal) result += processarLacuna(lacunaFinal);
+            
+            return `<p class="linha-texto">${result}</p>`;
+        }
+
+        function processarLacuna(textoDesconhecido) {
+            let html = '';
+            const segmentos = segmentador.segment(textoDesconhecido);
+            
+            for (let seg of segmentos) {
+                // isWordLike filtra espaços e pontuações para não pintá-los de vermelho
+                if (seg.isWordLike) {
+                    html += `<span class="termo-destaque desconhecido" onclick="exibirDesconhecido('${seg.segment}', this)">${seg.segment}</span>`;
+                } else {
+                    html += seg.segment;
+                }
+            }
+            return html;
+        }
+
+        function processarTexto() {
+            const rawText = document.getElementById('input-texto').value;
+            if (!rawText.trim()) return;
+
+            const linhas = rawText.split('\n');
+            const output = document.getElementById('output-texto');
+            
+            let htmlFinal = '';
+            linhas.forEach(linha => {
+                htmlFinal += analisarLinha(linha);
+            });
+
+            output.innerHTML = htmlFinal;
+            document.getElementById('dic-conteudo').innerHTML = '<p class="dic-vazio">Clique em um termo destacado no texto para ver os detalhes.</p>';
+        }
+
+        function atualizarDestaqueVisual(elementoSpan) {
+            document.querySelectorAll('.termo-destaque.ativo').forEach(el => el.classList.remove('ativo'));
+            elementoSpan.classList.add('ativo');
+        }
+
+        function exibirDetalhes(termoString, elementoSpan) {
+            atualizarDestaqueVisual(elementoSpan);
+            
+            const termo = dadosRevisao.find(d => d.item === termoString);
+            if (!termo) return;
+
+            termoSelecionadoAtual = termo.item;
+
+            const painel = document.getElementById('dic-conteudo');
+            painel.innerHTML = `
+                <span class="dic-categoria" style="color:var(--learned-color)">✅ Já Aprendido (${termo.categoria})</span>
+                <p class="dic-termo">${termo.item}</p>
+                <p class="dic-leitura">${termo.leitura}</p>
+                <p class="dic-significado">${termo.significado}</p>
+                <div class="dic-notas"><strong>Notas:</strong><br>${termo.notas || termo.notes}</div>
+                <button class="btn-ver-card" onclick="irParaVocabulario()">Editar no Vocabulário ➔</button>
+            `;
+        }
+
+        function exibirDesconhecido(termoString, elementoSpan) {
+            atualizarDestaqueVisual(elementoSpan);
+
+            const painel = document.getElementById('dic-conteudo');
+            painel.innerHTML = `
+                <span class="dic-categoria" style="color:var(--unlearned-color)">❌ Desconhecido</span>
+                <p class="dic-termo">${termoString}</p>
+                <p class="dic-significado" style="color:var(--unlearned-color); font-size:1.1em; font-weight:normal;">Você ainda não adicionou este termo ao seu banco de dados.</p>
+                <a href="https://jisho.org/search/${termoString}" target="_blank" class="btn-ver-card externo">🔍 Pesquisar no Jisho.org ➔</a>
+            `;
+        }
+
+        function irParaVocabulario() {
+            if (termoSelecionadoAtual) {
+                window.location.href = `index.html?termo=${encodeURIComponent(termoSelecionadoAtual)}`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisão de Japonês - Minigame</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9; --text-color: #333; --card-bg: #ffffff;
+            --primary-color: #2c3e50; --secondary-color: #34495e;
+            --border-color: #dddddd; --highlight-color: #d35400;
+        }
+        [data-theme="dark"] {
+            --bg-color: #121212; --text-color: #e0e0e0; --card-bg: #1e1e1e;
+            --primary-color: #34495e; --secondary-color: #4b6584;
+            --border-color: #333333; --highlight-color: #e67e22;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: 0.3s; outline: none; }
+        
+        .nav-menu { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .nav-menu a { padding: 10px 20px; text-decoration: none; background: var(--primary-color); color: white; border-radius: 5px; font-weight: bold; }
+        .nav-menu a.ativo { background: var(--highlight-color); }
+        .header-container { display: flex; justify-content: space-between; max-width: 800px; margin: 0 auto 20px; }
+
+        .game-container { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        
+        .flashcard {
+            background: var(--card-bg);
+            border: 3px solid var(--primary-color);
+            border-radius: 15px;
+            width: 100%;
+            min-height: 350px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: 0.2s;
+            position: relative;
+            padding: 20px;
+            box-sizing: border-box;
+            user-select: none; /* Evita que o texto fique azul com cliques rapidos */
+        }
+        .flashcard:hover { border-color: var(--highlight-color); }
+        
+        .categoria-badge { position: absolute; top: 15px; left: 15px; font-size: 0.9em; font-weight: bold; color: gray; width: calc(100% - 30px); }
+        .termo-gigante { font-size: 6em; margin: 20px 0 0 0; font-weight: bold; text-align: center; }
+        
+        .resposta { display: none; flex-direction: column; align-items: center; margin-top: 20px; width: 100%; border-top: 1px dashed var(--border-color); padding-top: 20px; }
+        .resposta.visivel { display: flex; animation: fadeIn 0.15s ease-in; }
+        
+        .leitura { font-size: 1.5em; color: gray; font-family: monospace; margin-bottom: 10px; }
+        .significado { font-size: 2em; color: var(--highlight-color); font-weight: bold; text-align: center; margin: 0; }
+        .notas { font-size: 1em; opacity: 0.8; text-align: center; margin-top: 10px; }
+
+        .btn-proximo { background-color: #27ae60; color: white; border: none; padding: 15px 30px; font-size: 1.2em; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; display: none; }
+        .btn-proximo.visivel { display: block; animation: fadeIn 0.15s ease-in; }
+        .btn-proximo:hover { background-color: #219653; }
+
+        .instrucoes { font-size: 0.85em; color: gray; text-align: center; margin-top: -10px; opacity: 0.7; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <script src="vocabulario.js"></script>
+
+    <div class="header-container">
+        <h1>Módulo 3: Minigame</h1>
+        <button onclick="toggleTheme()" style="padding:5px 10px; cursor:pointer; background:var(--primary-color); color:white; border:none; border-radius:5px; font-weight:bold;">🌙 Tema</button>
+    </div>
+
+    <div class="nav-menu">
+        <a href="index.html">📚 Vocabulário & Kanji</a>
+        <a href="frases.html">💬 Frases Práticas</a>
+        <a href="minigame.html" class="ativo">🎮 Minigame</a>
+    </div>
+
+    <div class="game-container">
+        <!-- Evento de clique unico removido daqui. Adicionado ondblclick -->
+        <div class="flashcard" id="flashcard" ondblclick="gerenciarAcao()">
+            <span class="categoria-badge" id="card-categoria">Categoria</span>
+            <p class="termo-gigante" id="card-termo">?</p>
+            
+            <div class="resposta" id="card-resposta">
+                <span class="leitura" id="card-leitura">leitura</span>
+                <p class="significado" id="card-significado">Significado</p>
+                <p class="notas" id="card-notas">Notas explicativas aqui.</p>
+            </div>
+        </div>
+
+        <button class="btn-proximo" id="btn-proximo" onclick="sortearTermo()">Próximo Termo ➔</button>
+        <p class="instrucoes">Dica: Use a <b>Barra de Espaço</b> ou <b>Clique Duplo</b> no card para revelar e avançar.</p>
+    </div>
+
+    <script>
+        if (localStorage.getItem('tema') === 'dark') document.body.setAttribute('data-theme', 'dark');
+        function toggleTheme() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            document.body.toggleAttribute('data-theme', !isDark);
+            localStorage.setItem('tema', isDark ? 'light' : 'dark');
+        }
+
+        let baralho = [];
+        let termoAtual = null;
+        let totalTermos = 0;
+        let respostaRevelada = false;
+
+        function inicializarBaralho() {
+            baralho = [...dadosRevisao];
+            totalTermos = baralho.length;
+            for (let i = baralho.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [baralho[i], baralho[j]] = [baralho[j], baralho[i]];
+            }
+        }
+
+        function sortearTermo() {
+            respostaRevelada = false;
+            document.getElementById('card-resposta').classList.remove('visivel');
+            document.getElementById('btn-proximo').classList.remove('visivel');
+
+            if (baralho.length === 0) {
+                inicializarBaralho();
+            }
+
+            termoAtual = baralho.pop();
+
+            const faltam = baralho.length;
+            const exibidos = totalTermos - faltam;
+            document.getElementById('card-categoria').innerHTML = `${termoAtual.categoria} <span style="float:right;">${exibidos}/${totalTermos}</span>`;
+
+            document.getElementById('card-termo').textContent = termoAtual.item;
+            document.getElementById('card-leitura').textContent = termoAtual.leitura;
+            document.getElementById('card-significado').textContent = termoAtual.significado;
+            document.getElementById('card-notas').textContent = termoAtual.notas;
+        }
+
+        // Função unificada que controla o fluxo (revela ou pula)
+        function gerenciarAcao() {
+            if (!respostaRevelada) {
+                // Estado 1: Resposta oculta -> Revelar
+                respostaRevelada = true;
+                document.getElementById('card-resposta').classList.add('visivel');
+                document.getElementById('btn-proximo').classList.add('visivel');
+            } else {
+                // Estado 2: Resposta ja visivel -> Avançar para o proximo
+                sortearTermo();
+            }
+        }
+
+        // Captura o clique da barra de espaço no teclado
+        window.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+                event.preventDefault(); // Impede a página de rolar para baixo com o espaço
+                gerenciarAcao();
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            inicializarBaralho();
+            sortearTermo();
+        });
+    </script>
+</body>
+</html>
