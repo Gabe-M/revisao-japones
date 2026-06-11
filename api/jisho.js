@@ -5,11 +5,17 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     const { acao, termo } = req.query;
 
-    // AÇÃO 1: Buscar vocabulário salvo no banco do Supabase
+    // Captura o token de autenticação enviado pelo cabeçalho do Front-end
+    const tokenUsuario = req.headers['authorization'] || `Bearer ${SUPABASE_KEY}`;
+
+    // AÇÃO 1: Listar vocabulário do usuário logado
     if (acao === 'listar') {
         try {
             const response = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario?select=*&order=item.asc`, {
-                headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+                headers: { 
+                    "apikey": SUPABASE_KEY, 
+                    "Authorization": tokenUsuario // Repassa o token do usuário para o Supabase validar o RLS
+                }
             });
             const dados = await response.json();
             return res.status(200).json(dados);
@@ -18,7 +24,7 @@ export default async function handler(req, res) {
         }
     }
 
-    // AÇÃO 2: Salvar palavra nova no Supabase
+    // AÇÃO 2: Salvar palavra nova associada ao usuário logado
     if (acao === 'salvar' && req.method === 'POST') {
         try {
             const corpo = JSON.parse(req.body);
@@ -26,7 +32,7 @@ export default async function handler(req, res) {
                 method: 'POST',
                 headers: {
                     "apikey": SUPABASE_KEY,
-                    "Authorization": `Bearer ${SUPABASE_KEY}`,
+                    "Authorization": tokenUsuario, // Repassa o token do usuário
                     "Content-Type": "application/json",
                     "Prefer": "return=representation"
                 },
@@ -39,9 +45,8 @@ export default async function handler(req, res) {
         }
     }
 
-    // AÇÃO 3: Buscar no Jisho (Lógica padrão que você já tinha)
+    // AÇÃO 3: Buscar no Jisho (Lógica livre de autenticação)
     if (!termo) return res.status(400).json({ error: 'Termo ausente' });
-    
     try {
         const urlJisho = `https://jisho.org/api/v1/search/words?keyword=${encodeURIComponent(termo)}`;
         const response = await fetch(urlJisho);
