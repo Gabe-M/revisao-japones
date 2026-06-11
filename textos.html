@@ -204,18 +204,46 @@
             `;
         }
 
-        function exibirDesconhecido(termoString, elementoSpan) {
+        async function exibirDesconhecido(termoString, elementoSpan) {
             atualizarDestaqueVisual(elementoSpan);
 
             const painel = document.getElementById('dic-conteudo');
+            
+            // Estado de carregamento
             painel.innerHTML = `
-                <span class="dic-categoria" style="color:var(--unlearned-color)">❌ Desconhecido</span>
+                <span class="dic-categoria" style="color:var(--unlearned-color)">⏳ Consultando API...</span>
                 <p class="dic-termo">${termoString}</p>
-                <p class="dic-significado" style="color:var(--unlearned-color); font-size:1.1em; font-weight:normal;">Você ainda não adicionou este termo ao seu banco de dados.</p>
-                <a href="https://jisho.org/search/${termoString}" target="_blank" class="btn-ver-card externo">🔍 Pesquisar no Jisho.org ➔</a>
             `;
-        }
 
+            try {
+                // Chamada para o SEU servidor na Vercel
+                const response = await fetch(`/api/jisho?termo=${encodeURIComponent(termoString)}`);
+                const json = await response.json();
+                
+                if (json.data && json.data.length > 0) {
+                    const resultado = json.data[0];
+                    const leitura = resultado.japanese[0].reading || termoString;
+                    const significados = resultado.senses[0].english_definitions.join(', ');
+                    
+                    painel.innerHTML = `
+                        <span class="dic-categoria" style="color:var(--unlearned-color)">❌ Desconhecido</span>
+                        <p class="dic-termo">${termoString}</p>
+                        <p class="dic-leitura">${leitura}</p>
+                        <p class="dic-significado" style="color:var(--unlearned-color); font-size: 1.1em;">${significados}</p>
+                        <a href="https://jisho.org/search/${termoString}" target="_blank" class="btn-ver-card externo">Ver mais no Jisho ➔</a>
+                    `;
+                } else {
+                    throw new Error('Sem resultados');
+                }
+            } catch (error) {
+                painel.innerHTML = `
+                    <span class="dic-categoria" style="color:var(--unlearned-color)">❌ Erro</span>
+                    <p class="dic-termo">${termoString}</p>
+                    <p>Não foi possível carregar a tradução automática.</p>
+                    <a href="https://jisho.org/search/${termoString}" target="_blank" class="btn-ver-card externo">Pesquisar Manualmente ➔</a>
+                `;
+            }
+        }
         function irParaVocabulario() {
             if (termoSelecionadoAtual) {
                 window.location.href = `index.html?termo=${encodeURIComponent(termoSelecionadoAtual)}`;
