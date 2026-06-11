@@ -220,19 +220,27 @@
             botao.textContent = "💾 Salvando...";
             botao.disabled = true;
 
-            const novoTermo = { item, leitura, significado, categoria: 'Vocabulário', notas: 'Adicionado via módulo de textos.' };
+            const novoTermo = { 
+                item, 
+                leitura, 
+                significado, 
+                categoria: 'Vocabulário', 
+                notas: 'Adicionado via módulo de textos.',
+                user_id: idDoUsuarioLogado // Carimbo obrigatório de quem é o dono da palavra
+            };
 
             try {
                 const response = await fetch('/api/jisho?acao=salvar', {
                     method: 'POST',
+                    headers: { 
+                        "Authorization": tokenDeAcesso, // Envia a "chave" da sua sessão
+                        "Content-Type": "application/json"
+                    },
                     body: JSON.stringify(novoTermo)
                 });
 
                 if (response.ok) {
-                    // Atualiza a memória local sem precisar recarregar a página inteira
                     bancoDadosDinamico.push(novoTermo);
-                    
-                    // Transforma visualmente o span de vermelho (desconhecido) para azul (aprendido)
                     const spanAtivo = document.querySelector('.termo-destaque.desconhecido.ativo');
                     if (spanAtivo) {
                         spanAtivo.classList.remove('desconhecido');
@@ -240,9 +248,11 @@
                         spanAtivo.onclick = () => exibirDetalhes(item, spanAtivo);
                     }
                     exibirDetalhes(item, spanAtivo);
+                } else {
+                    throw new Error();
                 }
             } catch (e) {
-                alert("Erro ao salvar palavra.");
+                alert("Erro ao salvar palavra. Verifique as regras do banco.");
                 botao.textContent = "📥 Salvar no meu Banco";
                 botao.disabled = false;
             }

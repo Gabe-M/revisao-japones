@@ -65,11 +65,12 @@
 </head>
 <body>
 
-    <script src="vocabulario.js">
-    // Cole este bloco no início da tag <script> das suas páginas para controlar o login:
+    <script src="vocabulario.js"></script>
+    <script>
+        // CONTROLE DE LOGIN
         const sessaoLocalStorage = localStorage.getItem('supabase_session');
         if (!sessaoLocalStorage) {
-        window.location.href = "login.html"; // Redireciona se não tiver logado
+            window.location.href = "login.html"; // Redireciona se não tiver logado
         }
         const sessao = JSON.parse(sessaoLocalStorage);
         const tokenDeAcesso = `Bearer ${sessao.access_token}`;
