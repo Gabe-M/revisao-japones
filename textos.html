@@ -76,10 +76,10 @@
     </div>
 
     <script>
-        // Cole este bloco no início da tag <script> das suas páginas para controlar o login:
+        // --- CONTROLE DE LOGIN OBRIGATÓRIO ---
         const sessaoLocalStorage = localStorage.getItem('supabase_session');
         if (!sessaoLocalStorage) {
-        window.location.href = "login.html"; // Redireciona se não tiver logado
+            window.location.href = "login.html"; // Redireciona se não tiver logado
         }
         const sessao = JSON.parse(sessaoLocalStorage);
         const tokenDeAcesso = `Bearer ${sessao.access_token}`;
@@ -96,15 +96,23 @@
         const segmentador = new Intl.Segmenter('ja-JP', { granularity: 'word' });
 
         // Carrega os dados persistidos do Supabase via backend Vercel
-        // Substitui por esta versão:
         async function carregarBancoDinamico() {
             try {
                 const response = await fetch('/api/jisho?acao=listar', {
-                    headers: { "Authorization": tokenDeAcesso } // Injeta o token aqui
+                    headers: { "Authorization": tokenDeAcesso }
                 });
-                bancoDadosDinamico = await response.json();
+                const resultado = await response.json();
+                
+                // BLINDAGEM: Garante que só aceitará se for uma lista (Array)
+                if (Array.isArray(resultado)) {
+                    bancoDadosDinamico = resultado;
+                } else {
+                    console.error("O banco não retornou uma lista. Resposta recebida:", resultado);
+                    bancoDadosDinamico = []; // Evita o TypeError.forEach
+                }
             } catch (e) {
-                console.error("Falha ao carregar banco de dados persistente.");
+                console.error("Falha na requisição de dados persistentes:", e);
+                bancoDadosDinamico = [];
             }
         }
 
@@ -113,10 +121,12 @@
             let matches = [];
             
             bancoDadosDinamico.forEach(dado => {
-                let index = linha.indexOf(dado.item);
-                while (index !== -1) {
-                    matches.push({ start: index, end: index + dado.item.length, dado: dado });
-                    index = linha.indexOf(dado.item, index + 1);
+                if (dado && dado.item) { // Garante integridade do objeto
+                    let index = linha.indexOf(dado.item);
+                    while (index !== -1) {
+                        matches.push({ start: index, end: index + dado.item.length, dado: dado });
+                        index = linha.indexOf(dado.item, index + 1);
+                    }
                 }
             });
 
@@ -141,7 +151,8 @@
                 curr = m.end;
             }
 
-            let lacunaFinal = Join = linha.substring(curr);
+            // CORREÇÃO DA SINTAXE: Removido o '=' duplicado
+            let lacunaFinal = linha.substring(curr);
             if (lacunaFinal) result += processarLacuna(lacunaFinal);
             return `<p class="linha-texto">${result}</p>`;
         }
@@ -229,14 +240,14 @@
                 significado, 
                 categoria: 'Vocabulário', 
                 notas: 'Adicionado via módulo de textos.',
-                user_id: idDoUsuarioLogado // Carimbo obrigatório de quem é o dono da palavra
+                user_id: idDoUsuarioLogado
             };
 
             try {
                 const response = await fetch('/api/jisho?acao=salvar', {
                     method: 'POST',
                     headers: { 
-                        "Authorization": tokenDeAcesso, // Envia a "chave" da sua sessão
+                        "Authorization": tokenDeAcesso,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify(novoTermo)
