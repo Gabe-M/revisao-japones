@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisão de Japonês - Login</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 360px; }
+        h2 { text-align: center; color: #2c3e50; margin-bottom: 30px; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #dddddd; border-radius: 5px; box-sizing: border-box; font-size: 1em; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 5px; font-weight: bold; font-size: 1em; cursor: pointer; margin-bottom: 10px; }
+        .btn-primary { background: #2980b9; color: white; }
+        .btn-secondary { background: transparent; color: #2980b9; border: 1px solid #2980b9; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2 id="titulo">Entrar no Sistema</h2>
+        <input type="email" id="email" placeholder="Seu E-mail">
+        <input type="password" id="senha" placeholder="Sua Senha">
+        
+        <button class="btn-primary" onclick="autenticar('login')">Entrar</button>
+        <button class="btn-secondary" onclick="autenticar('cadastro')">Criar Nova Conta</button>
+    </div>
+
+    <script>
+        // Inicializa o Supabase direto no Front apenas para autenticação
+        // IMPORTANTE: Insira seus dados estáticos reais aqui para o SDK de auth funcionar no navegador
+        const SUPABASE_URL = "SUA_URL_DO_SUPABASE_AQUI"; 
+        const SUPABASE_KEY = "SUA_CHAVE_PUBLICA_ANON_AQUI";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function autenticar(tipo) {
+            const email = document.getElementById('email').value;
+            const senha = document.getElementById('senha').value;
+
+            if (!email || !senha) return alert("Preencha todos os campos.");
+
+            let resultado;
+            if (tipo === 'cadastro') {
+                resultado = await supabaseClient.auth.signUp({ email, password: senha });
+            } else {
+                resultado = await supabaseClient.auth.signInWithPassword({ email, password: senha });
+            }
+
+            if (resultado.error) {
+                alert("Erro: " + resultado.error.message);
+            } else {
+                // Salva a sessão no cache do navegador local e redireciona
+                localStorage.setItem('supabase_session', JSON.stringify(resultado.data.session));
+                window.location.href = "index.html";
+            }
+        }
+    </script>
+</body>
+</html>
