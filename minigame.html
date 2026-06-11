@@ -117,7 +117,19 @@
         let termoAtual = null;
         let totalTermos = 0;
         let respostaRevelada = false;
-
+        async function iniciarJogo() {
+    try {
+        const response = await fetch('/api/jisho?acao=listar', {
+            headers: { "Authorization": tokenDeAcesso }
+        });
+        dadosRevisao = await response.json();
+        inicializarBaralho();
+        sortearTermo();
+    } catch (e) {
+        document.getElementById('card-termo').textContent = "Erro ao carregar";
+    }
+}
+window.addEventListener('DOMContentLoaded', iniciarJogo);
         function inicializarBaralho() {
             baralho = [...dadosRevisao];
             totalTermos = baralho.length;
