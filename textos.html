@@ -426,6 +426,7 @@
                 <div class="bloco-linha">
                     <p class="linha-texto">${result}</p>
                     <button class="btn-traduzir-linha" data-texto="${textoEscapado}" onclick="traduzirLinhaCompleta(this)" title="Traduzir linha completa para Português">🌐 Traduzir</button>
+                    <button class="btn-traduzir-linha" data-texto="${textoEscapado}" onclick="perguntarLinhaSensei(this)" style="color: var(--primary-color);" title="Perguntar ao Sensei sobre esta linha">🤖 Sensei</button>
                     <div class="traducao-container" style="display: none;"></div>
                 </div>
             `;
@@ -701,6 +702,13 @@
                 botao.innerHTML = '🌐 Traduzir';
             } finally {
                 botao.disabled = false;
+            }
+        }
+
+        async function perguntarLinhaSensei(botao) {
+            const texto = botao.getAttribute('data-texto');
+            if (texto && window.TutorIA) {
+                window.TutorIA.perguntar(`Explique a estrutura gramatical, partículas e nuances da frase: "${texto}"`);
             }
         }
 
