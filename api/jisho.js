@@ -5,16 +5,16 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     const { acao, termo } = req.query;
 
-    // Captura dinamicamente o Token do Usuário logado vindo do Front-end
+    // Captura o token de quem está logado
     const tokenUsuario = req.headers['authorization'] || `Bearer ${SUPABASE_KEY}`;
 
-    // AÇÃO 1: Buscar vocabulário salvo no banco do Supabase
+    // AÇÃO 1: Buscar vocabulário
     if (acao === 'listar') {
         try {
             const response = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario?select=*&order=item.asc`, {
                 headers: {
                     "apikey": SUPABASE_KEY,
-                    "Authorization": tokenUsuario // Passa a identidade do usuário logado
+                    "Authorization": tokenUsuario
                 }
             });
             const dados = await response.json();
@@ -24,15 +24,17 @@ export default async function handler(req, res) {
         }
     }
 
-    // AÇÃO 2: Salvar palavra nova no Supabase (COM DEBUG DE ERRO)
+    // AÇÃO 2: Salvar palavra nova
     if (acao === 'salvar' && req.method === 'POST') {
         try {
-            const corpo = JSON.parse(req.body);
+            // CORREÇÃO: Pega o corpo da requisição diretamente, pois a Vercel já o formatou
+            const corpo = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+
             const response = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario`, {
                 method: 'POST',
                 headers: {
                     "apikey": SUPABASE_KEY,
-                    "Authorization": `Bearer ${SUPABASE_KEY}`,
+                    "Authorization": tokenUsuario, // Usa a identidade real do usuário para o RLS
                     "Content-Type": "application/json",
                     "Prefer": "return=representation"
                 },
@@ -41,20 +43,21 @@ export default async function handler(req, res) {
 
             const resultado = await response.json();
 
+            // Intercepta erros reais do Supabase
             if (!response.ok) {
                 return res.status(response.status).json({
-                    error: 'O Supabase rejeitou os dados',
+                    error: 'O Supabase rejeitou a gravação',
                     detalhes: resultado
                 });
             }
 
             return res.status(201).json(resultado);
         } catch (error) {
-            return res.status(500).json({ error: 'Erro no catch da API', mensagem: error.message });
+            return res.status(500).json({ error: 'Falha no servidor', mensagem: error.message });
         }
     }
 
-    // AÇÃO 3: Buscar no Jisho (Lógica padrão sem necessidade de Auth)
+    // AÇÃO 3: Traduzir no Jisho
     if (!termo) return res.status(400).json({ error: 'Termo ausente' });
 
     try {
