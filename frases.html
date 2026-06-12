@@ -71,9 +71,52 @@
         <a href="textos.html">📄 Textos</a>
     </div>
 
-    <div class="tools-panel">
+    <div class="tools-panel" style="gap: 15px; flex-wrap: wrap;">
         <button class="tool-btn" id="btnLacunas" onclick="toggleLacunas()">Ativar Teste de Partículas</button>
         <button class="tool-btn danger" onclick="toggleRomaji()">Ocultar/Mostrar Romaji</button>
+        <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
+            <label style="font-weight: bold; font-size: 0.9em; color: var(--text-color);">Conjunto:</label>
+            <select id="filtro-conjunto" onchange="mudarConjunto()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none;">
+                <option value="Todos">Todos</option>
+                <option value="Frase">Frase (Padrão)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Painel do Sensei IA para Gerar Frases -->
+    <div class="tools-panel" style="flex-direction: column; max-width: 1000px; margin: 0 auto 20px; align-items: stretch; gap: 15px;">
+        <h3 style="margin: 0; color: var(--primary-color); display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; user-select: none;" onclick="togglePanelIA()">
+            <span>🤖 Gerar Novas Frases com o Sensei IA</span> <span id="ia-panel-arrow">▼</span>
+        </h3>
+        
+        <div id="painel-geracao-ia" style="display: none; flex-direction: column; gap: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <div style="flex: 2; min-width: 250px;">
+                    <label style="font-weight: bold; font-size: 0.9em; display: block; margin-bottom: 5px;">Tema das Frases:</label>
+                    <input type="text" id="ia-tema" placeholder="Ex: No aeroporto, Fazendo compras, Falando sobre hobbies..." style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); outline: none;">
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-weight: bold; font-size: 0.9em; display: block; margin-bottom: 5px;">Conjunto (Categoria):</label>
+                    <select id="ia-categoria-select" onchange="toggleNovoConjuntoInput()" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); outline: none; cursor: pointer;">
+                        <option value="Frase">Frase (Padrão)</option>
+                        <option value="novo">Criar Novo Conjunto...</option>
+                    </select>
+                </div>
+                <div id="ia-novo-conjunto-div" style="flex: 1; min-width: 200px; display: none;">
+                    <label style="font-weight: bold; font-size: 0.9em; display: block; margin-bottom: 5px;">Nome do Novo Conjunto:</label>
+                    <input type="text" id="ia-novo-conjunto" placeholder="Ex: Viagem" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); outline: none;">
+                </div>
+            </div>
+            
+            <button class="tool-btn" onclick="gerarFrasesIA()" style="width: 100%;">🤖 Gerar Frases</button>
+            
+            <!-- Pré-visualização das frases geradas -->
+            <div id="preview-geracao" style="display: none; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.02); padding: 15px; border-radius: 5px; border: 1px dashed var(--border-color);">
+                <h4 style="margin: 0 0 10px 0;">Pré-visualização das Frases Geradas:</h4>
+                <div id="preview-lista" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                <button class="tool-btn" id="btn-salvar-geradas" onclick="salvarFrasesGeradas()" style="background-color: #27ae60; margin-top: 10px; width: 100%;">📥 Salvar no meu Banco</button>
+            </div>
+        </div>
     </div>
 
     <div class="list-container" id="frases-container"></div>
@@ -102,6 +145,282 @@
         // Configurações de Paginação
         let currentPage = 1;
         const itemsPerPage = 5; // Limite de 5 frases por página
+
+        let frasesCombinadas = [];
+        let frasesFiltradas = [];
+        let categoriasDeFrases = ['Todos', 'Frase']; // Lista dinâmica de categorias
+        let frasesGeradasTemporarias = [];
+
+        async function carregarFrasesDinamicas() {
+            try {
+                const response = await fetch('/api/jisho?acao=listar', {
+                    headers: { "Authorization": tokenDeAcesso }
+                });
+                const resultado = await response.json();
+
+                // Trava automática de JWT expirado
+                if (resultado && resultado.code === "PGRST303") {
+                    console.warn("Sessão expirada. Redirecionando para o login...");
+                    localStorage.removeItem('supabase_session');
+                    window.location.href = "login.html";
+                    return;
+                }
+
+                let dadosDb = [];
+                if (Array.isArray(resultado)) {
+                    dadosDb = resultado;
+                }
+
+                // Filtrar os dados dinâmicos: apenas categorias que começam com "Frase"
+                const frasesDb = dadosDb.filter(d => d && d.item && (d.categoria === 'Frase' || (d.categoria && d.categoria.startsWith('Frase:'))));
+
+                // Evitar duplicados com as estáticas base (frasesPraticas de frases.js)
+                const itensExistentes = new Set(frasesPraticas.map(d => d.item));
+                const frasesDbFiltradas = frasesDb.filter(d => !itensExistentes.has(d.item));
+
+                frasesCombinadas = [...frasesPraticas, ...frasesDbFiltradas];
+                
+                // Atualizar lista de categorias disponíveis
+                const sets = new Set(['Todos', 'Frase']);
+                frasesCombinadas.forEach(f => {
+                    if (f.categoria && f.categoria.startsWith('Frase:')) {
+                        sets.add(f.categoria);
+                    }
+                });
+                categoriasDeFrases = Array.from(sets);
+
+                // Preencher seletores HTML
+                atualizarSeletoresDeCategoria();
+
+            } catch (e) {
+                console.error("Falha ao carregar frases dinâmicas.", e);
+                frasesCombinadas = [...frasesPraticas];
+            }
+
+            aplicarFiltroConjunto();
+        }
+
+        function atualizarSeletoresDeCategoria() {
+            const filtroSelect = document.getElementById('filtro-conjunto');
+            const currentFiltroVal = filtroSelect.value;
+            
+            // Preenche o filtro principal
+            filtroSelect.innerHTML = categoriasDeFrases.map(cat => {
+                const label = cat === 'Todos' ? 'Todos' : (cat === 'Frase' ? 'Frase (Padrão)' : cat.replace('Frase: ', ''));
+                return `<option value="${cat}">${label}</option>`;
+            }).join('');
+            
+            // Tenta manter o valor selecionado se ainda existir
+            if (categoriasDeFrases.includes(currentFiltroVal)) {
+                filtroSelect.value = currentFiltroVal;
+            } else {
+                filtroSelect.value = 'Todos';
+            }
+
+            // Preenche o select do painel de IA
+            const iaSelect = document.getElementById('ia-categoria-select');
+            const options = categoriasDeFrases
+                .filter(cat => cat !== 'Todos')
+                .map(cat => {
+                    const label = cat === 'Frase' ? 'Frase (Padrão)' : cat.replace('Frase: ', '');
+                    return `<option value="${cat}">${label}</option>`;
+                });
+            options.push(`<option value="novo">Criar Novo Conjunto...</option>`);
+            iaSelect.innerHTML = options.join('');
+        }
+
+        function aplicarFiltroConjunto() {
+            const filtroVal = document.getElementById('filtro-conjunto').value;
+            if (filtroVal === 'Todos') {
+                frasesFiltradas = frasesCombinadas;
+            } else {
+                frasesFiltradas = frasesCombinadas.filter(f => f.categoria === filtroVal);
+            }
+            currentPage = 1;
+            renderizarPagina();
+        }
+
+        function mudarConjunto() {
+            aplicarFiltroConjunto();
+        }
+
+        function togglePanelIA() {
+            const panel = document.getElementById('painel-geracao-ia');
+            const arrow = document.getElementById('ia-panel-arrow');
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                panel.style.display = 'flex';
+                arrow.textContent = '▲';
+            } else {
+                panel.style.display = 'none';
+                arrow.textContent = '▼';
+            }
+        }
+
+        function toggleNovoConjuntoInput() {
+            const select = document.getElementById('ia-categoria-select');
+            const divNovo = document.getElementById('ia-novo-conjunto-div');
+            if (select.value === 'novo') {
+                divNovo.style.display = 'block';
+                document.getElementById('ia-novo-conjunto').focus();
+            } else {
+                divNovo.style.display = 'none';
+            }
+        }
+
+        async function gerarFrasesIA() {
+            const tema = document.getElementById('ia-tema').value.trim();
+            if (!tema) {
+                alert("Por favor, digite um tema para as frases.");
+                return;
+            }
+
+            const btn = document.querySelector('button[onclick="gerarFrasesIA()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '🤖 Gerando frases estruturadas...';
+            btn.disabled = true;
+
+            const preview = document.getElementById('preview-geracao');
+            const previewLista = document.getElementById('preview-lista');
+            preview.style.display = 'none';
+            previewLista.innerHTML = '';
+
+            try {
+                const apiKey = localStorage.getItem('gemini_api_key');
+                const headers = { 'Content-Type': 'application/json' };
+                if (apiKey) {
+                    headers['X-Gemini-Key'] = apiKey;
+                }
+
+                const prompt = `Gere exatamente 3 frases úteis e práticas em japonês sobre o tema: "${tema}".
+Retorne a resposta estritamente no formato de uma array JSON (sem formatação markdown, sem blocos de código \`\`\`json, apenas a array JSON direta).
+Cada objeto da array deve conter exatamente estas 4 chaves:
+- "item": a frase escrita em japonês (com kanji/kana).
+- "leitura": a leitura/transliteração em Romaji.
+- "significado": a tradução exata em português.
+- "notas": uma breve nota gramatical contendo a análise da frase e a identificação dos blocos/palavras utilizados nela no formato exato: "Blocos usados: [bloco1] + [bloco2] + ...". Exemplo: "Blocos usados: 私 + は + 学生 + です."
+
+Siga o formato estrito JSON.`;
+
+                const response = await fetch('/api/ai', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        messages: [
+                            { role: 'user', parts: [{ text: prompt }] }
+                        ]
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Erro do servidor');
+
+                let jsonText = data.reply.trim();
+                
+                if (jsonText.startsWith('```json')) {
+                    jsonText = jsonText.substring(7);
+                }
+                if (jsonText.startsWith('```')) {
+                    jsonText = jsonText.substring(3);
+                }
+                if (jsonText.endsWith('```')) {
+                    jsonText = jsonText.substring(0, jsonText.length - 3);
+                }
+                jsonText = jsonText.trim();
+
+                const arrayFrases = JSON.parse(jsonText);
+                if (!Array.isArray(arrayFrases)) throw new Error('A resposta não é uma lista de frases válida.');
+
+                frasesGeradasTemporarias = arrayFrases;
+
+                previewLista.innerHTML = arrayFrases.map((f, index) => `
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 5px; padding: 12px; display: flex; gap: 10px; align-items: start; text-align: left;">
+                        <input type="checkbox" id="chk-frase-${index}" checked style="margin-top: 5px; transform: scale(1.2);">
+                        <div style="flex-grow:1;">
+                            <p style="font-size: 1.4em; margin: 0 0 5px 0; font-weight: bold;">${f.item}</p>
+                            <p style="color: gray; font-size: 0.85em; font-family: monospace; margin: 0 0 5px 0;">${f.leitura}</p>
+                            <p style="color: var(--highlight-color); font-weight: bold; margin: 0 0 5px 0;">${f.significado}</p>
+                            <p style="font-size: 0.85em; opacity: 0.8; margin: 0;">${f.notas}</p>
+                        </div>
+                    </div>
+                `).join('');
+
+                preview.style.display = 'flex';
+
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao gerar frases. Verifique se o tema é adequado ou tente novamente.\nDetalhes: " + e.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function salvarFrasesGeradas() {
+            const checkboxes = frasesGeradasTemporarias.map((_, i) => document.getElementById(`chk-frase-${i}`));
+            const selecionadas = frasesGeradasTemporarias.filter((_, i) => checkboxes[i] && checkboxes[i].checked);
+
+            if (selecionadas.length === 0) {
+                alert("Nenhuma frase selecionada para salvar.");
+                return;
+            }
+
+            const selectCat = document.getElementById('ia-categoria-select');
+            let categoriaFinal = selectCat.value;
+            
+            if (categoriaFinal === 'novo') {
+                const nomeNovo = document.getElementById('ia-novo-conjunto').value.trim();
+                if (!nomeNovo) {
+                    alert("Por favor, digite o nome do novo conjunto.");
+                    return;
+                }
+                categoriaFinal = nomeNovo.startsWith('Frase:') ? nomeNovo : `Frase: ${nomeNovo}`;
+            }
+
+            const btn = document.getElementById('btn-salvar-geradas');
+            btn.innerHTML = '⏳ Salvando frases no banco...';
+            btn.disabled = true;
+
+            try {
+                for (let frase of selecionadas) {
+                    const novoTermo = {
+                        item: frase.item,
+                        leitura: frase.leitura,
+                        significado: frase.significado,
+                        categoria: categoriaFinal,
+                        notas: frase.notas,
+                        user_id: idDoUsuarioLogado
+                    };
+
+                    const response = await fetch('/api/jisho?acao=salvar', {
+                        method: 'POST',
+                        headers: {
+                            "Authorization": tokenDeAcesso,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(novoTermo)
+                    });
+
+                    if (!response.ok) throw new Error("Erro ao salvar no banco");
+                }
+
+                alert(`${selecionadas.length} frase(s) salva(s) com sucesso no conjunto "${categoriaFinal.replace('Frase: ', '')}"!`);
+                
+                document.getElementById('ia-tema').value = '';
+                document.getElementById('ia-novo-conjunto').value = '';
+                document.getElementById('ia-categoria-select').value = 'Frase';
+                toggleNovoConjuntoInput();
+                document.getElementById('preview-geracao').style.display = 'none';
+                
+                await carregarFrasesDinamicas();
+
+            } catch (e) {
+                console.error(e);
+                alert("Ocorreu um erro ao salvar as frases. Tente novamente.");
+            } finally {
+                btn.innerHTML = '📥 Salvar no meu Banco';
+                btn.disabled = false;
+            }
+        }
 
         function toggleLacunas() {
             modoTesteAtivo = !modoTesteAtivo;
@@ -152,13 +471,17 @@
             return resultado;
         }
 
-        // Função principal de renderização com paginação
         function renderizarPagina() {
             const startIndex = (currentPage - 1) * itemsPerPage;
             const endIndex = startIndex + itemsPerPage;
-            const frasesPagina = frasesPraticas.slice(startIndex, endIndex);
+            const frasesPagina = frasesFiltradas.slice(startIndex, endIndex);
 
             const container = document.getElementById('frases-container');
+            if (frasesPagina.length === 0) {
+                container.innerHTML = `<p style="text-align:center;">Nenhuma frase encontrada neste conjunto.</p>`;
+                return;
+            }
+
             container.innerHTML = frasesPagina.map(d => `
                 <div class="frase-card" onclick="const det = this.querySelector('details'); det.open = !det.open;" style="cursor: pointer;">
                     <p class="frase-texto">${processarTextoComBlocos(d.item, d.notas)}</p>
@@ -176,7 +499,7 @@
 
         function renderizarControlesPaginacao() {
             const container = document.getElementById('pagination-controls');
-            const totalPages = Math.ceil(frasesPraticas.length / itemsPerPage);
+            const totalPages = Math.ceil(frasesFiltradas.length / itemsPerPage);
             
             if (totalPages <= 1) {
                 container.innerHTML = ''; 
@@ -197,7 +520,7 @@
         }
 
         // Inicialização
-        renderizarPagina();
+        window.addEventListener('DOMContentLoaded', carregarFrasesDinamicas);
     </script>
 </body>
 </html>

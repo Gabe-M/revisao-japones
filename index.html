@@ -116,7 +116,7 @@
                 // Combinar o vocabulário estático (dadosRevisao) com o do banco de dados (dadosDb)
                 // Evitamos duplicados com base na propriedade 'item' (palavra em japonês) e ignoramos textos longos
                 const itensExistentes = new Set(dadosRevisao.map(d => d.item));
-                const dadosDbFiltrados = dadosDb.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto');
+                const dadosDbFiltrados = dadosDb.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto' && !(d.categoria && d.categoria.startsWith('Frase:')));
 
                 dadosCombinados = [...dadosRevisao, ...dadosDbFiltrados];
             } catch (e) {

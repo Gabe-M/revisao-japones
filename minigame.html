@@ -134,9 +134,9 @@
                 }
 
                 if (Array.isArray(resultado)) {
-                    // Combinar com os dados estáticos base, evitando duplicatas e ignorando textos longos
+                    // Combinar com os dados estáticos base, evitando duplicatas e ignorando textos longos e frases
                     const itensExistentes = new Set(dadosRevisao.map(d => d.item));
-                    const dadosDbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto');
+                    const dadosDbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto' && !(d.categoria && d.categoria.startsWith('Frase:')));
                     dadosRevisao = [...dadosRevisao, ...dadosDbFiltrados];
                 }
             } catch (e) {
