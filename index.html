@@ -94,10 +94,7 @@
     </div>
 
     <div style="display: flex; gap: 15px; max-width: 500px; margin: 0 auto 20px; align-items: center; justify-content: center; width: 100%;">
-        <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo..." onkeyup="aplicarFiltros()" style="margin: 0; flex: 2; width: auto; max-width: none;">
-        <select id="filtro-conjunto-select" onchange="mudarFiltroConjunto()" style="padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none; flex: 1; min-width: 150px; box-sizing: border-box;">
-            <option value="Todos">Todos os Conjuntos</option>
-        </select>
+        <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo..." onkeyup="aplicarFiltros()" style="margin: 0; flex: 1; width: auto; max-width: none;">
     </div>
     
     <div class="controls" id="botoes-filtro">
@@ -237,32 +234,21 @@
             const select = document.getElementById('ia-conjunto-select');
             const currentVal = select.value;
             
-            select.innerHTML = conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
-            select.innerHTML += `<option value="novo">Criar Novo Conjunto...</option>`;
+            let html = `<option value="Todos">Todos os Conjuntos</option>`;
+            html += conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
+            html += `<option value="novo">Criar Novo Conjunto...</option>`;
+            select.innerHTML = html;
 
-            if (conjuntosDisponiveis.includes(currentVal)) {
+            if (currentVal === 'Todos' || conjuntosDisponiveis.includes(currentVal)) {
                 select.value = currentVal;
-            } else if (conjuntosDisponiveis.length > 0) {
-                select.value = conjuntosDisponiveis[0];
-            } else {
+            } else if (currentVal === 'novo') {
                 select.value = 'novo';
+            } else {
+                select.value = 'Todos';
             }
 
             // Garante que o campo de input de novo conjunto apareça se a opção for "novo"
             toggleNovoConjuntoInput();
-
-            // Atualiza também o filtro ao lado da busca
-            const filtroSelect = document.getElementById('filtro-conjunto-select');
-            const currentFiltroVal = filtroSelect.value;
-            
-            filtroSelect.innerHTML = `<option value="Todos">Todos os Conjuntos</option>` + 
-                conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
-                
-            if (currentFiltroVal === 'Todos' || conjuntosDisponiveis.includes(currentFiltroVal)) {
-                filtroSelect.value = currentFiltroVal;
-            } else {
-                filtroSelect.value = 'Todos';
-            }
         }
 
         function atualizarBotoesFiltro() {
@@ -281,6 +267,14 @@
 
         function toggleModoAssociacao() {
             const chk = document.getElementById('modo-associacao-chk');
+            const select = document.getElementById('ia-conjunto-select');
+            
+            if (chk.checked && (select.value === 'Todos' || select.value === 'novo')) {
+                alert("Por favor, selecione ou crie um conjunto específico antes de ativar o Modo Associação.");
+                chk.checked = false;
+                return;
+            }
+            
             const label = document.getElementById('modo-associacao-label');
             modoAssociacaoAtivo = chk.checked;
             
@@ -291,7 +285,7 @@
                 label.textContent = "Modo Associação Desativado";
                 label.style.color = "gray";
             }
-            renderizarPagina();
+            aplicarFiltros();
         }
 
         function toggleNovoConjuntoInput() {
@@ -307,12 +301,18 @@
 
         function mudarConjuntoAssociacao() {
             toggleNovoConjuntoInput();
-            if (modoAssociacaoAtivo) {
-                renderizarPagina();
+            const select = document.getElementById('ia-conjunto-select');
+            const chk = document.getElementById('modo-associacao-chk');
+            
+            if (select.value === 'Todos' || select.value === 'novo') {
+                if (chk.checked) {
+                    chk.checked = false;
+                    modoAssociacaoAtivo = false;
+                    const label = document.getElementById('modo-associacao-label');
+                    label.textContent = "Modo Associação Desativado";
+                    label.style.color = "gray";
+                }
             }
-        }
-
-        function mudarFiltroConjunto() {
             aplicarFiltros();
         }
 
@@ -336,12 +336,13 @@
             
             const select = document.getElementById('ia-conjunto-select');
             select.value = nome;
-            mudarConjuntoAssociacao();
-            nomeInput.value = '';
             
+            // Ativa o Modo Associação automaticamente
             const chk = document.getElementById('modo-associacao-chk');
             chk.checked = true;
             toggleModoAssociacao();
+            
+            nomeInput.value = '';
         }
 
         async function gerenciarCliqueCard(elementoCard, termoObj, event) {
