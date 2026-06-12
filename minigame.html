@@ -139,12 +139,13 @@
                     const dadosDbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto');
                     dadosRevisao = [...dadosRevisao, ...dadosDbFiltrados];
                 }
-
-                inicializarBaralho();
-                sortearTermo();
             } catch (e) {
-                document.getElementById('card-termo').textContent = "Erro ao carregar";
+                console.error("Erro ao buscar dados do banco para o minigame, usando dados locais.", e);
             }
+
+            // Garante que o jogo inicializa e sorteia o primeiro termo mesmo se a chamada da API falhar
+            inicializarBaralho();
+            sortearTermo();
         }
 window.addEventListener('DOMContentLoaded', iniciarJogo);
         function inicializarBaralho() {
