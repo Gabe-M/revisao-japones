@@ -300,16 +300,17 @@
 
     // Processamento de Markdown simples
     function formatMarkdown(text) {
+        if (!text) return '';
         let html = text
-            .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>') // Negrito **texto**
-            .replace(/\\*(.*?)\\*/g, '<em>$1</em>')             // Itálico *texto*
-            .replace(/\\n/g, '<br>');                          // Quebras de linha
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Negrito **texto**
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')             // Itálico *texto*
+            .replace(/\n/g, '<br>');                          // Quebras de linha
         return html;
     }
 
     function addMessage(text, role) {
         const div = document.createElement('div');
-        div.className = \`tutor-msg tutor-msg-\${role}\`;
+        div.className = 'tutor-msg tutor-msg-' + role;
         
         if (role === 'ai') {
             div.innerHTML = formatMarkdown(text);
