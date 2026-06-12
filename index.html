@@ -43,6 +43,8 @@
         .switch input:checked + .slider:before { transform: translateX(22px); }
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         .card.associando { border: 2px solid #27ae60 !important; background-color: rgba(39, 174, 96, 0.05) !important; }
+        .card.no-conjunto { border: 2px solid var(--highlight-color) !important; background-color: rgba(230, 126, 34, 0.08) !important; }
+        .card-conjunto-badge { background-color: var(--highlight-color); color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.85em; }
         .card.associado-sucesso { animation: pulse-green 0.6s ease-out; }
         @keyframes pulse-green {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7); }
@@ -72,7 +74,7 @@
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
             <span style="font-weight: bold; font-size: 1.1em; color: var(--text-color);">🗂️ Organizar em Conjuntos:</span>
             
-            <select id="ia-conjunto-select" onchange="toggleNovoConjuntoInput()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none;">
+            <select id="ia-conjunto-select" onchange="mudarConjuntoAssociacao()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none;">
                 <!-- Preenchido via JS -->
             </select>
             
@@ -91,7 +93,12 @@
         </div>
     </div>
 
-    <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo..." onkeyup="aplicarFiltros()">
+    <div style="display: flex; gap: 15px; max-width: 500px; margin: 0 auto 20px; align-items: center; justify-content: center; width: 100%;">
+        <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo..." onkeyup="aplicarFiltros()" style="margin: 0; flex: 2; width: auto; max-width: none;">
+        <select id="filtro-conjunto-select" onchange="mudarFiltroConjunto()" style="padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none; flex: 1; min-width: 150px; box-sizing: border-box;">
+            <option value="Todos">Todos os Conjuntos</option>
+        </select>
+    </div>
     
     <div class="controls" id="botoes-filtro">
         <button onclick="mudarCategoria('Todos')" class="active">Todos</button>
@@ -122,7 +129,28 @@
             localStorage.setItem('tema', isDark ? 'light' : 'dark');
         }
 
-        // NOVO: Variáveis de estado para a paginação e conjuntos
+        // NOVO: Funções utilitárias para lidar com tags de conjuntos no campo 'notas'
+        function extrairConjuntos(notas) {
+            if (!notas) return [];
+            const match = notas.match(/\[Conjuntos:\s*([^\]]+)\]/);
+            if (!match) return [];
+            return match[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
+        }
+
+        function removerTagConjuntos(notas) {
+            if (!notas) return '';
+            return notas.replace(/\s*\[Conjuntos:\s*([^\]]+)\]/, '').trim();
+        }
+
+        function atualizarNotasComConjuntos(notasLimpa, conjuntos) {
+            if (conjuntos.length === 0) {
+                return notasLimpa;
+            }
+            const tag = `[Conjuntos: ${conjuntos.join(', ')}]`;
+            return notasLimpa ? `${notasLimpa}\n${tag}` : tag;
+        }
+
+        // Variáveis de estado para a paginação e conjuntos
         let filtroAtual = 'Todos';
         let dadosFiltrados = [];
         let dadosCombinados = [];
@@ -130,7 +158,8 @@
         const itemsPerPage = 12;
 
         let modoAssociacaoAtivo = false;
-        let categoriasDisponiveis = ['Kanji', 'Partícula', 'Verbo', 'Demonstrativo', 'Vocabulário'];
+        let tiposDisponiveis = ['Kanji', 'Partícula', 'Verbo', 'Demonstrativo', 'Vocabulário'];
+        let conjuntosDisponiveis = [];
 
         async function carregarDados() {
             try {
@@ -156,13 +185,12 @@
                 const dadosDbFiltrados = dadosDb.filter(d => d && d.item && d.categoria !== 'Texto' && !(d.categoria && d.categoria.startsWith('Frase:')));
 
                 // Evitamos duplicados com base na propriedade 'item' (palavra em japonês)
-                // Se o item base existe na DB, nós preferimos o da DB (pois pode ter tido a categoria atualizada!)
+                // Se o item base existe na DB, nós preferimos o da DB (pois pode ter tido a categoria ou notas atualizadas!)
                 const itensDb = new Map(dadosDbFiltrados.map(d => [d.item, d]));
                 
                 const dadosRevisaoAtualizados = dadosRevisao.map(localItem => {
                     if (itensDb.has(localItem.item)) {
                         const dbItem = itensDb.get(localItem.item);
-                        // Removemos do map para que não seja adicionado novamente depois
                         itensDb.delete(localItem.item);
                         return dbItem;
                     }
@@ -171,14 +199,20 @@
 
                 dadosCombinados = [...dadosRevisaoAtualizados, ...itensDb.values()];
 
-                // Atualiza a lista de categorias disponíveis
-                const sets = new Set(['Kanji', 'Partícula', 'Verbo', 'Demonstrativo', 'Vocabulário']);
+                // Descobrir tipos gramaticais e conjuntos de forma separada
+                const tiposSet = new Set(['Kanji', 'Partícula', 'Verbo', 'Demonstrativo', 'Vocabulário']);
+                const conjuntosSet = new Set();
+
                 dadosCombinados.forEach(d => {
                     if (d.categoria && d.categoria !== 'Texto' && !d.categoria.startsWith('Frase:')) {
-                        sets.add(d.categoria);
+                        tiposSet.add(d.categoria);
                     }
+                    const conjuntos = extrairConjuntos(d.notas);
+                    conjuntos.forEach(c => conjuntosSet.add(c));
                 });
-                categoriasDisponiveis = Array.from(sets);
+
+                tiposDisponiveis = Array.from(tiposSet);
+                conjuntosDisponiveis = Array.from(conjuntosSet);
 
                 atualizarSeletoresDeConjunto();
                 atualizarBotoesFiltro();
@@ -186,6 +220,14 @@
             } catch (e) {
                 console.error("Erro ao buscar dados do banco, usando dados locais.", e);
                 dadosCombinados = [...dadosRevisao];
+                
+                const conjuntosSet = new Set();
+                dadosCombinados.forEach(d => {
+                    const conjuntos = extrairConjuntos(d.notas);
+                    conjuntos.forEach(c => conjuntosSet.add(c));
+                });
+                conjuntosDisponiveis = Array.from(conjuntosSet);
+                
                 atualizarSeletoresDeConjunto();
                 atualizarBotoesFiltro();
             }
@@ -195,27 +237,42 @@
             const select = document.getElementById('ia-conjunto-select');
             const currentVal = select.value;
             
-            select.innerHTML = categoriasDisponiveis.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            select.innerHTML = conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
             select.innerHTML += `<option value="novo">Criar Novo Conjunto...</option>`;
 
-            if (categoriasDisponiveis.includes(currentVal)) {
+            if (conjuntosDisponiveis.includes(currentVal)) {
                 select.value = currentVal;
+            } else if (conjuntosDisponiveis.length > 0) {
+                select.value = conjuntosDisponiveis[0];
             } else {
-                select.value = 'Vocabulário';
+                select.value = 'novo';
+            }
+
+            // Atualiza também o filtro ao lado da busca
+            const filtroSelect = document.getElementById('filtro-conjunto-select');
+            const currentFiltroVal = filtroSelect.value;
+            
+            filtroSelect.innerHTML = `<option value="Todos">Todos os Conjuntos</option>` + 
+                conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
+                
+            if (currentFiltroVal === 'Todos' || conjuntosDisponiveis.includes(currentFiltroVal)) {
+                filtroSelect.value = currentFiltroVal;
+            } else {
+                filtroSelect.value = 'Todos';
             }
         }
 
         function atualizarBotoesFiltro() {
             const container = document.getElementById('botoes-filtro');
             container.innerHTML = `<button onclick="mudarCategoria('Todos')" class="${filtroAtual === 'Todos' ? 'active' : ''}">Todos</button>` +
-                categoriasDisponiveis.map(cat => {
-                    let label = cat;
-                    if (cat === 'Kanji') label = 'Kanjis';
-                    if (cat === 'Partícula') label = 'Partículas';
-                    if (cat === 'Verbo') label = 'Verbos';
-                    if (cat === 'Demonstrativo') label = 'Demonstrativos';
-                    if (cat === 'Vocabulário') label = 'Vocabulário';
-                    return `<button onclick="mudarCategoria('${cat}')" class="${filtroAtual === cat ? 'active' : ''}">${label}</button>`;
+                tiposDisponiveis.map(tipo => {
+                    let label = tipo;
+                    if (tipo === 'Kanji') label = 'Kanjis';
+                    if (tipo === 'Partícula') label = 'Partículas';
+                    if (tipo === 'Verbo') label = 'Verbos';
+                    if (tipo === 'Demonstrativo') label = 'Demonstrativos';
+                    if (tipo === 'Vocabulário') label = 'Vocabulário';
+                    return `<button onclick="mudarCategoria('${tipo}')" class="${filtroAtual === tipo ? 'active' : ''}">${label}</button>`;
                 }).join('');
         }
 
@@ -227,12 +284,11 @@
             if (modoAssociacaoAtivo) {
                 label.textContent = "Modo Associação ATIVO 🟢";
                 label.style.color = "#27ae60";
-                document.querySelectorAll('.card').forEach(c => c.classList.add('associando'));
             } else {
                 label.textContent = "Modo Associação Desativado";
                 label.style.color = "gray";
-                document.querySelectorAll('.card').forEach(c => c.classList.remove('associando'));
             }
+            renderizarPagina();
         }
 
         function toggleNovoConjuntoInput() {
@@ -244,6 +300,17 @@
             } else {
                 divNovo.style.display = 'none';
             }
+        }
+
+        function mudarConjuntoAssociacao() {
+            toggleNovoConjuntoInput();
+            if (modoAssociacaoAtivo) {
+                renderizarPagina();
+            }
+        }
+
+        function mudarFiltroConjunto() {
+            aplicarFiltros();
         }
 
         function criarNovoConjunto() {
@@ -259,15 +326,14 @@
                 return;
             }
 
-            if (!categoriasDisponiveis.includes(nome)) {
-                categoriasDisponiveis.push(nome);
+            if (!conjuntosDisponiveis.includes(nome)) {
+                conjuntosDisponiveis.push(nome);
                 atualizarSeletoresDeConjunto();
-                atualizarBotoesFiltro();
             }
             
             const select = document.getElementById('ia-conjunto-select');
             select.value = nome;
-            toggleNovoConjuntoInput();
+            mudarConjuntoAssociacao();
             nomeInput.value = '';
             
             const chk = document.getElementById('modo-associacao-chk');
@@ -290,6 +356,17 @@
                 
                 try {
                     let idDoTermo = termoObj.id;
+                    const conjuntosAtuais = extrairConjuntos(termoObj.notas || '');
+                    let novosConjuntos = [...conjuntosAtuais];
+                    
+                    if (novosConjuntos.includes(conjuntoSelecionado)) {
+                        novosConjuntos = novosConjuntos.filter(c => c !== conjuntoSelecionado);
+                    } else {
+                        novosConjuntos.push(conjuntoSelecionado);
+                    }
+                    
+                    const notasLimpa = removerTagConjuntos(termoObj.notas || '');
+                    const novasNotas = atualizarNotasComConjuntos(notasLimpa, novosConjuntos);
                     
                     if (idDoTermo) {
                         const response = await fetch(`/api/jisho?acao=atualizar&id=${idDoTermo}`, {
@@ -298,7 +375,7 @@
                                 "Authorization": tokenDeAcesso,
                                 "Content-Type": "application/json"
                             },
-                            body: JSON.stringify({ categoria: conjuntoSelecionado })
+                            body: JSON.stringify({ notas: novasNotas })
                         });
                         if (!response.ok) throw new Error();
                     } else {
@@ -306,8 +383,8 @@
                             item: termoObj.item,
                             leitura: termoObj.leitura,
                             significado: termoObj.significado,
-                            categoria: conjuntoSelecionado,
-                            notas: termoObj.notas || 'Termo base associado.',
+                            categoria: termoObj.categoria,
+                            notas: novasNotas,
                             user_id: idDoUsuarioLogado
                         };
                         
@@ -326,19 +403,37 @@
 
                     const index = dadosCombinados.findIndex(d => d.item === termoObj.item);
                     if (index !== -1) {
-                        dadosCombinados[index].categoria = conjuntoSelecionado;
+                        dadosCombinados[index].notas = novasNotas;
                         if (idDoTermo) dadosCombinados[index].id = idDoTermo;
-                        termoObj.categoria = conjuntoSelecionado;
+                        termoObj.notas = novasNotas;
                         termoObj.id = idDoTermo;
                     }
 
+                    // Recalcular conjuntos disponíveis mantendo o selecionado
+                    const setsEncontrados = new Set();
+                    dadosCombinados.forEach(d => {
+                        const conjuntos = extrairConjuntos(d.notas);
+                        conjuntos.forEach(c => setsEncontrados.add(c));
+                    });
+                    setsEncontrados.add(conjuntoSelecionado);
+                    conjuntosDisponiveis = Array.from(setsEncontrados);
+                    atualizarSeletoresDeConjunto();
+
                     elementoCard.style.opacity = '1';
-                    elementoCard.querySelector('.card-categoria-label').textContent = conjuntoSelecionado;
                     
-                    elementoCard.classList.add('associado-sucesso');
-                    setTimeout(() => {
-                        elementoCard.classList.remove('associado-sucesso');
-                    }, 600);
+                    // Re-renderizar página atual para atualizar badges e estados
+                    renderizarPagina();
+                    
+                    // Animar o card atualizado
+                    const newCardElement = Array.from(document.querySelectorAll('.card')).find(c => 
+                        c.querySelector('.item-title')?.textContent === termoObj.item
+                    );
+                    if (newCardElement) {
+                        newCardElement.classList.add('associado-sucesso');
+                        setTimeout(() => {
+                            newCardElement.classList.remove('associado-sucesso');
+                        }, 600);
+                    }
 
                 } catch (e) {
                     console.error("Falha ao associar termo", e);
@@ -361,10 +456,29 @@
 
         function aplicarFiltros() {
             const texto = document.getElementById('searchInput').value.toLowerCase();
-            dadosFiltrados = dadosCombinados.filter(d => 
-                (filtroAtual === 'Todos' || d.categoria === filtroAtual) &&
-                (d.item.toLowerCase().includes(texto) || d.leitura.toLowerCase().includes(texto) || d.significado.toLowerCase().includes(texto))
-            );
+            const filtroConjunto = document.getElementById('filtro-conjunto-select').value;
+            
+            dadosFiltrados = dadosCombinados.filter(d => {
+                // 1. Filtro de Conjunto
+                let pertenceAoConjunto = true;
+                if (filtroConjunto !== 'Todos') {
+                    const conjuntosDoTermo = extrairConjuntos(d.notas);
+                    pertenceAoConjunto = conjuntosDoTermo.includes(filtroConjunto);
+                }
+                
+                // 2. Filtro de Categoria/Tipo (Kanji, Verbo, etc.)
+                let pertenceACategoria = true;
+                if (filtroAtual !== 'Todos') {
+                    pertenceACategoria = (d.categoria === filtroAtual);
+                }
+                
+                // 3. Filtro de texto de busca
+                const textoMatch = d.item.toLowerCase().includes(texto) || 
+                                   d.leitura.toLowerCase().includes(texto) || 
+                                   d.significado.toLowerCase().includes(texto);
+                                   
+                return pertenceAoConjunto && pertenceACategoria && textoMatch;
+            });
             currentPage = 1;
             renderizarPagina();
         }
@@ -407,18 +521,46 @@
                 return;
             }
 
+            const conjuntoSelecionado = document.getElementById('ia-conjunto-select')?.value || '';
+
             container.innerHTML = dados.map(d => {
                 const termoJson = JSON.stringify(d).replace(/"/g, '&quot;');
+                const conjuntosDoTermo = extrairConjuntos(d.notas);
+                
+                // Determina se o card pertence ao conjunto ativo
+                const estaNoConjuntoSelecionado = conjuntoSelecionado && conjuntosDoTermo.includes(conjuntoSelecionado);
+                
+                // Classes de estilo
+                let classes = 'card';
+                if (modoAssociacaoAtivo) {
+                    classes += ' associando';
+                    if (estaNoConjuntoSelecionado) {
+                        classes += ' no-conjunto';
+                    }
+                }
+
+                // Limpa as notas para exibição
+                const notasLimpa = removerTagConjuntos(d.notas || '');
+
+                // Gera os badges dos conjuntos
+                const badgesHtml = conjuntosDoTermo.map(conj => 
+                    `<span class="card-conjunto-badge">${conj}</span>`
+                ).join(' ');
+
                 return `
-                    <div class="card ${modoAssociacaoAtivo ? 'associando' : ''}" onclick="gerenciarCliqueCard(this, ${termoJson}, event)" style="cursor: pointer;">
-                        <div style="display:flex; justify-content:space-between; font-size:0.8em; color:gray; pointer-events: none;">
-                            <span class="card-categoria-label">${d.categoria}</span><span>${d.leitura}</span>
+                    <div class="${classes}" onclick="gerenciarCliqueCard(this, ${termoJson}, event)" style="cursor: pointer;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85em; color:gray; pointer-events: none; margin-bottom: 8px; gap: 5px; flex-wrap: wrap;">
+                            <div style="display:flex; gap: 4px; align-items:center; flex-wrap: wrap;">
+                                <span class="card-categoria-label" style="background: var(--secondary-color); color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.9em;">${d.categoria}</span>
+                                ${badgesHtml}
+                            </div>
+                            <span>${d.leitura}</span>
                         </div>
                         <p class="item-title" style="pointer-events: none;">${d.item}</p>
                         <details onclick="event.stopPropagation();">
                             <summary>Tradução e Notas</summary>
                             <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
-                            <p style="font-size:0.9em; opacity:0.8;">${d.notas}</p>
+                            <p style="font-size:0.9em; opacity:0.8;">${notasLimpa}</p>
                             <button style="margin-top: 10px; width: 100%; font-size: 0.9em; background-color: var(--secondary-color);" onclick="event.stopPropagation(); window.TutorIA && window.TutorIA.perguntar('Explique de forma bem resumida e direta a palavra: ${d.item} (${d.leitura})')">🤖 Perguntar ao Sensei IA</button>
                         </details>
                     </div>
