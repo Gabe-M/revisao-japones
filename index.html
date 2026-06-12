@@ -194,6 +194,7 @@
                         <summary>Tradução e Notas</summary>
                         <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
                         <p style="font-size:0.9em; opacity:0.8;">${d.notas}</p>
+                        <button style="margin-top: 10px; width: 100%; font-size: 0.9em; background-color: var(--secondary-color);" onclick="event.stopPropagation(); window.TutorIA && window.TutorIA.perguntar('Explique os detalhes, usos e nuances da palavra: ${d.item} (${d.leitura}).')">🤖 Perguntar ao Sensei IA</button>
                     </details>
                 </div>
             `).join('');
@@ -221,5 +222,6 @@
             }
         });
     </script>
+    <script src="tutor-ia.js"></script>
 </body>
 </html>

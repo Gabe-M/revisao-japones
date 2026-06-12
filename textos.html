@@ -429,6 +429,7 @@
                 <p class="dic-leitura">${termo.leitura}</p>
                 <p class="dic-significado">${termo.significado}</p>
                 <div class="dic-notas"><strong>Notas:</strong><br>${termo.notas || 'Nenhuma nota registrada.'}</div>
+                <button class="btn-processar" style="background-color: var(--primary-color); margin-top: 15px;" onclick="window.TutorIA && window.TutorIA.perguntar('Explique em detalhes o termo japonês: ${termo.item} (${termo.leitura || ''}). Como usá-lo e exemplos?')">🤖 Perguntar ao Sensei IA</button>
             `;
         }
 
@@ -454,6 +455,7 @@
                         <p class="dic-leitura">${leitura}</p>
                         <p class="dic-significado" style="color:var(--unlearned-color); font-size:1.2em;">${significados}</p>
                         <button class="btn-salvar-db" onclick="salvarPalavraDinamica('${termoString}', '${leitura}', '${significados.replace(/'/g, "\\'")}')">📥 Salvar no meu Banco</button>
+                        <button class="btn-processar" style="background-color: var(--primary-color); margin-top: 10px;" onclick="window.TutorIA && window.TutorIA.perguntar('Explique a gramática e os possíveis significados de: ${termoString} (${leitura}).')">🤖 Perguntar ao Sensei IA</button>
                     `;
                 } else {
                     throw new Error();
@@ -593,6 +595,7 @@
 
         window.addEventListener('DOMContentLoaded', carregarBancoDinamico);
     </script>
+    <script src="tutor-ia.js"></script>
 </body>
 
 </html>
