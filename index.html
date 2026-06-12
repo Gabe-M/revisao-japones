@@ -127,11 +127,22 @@
         }
 
         // NOVO: Funções utilitárias para lidar com tags de conjuntos no campo 'notas'
-        function extrairConjuntos(notas) {
-            if (!notas) return [];
-            const match = notas.match(/\[Conjuntos:\s*([^\]]+)\]/);
-            if (!match) return [];
-            return match[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
+        function extrairConjuntos(notas, itemJapones) {
+            let conjuntos = [];
+            if (notas) {
+                const match = notas.match(/\[Conjuntos:\s*([^\]]+)\]/);
+                if (match) {
+                    conjuntos = match[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
+                }
+            }
+            // Se o termo for um dos termos básicos (dadosRevisao) e 'Geral' não estiver, adicionamos
+            if (itemJapones && typeof dadosRevisao !== 'undefined') {
+                const ehBasico = dadosRevisao.some(localItem => localItem.item === itemJapones);
+                if (ehBasico && !conjuntos.includes('Geral')) {
+                    conjuntos.unshift('Geral');
+                }
+            }
+            return conjuntos;
         }
 
         function removerTagConjuntos(notas) {
@@ -198,13 +209,13 @@
 
                 // Descobrir tipos gramaticais e conjuntos de forma separada
                 const tiposSet = new Set(['Kanji', 'Partícula', 'Verbo', 'Demonstrativo', 'Vocabulário']);
-                const conjuntosSet = new Set();
+                const conjuntosSet = new Set(['Geral']); // Sempre inicia com Geral
 
                 dadosCombinados.forEach(d => {
                     if (d.categoria && d.categoria !== 'Texto' && !d.categoria.startsWith('Frase:')) {
                         tiposSet.add(d.categoria);
                     }
-                    const conjuntos = extrairConjuntos(d.notas);
+                    const conjuntos = extrairConjuntos(d.notas, d.item);
                     conjuntos.forEach(c => conjuntosSet.add(c));
                 });
 
@@ -218,9 +229,9 @@
                 console.error("Erro ao buscar dados do banco, usando dados locais.", e);
                 dadosCombinados = [...dadosRevisao];
                 
-                const conjuntosSet = new Set();
+                const conjuntosSet = new Set(['Geral']);
                 dadosCombinados.forEach(d => {
-                    const conjuntos = extrairConjuntos(d.notas);
+                    const conjuntos = extrairConjuntos(d.notas, d.item);
                     conjuntos.forEach(c => conjuntosSet.add(c));
                 });
                 conjuntosDisponiveis = Array.from(conjuntosSet);
@@ -234,17 +245,20 @@
             const select = document.getElementById('ia-conjunto-select');
             const currentVal = select.value;
             
+            // Garante que o conjunto 'Geral' sempre esteja disponível no seletor
+            if (!conjuntosDisponiveis.includes('Geral')) {
+                conjuntosDisponiveis.unshift('Geral');
+            }
+
             let html = `<option value="Todos">Todos os Conjuntos</option>`;
             html += conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
             html += `<option value="novo">Criar Novo Conjunto...</option>`;
             select.innerHTML = html;
 
-            if (currentVal === 'Todos' || conjuntosDisponiveis.includes(currentVal)) {
+            if (currentVal) {
                 select.value = currentVal;
-            } else if (currentVal === 'novo') {
-                select.value = 'novo';
             } else {
-                select.value = 'Todos';
+                select.value = 'Geral'; // Seleciona o conjunto base 'Geral' por padrão
             }
 
             // Garante que o campo de input de novo conjunto apareça se a opção for "novo"
@@ -360,7 +374,7 @@
                 
                 try {
                     let idDoTermo = termoObj.id;
-                    const conjuntosAtuais = extrairConjuntos(termoObj.notas || '');
+                    const conjuntosAtuais = extrairConjuntos(termoObj.notas || '', termoObj.item);
                     let novosConjuntos = [...conjuntosAtuais];
                     
                     if (novosConjuntos.includes(conjuntoSelecionado)) {
@@ -414,9 +428,9 @@
                     }
 
                     // Recalcular conjuntos disponíveis mantendo o selecionado
-                    const setsEncontrados = new Set();
+                    const setsEncontrados = new Set(['Geral']);
                     dadosCombinados.forEach(d => {
-                        const conjuntos = extrairConjuntos(d.notas);
+                        const conjuntos = extrairConjuntos(d.notas, d.item);
                         conjuntos.forEach(c => setsEncontrados.add(c));
                     });
                     setsEncontrados.add(conjuntoSelecionado);
@@ -460,13 +474,13 @@
 
         function aplicarFiltros() {
             const texto = document.getElementById('searchInput').value.toLowerCase();
-            const filtroConjunto = document.getElementById('filtro-conjunto-select').value;
+            const filtroConjunto = document.getElementById('ia-conjunto-select').value;
             
             dadosFiltrados = dadosCombinados.filter(d => {
-                // 1. Filtro de Conjunto
+                // 1. Filtro de Conjunto (apenas se o modo de associação estiver desativado)
                 let pertenceAoConjunto = true;
-                if (filtroConjunto !== 'Todos') {
-                    const conjuntosDoTermo = extrairConjuntos(d.notas);
+                if (!modoAssociacaoAtivo && filtroConjunto !== 'Todos' && filtroConjunto !== 'novo') {
+                    const conjuntosDoTermo = extrairConjuntos(d.notas, d.item);
                     pertenceAoConjunto = conjuntosDoTermo.includes(filtroConjunto);
                 }
                 
@@ -529,7 +543,7 @@
 
             container.innerHTML = dados.map(d => {
                 const termoJson = JSON.stringify(d).replace(/"/g, '&quot;');
-                const conjuntosDoTermo = extrairConjuntos(d.notas);
+                const conjuntosDoTermo = extrairConjuntos(d.notas, d.item);
                 
                 // Determina se o card pertence ao conjunto ativo
                 const estaNoConjuntoSelecionado = conjuntoSelecionado && conjuntosDoTermo.includes(conjuntoSelecionado);
