@@ -90,8 +90,8 @@
     </div>
 
     <div class="game-container">
-        <!-- Evento de clique unico removido daqui. Adicionado ondblclick -->
-        <div class="flashcard" id="flashcard" ondblclick="gerenciarAcao()">
+        <!-- Evento de clique único para revelar e avançar -->
+        <div class="flashcard" id="flashcard" onclick="gerenciarAcao()">
             <span class="categoria-badge" id="card-categoria">Categoria</span>
             <p class="termo-gigante" id="card-termo">?</p>
             
@@ -103,7 +103,7 @@
         </div>
 
         <button class="btn-proximo" id="btn-proximo" onclick="sortearTermo()">Próximo Termo ➔</button>
-        <p class="instrucoes">Dica: Use a <b>Barra de Espaço</b> ou <b>Clique Duplo</b> no card para revelar e avançar.</p>
+        <p class="instrucoes">Dica: Use a <b>Barra de Espaço</b> ou <b>Clique</b> no card para revelar e avançar.</p>
     </div>
 
     <script>
