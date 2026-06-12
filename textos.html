@@ -14,6 +14,8 @@
             --border-color: #dddddd;
             --learned-color: #2980b9;
             --unlearned-color: #c0392b;
+            --nav-bg: #2c3e50;
+            --nav-active: #e67e22;
         }
 
         [data-theme="dark"] {
@@ -24,6 +26,8 @@
             --border-color: #333333;
             --learned-color: #3498db;
             --unlearned-color: #e74c3c;
+            --nav-bg: #34495e;
+            --nav-active: #e67e22;
         }
 
         body {
@@ -46,14 +50,14 @@
         .nav-menu a {
             padding: 10px 20px;
             text-decoration: none;
-            background: #2c3e50;
+            background: var(--nav-bg);
             color: white;
             border-radius: 5px;
             font-weight: bold;
         }
 
         .nav-menu a.ativo {
-            background: var(--learned-color);
+            background: var(--nav-active);
         }
 
         .header-container {
@@ -418,9 +422,11 @@
 
             try {
                 const response = await fetch(`/api/jisho?termo=${encodeURIComponent(termoString)}`);
+                if (!response.ok) throw new Error();
+
                 const json = await response.json();
 
-                if (json.data && json.data.length > 0) {
+                if (json && json.data && json.data.length > 0) {
                     const resultado = json.data[0];
                     const leitura = resultado.japanese[0].reading || termoString;
                     const significados = resultado.senses[0].english_definitions.slice(0, 3).join(', ');
