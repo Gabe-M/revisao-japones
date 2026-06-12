@@ -1,55 +1,259 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Revisão de Japonês - Leitura de Textos</title>
     <style>
         :root {
-            --bg-color: #f4f4f9; --text-color: #333; --card-bg: #ffffff;
-            --primary-color: #2c3e50; --border-color: #dddddd; 
-            --learned-color: #2980b9; --unlearned-color: #c0392b;
+            --bg-color: #f4f4f9;
+            --text-color: #333;
+            --card-bg: #ffffff;
+            --primary-color: #2c3e50;
+            --border-color: #dddddd;
+            --learned-color: #2980b9;
+            --unlearned-color: #c0392b;
         }
+
         [data-theme="dark"] {
-            --bg-color: #121212; --text-color: #e0e0e0; --card-bg: #1e1e1e;
-            --primary-color: #e0e0e0; --border-color: #333333; 
-            --learned-color: #3498db; --unlearned-color: #e74c3c;
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --primary-color: #e0e0e0;
+            --border-color: #333333;
+            --learned-color: #3498db;
+            --unlearned-color: #e74c3c;
         }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: 0.3s; }
-        .nav-menu { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-        .nav-menu a { padding: 10px 20px; text-decoration: none; background: #2c3e50; color: white; border-radius: 5px; font-weight: bold; }
-        .nav-menu a.ativo { background: var(--learned-color); }
-        .header-container { display: flex; justify-content: space-between; max-width: 1200px; margin: 0 auto 20px; }
-        .layout-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; max-width: 1200px; margin: 0 auto; align-items: start; }
-        @media (max-width: 800px) { .layout-grid { grid-template-columns: 1fr; } }
-        .painel { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        textarea { width: 100%; height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); font-family: sans-serif; font-size: 1em; resize: vertical; box-sizing: border-box; }
-        .btn-processar { background-color: #27ae60; color: white; border: none; padding: 10px 20px; font-size: 1em; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px; }
-        .btn-processar:hover { background-color: #219653; }
-        .area-leitura { margin-top: 20px; line-height: 2; font-size: 1.4em; border-top: 1px solid var(--border-color); padding-top: 20px; }
-        .linha-texto { margin: 0 0 10px 0; border-bottom: 1px dashed var(--border-color); padding-bottom: 5px; }
-        .termo-destaque { font-weight: bold; cursor: pointer; padding: 0 2px; transition: 0.2s; border-radius: 3px; }
-        .termo-destaque.aprendido { color: var(--primary-color); border-bottom: 2px solid var(--learned-color); background-color: rgba(41, 128, 185, 0.1); }
-        .termo-destaque.aprendido:hover, .termo-destaque.aprendido.ativo { background-color: var(--learned-color); color: white; border-color: transparent; }
-        .termo-destaque.desconhecido { color: var(--primary-color); border-bottom: 2px solid var(--unlearned-color); background-color: rgba(192, 57, 43, 0.1); }
-        .termo-destaque.desconhecido:hover, .termo-destaque.desconhecido.ativo { background-color: var(--unlearned-color); color: white; border-color: transparent; }
-        .painel-dicionario { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .dic-vazio { text-align: center; color: gray; font-style: italic; margin-top: 20px; }
-        .dic-categoria { font-size: 0.8em; font-weight: bold; color: gray; text-transform: uppercase; }
-        .dic-termo { font-size: 3em; margin: 0; text-align: center; }
-        .dic-leitura { font-size: 1.2em; color: gray; font-family: monospace; text-align: center; }
-        .dic-significado { font-size: 1.5em; color: var(--learned-color); font-weight: bold; text-align: center; margin: 10px 0; }
-        .dic-notas { font-size: 0.9em; line-height: 1.5; padding-top: 10px; border-top: 1px solid var(--border-color); }
-        .btn-ver-card { background-color: var(--learned-color); color: white; border: none; padding: 8px; border-radius: 5px; cursor: pointer; font-weight: bold; text-align: center; margin-top: 10px; text-decoration: none; display: block; }
-        .btn-ver-card.externo { background-color: var(--unlearned-color); }
-        .btn-salvar-db { background-color: #27ae60; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: 0.3s;
+        }
+
+        .nav-menu {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav-menu a {
+            padding: 10px 20px;
+            text-decoration: none;
+            background: #2c3e50;
+            color: white;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .nav-menu a.ativo {
+            background: var(--learned-color);
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto 20px;
+        }
+
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: start;
+        }
+
+        @media (max-width: 800px) {
+            .layout-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .painel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: sans-serif;
+            font-size: 1em;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        .btn-processar {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-processar:hover {
+            background-color: #219653;
+        }
+
+        .area-leitura {
+            margin-top: 20px;
+            line-height: 2;
+            font-size: 1.4em;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+
+        .linha-texto {
+            margin: 0 0 10px 0;
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        .termo-destaque {
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 2px;
+            transition: 0.2s;
+            border-radius: 3px;
+        }
+
+        .termo-destaque.aprendido {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--learned-color);
+            background-color: rgba(41, 128, 185, 0.1);
+        }
+
+        .termo-destaque.aprendido:hover,
+        .termo-destaque.aprendido.ativo {
+            background-color: var(--learned-color);
+            color: white;
+            border-color: transparent;
+        }
+
+        .termo-destaque.desconhecido {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--unlearned-color);
+            background-color: rgba(192, 57, 43, 0.1);
+        }
+
+        .termo-destaque.desconhecido:hover,
+        .termo-destaque.desconhecido.ativo {
+            background-color: var(--unlearned-color);
+            color: white;
+            border-color: transparent;
+        }
+
+        .painel-dicionario {
+            position: sticky;
+            top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .dic-vazio {
+            text-align: center;
+            color: gray;
+            font-style: italic;
+            margin-top: 20px;
+        }
+
+        .dic-categoria {
+            font-size: 0.8em;
+            font-weight: bold;
+            color: gray;
+            text-transform: uppercase;
+        }
+
+        .dic-termo {
+            font-size: 3em;
+            margin: 0;
+            text-align: center;
+        }
+
+        .dic-leitura {
+            font-size: 1.2em;
+            color: gray;
+            font-family: monospace;
+            text-align: center;
+        }
+
+        .dic-significado {
+            font-size: 1.5em;
+            color: var(--learned-color);
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .dic-notas {
+            font-size: 0.9em;
+            line-height: 1.5;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-ver-card {
+            background-color: var(--learned-color);
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .btn-ver-card.externo {
+            background-color: var(--unlearned-color);
+        }
+
+        .btn-salvar-db {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 10px;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="header-container">
         <h1>Módulo 4: Leitura de Textos</h1>
-        <button onclick="toggleTheme()" style="padding:5px 10px; cursor:pointer; background:#2c3e50; color:white; border:none; border-radius:5px; font-weight:bold;">🌙 Tema</button>
+        <button onclick="toggleTheme()"
+            style="padding:5px 10px; cursor:pointer; background:#2c3e50; color:white; border:none; border-radius:5px; font-weight:bold;">🌙
+            Tema</button>
     </div>
 
     <div class="nav-menu">
@@ -84,7 +288,7 @@
         const sessao = JSON.parse(sessaoLocalStorage);
         const tokenDeAcesso = `Bearer ${sessao.access_token}`;
         const idDoUsuarioLogado = sessao.user.id;
-        
+
         if (localStorage.getItem('tema') === 'dark') document.body.setAttribute('data-theme', 'dark');
         function toggleTheme() {
             const isDark = document.body.getAttribute('data-theme') === 'dark';
@@ -102,16 +306,23 @@
                     headers: { "Authorization": tokenDeAcesso }
                 });
                 const resultado = await response.json();
-                
-                // BLINDAGEM: Garante que só aceitará se for uma lista (Array)
+
+                // TRAVA AUTOMÁTICA DE JWT EXPIRADO:
+                if (resultado && resultado.code === "PGRST303") {
+                    console.warn("Sessão expirada. Redirecionando para o login...");
+                    localStorage.removeItem('supabase_session');
+                    window.location.href = "login.html";
+                    return;
+                }
+
                 if (Array.isArray(resultado)) {
                     bancoDadosDinamico = resultado;
                 } else {
                     console.error("O banco não retornou uma lista. Resposta recebida:", resultado);
-                    bancoDadosDinamico = []; // Evita o TypeError.forEach
+                    bancoDadosDinamico = [];
                 }
             } catch (e) {
-                console.error("Falha na requisição de dados persistentes:", e);
+                console.error("Falha ao carregar banco de dados persistente.", e);
                 bancoDadosDinamico = [];
             }
         }
@@ -119,7 +330,7 @@
         function analisarLinha(linha) {
             if (!linha.trim()) return '<br>';
             let matches = [];
-            
+
             bancoDadosDinamico.forEach(dado => {
                 if (dado && dado.item) { // Garante integridade do objeto
                     let index = linha.indexOf(dado.item);
@@ -208,12 +419,12 @@
             try {
                 const response = await fetch(`/api/jisho?termo=${encodeURIComponent(termoString)}`);
                 const json = await response.json();
-                
+
                 if (json.data && json.data.length > 0) {
                     const resultado = json.data[0];
                     const leitura = resultado.japanese[0].reading || termoString;
                     const significados = resultado.senses[0].english_definitions.slice(0, 3).join(', ');
-                    
+
                     painel.innerHTML = `
                         <span class="dic-categoria" style="color:var(--unlearned-color)">❌ Desconhecido</span>
                         <p class="dic-termo">${termoString}</p>
@@ -234,11 +445,11 @@
             botao.textContent = "💾 Salvando...";
             botao.disabled = true;
 
-            const novoTermo = { 
-                item, 
-                leitura, 
-                significado, 
-                categoria: 'Vocabulário', 
+            const novoTermo = {
+                item,
+                leitura,
+                significado,
+                categoria: 'Vocabulário',
                 notas: 'Adicionado via módulo de textos.',
                 user_id: idDoUsuarioLogado
             };
@@ -246,7 +457,7 @@
             try {
                 const response = await fetch('/api/jisho?acao=salvar', {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         "Authorization": tokenDeAcesso,
                         "Content-Type": "application/json"
                     },
@@ -275,4 +486,5 @@
         window.addEventListener('DOMContentLoaded', carregarBancoDinamico);
     </script>
 </body>
+
 </html>
