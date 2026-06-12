@@ -67,6 +67,29 @@
         .vocab-sugestao-item:hover {
             background-color: rgba(120, 120, 120, 0.1);
         }
+        
+        .conjunto-pill {
+            padding: 6px 14px;
+            border-radius: 20px;
+            background-color: var(--card-bg);
+            border: 1.5px solid var(--border-color);
+            color: var(--text-color);
+            font-weight: bold;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: 0.2s;
+            user-select: none;
+            display: inline-block;
+        }
+        .conjunto-pill:hover {
+            border-color: var(--highlight-color);
+            background-color: rgba(230, 126, 34, 0.05);
+        }
+        .conjunto-pill.ativo {
+            background-color: var(--highlight-color);
+            color: white;
+            border-color: var(--highlight-color);
+        }
     </style>
 </head>
 <body>
@@ -124,13 +147,12 @@
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-                <label style="font-weight: bold; font-size: 0.95em; color: var(--text-color);">🧠 Usar termos específicos do vocabulário (Opcional):</label>
-                <div style="position: relative; width: 100%;">
-                    <input type="text" id="ia-vocab-search" placeholder="Pesquise e selecione termos (ex: 私, 行く)..." oninput="buscarTermosVocab()" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); outline: none;">
-                    <div id="ia-vocab-sugestoes" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 5px; max-height: 200px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 8px rgba(0,0,0,0.15);"></div>
+                <label style="font-weight: bold; font-size: 0.95em; color: var(--text-color);">📁 Usar termos dos conjuntos selecionados (Múltipla Escolha):</label>
+                <div id="ia-conjuntos-pills" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;">
+                    <!-- Preenchido dinamicamente via JS -->
                 </div>
-                <div id="ia-termos-selecionados" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;">
-                    <span style="color: gray; font-size: 0.9em; font-style: italic;">Nenhum termo selecionado. O Sensei criará frases livres se não houver termos selecionados.</span>
+                <div id="ia-termos-selecionados-preview" style="font-size: 0.85em; opacity: 0.8; margin-top: 4px; color: gray; font-style: italic;">
+                    Nenhum conjunto selecionado. O Sensei criará frases livres.
                 </div>
             </div>
             
@@ -177,77 +199,72 @@
         let categoriasDeFrases = ['Todos', 'Frase']; // Lista dinâmica de categorias
         let frasesGeradasTemporarias = [];
         let termosDeVocabulario = [];
-        let termosSelecionadosParaGeracao = [];
+        let conjuntosDeVocabulario = [];
+        let conjuntosSelecionadosParaGeracao = [];
 
-        function buscarTermosVocab() {
-            const input = document.getElementById('ia-vocab-search');
-            const sugestoes = document.getElementById('ia-vocab-sugestoes');
-            const busca = input.value.trim().toLowerCase();
-
-            if (!busca) {
-                sugestoes.style.display = 'none';
-                sugestoes.innerHTML = '';
-                return;
+        function extrairConjuntosDeTermo(notas) {
+            let conjuntos = [];
+            if (notas) {
+                const match = notas.match(/\[Conjuntos:\s*([^\]]+)\]/);
+                if (match) {
+                    conjuntos = match[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
+                }
             }
-
-            const correspondentes = termosDeVocabulario.filter(t => 
-                (t.item.toLowerCase().includes(busca) || 
-                 t.leitura.toLowerCase().includes(busca) || 
-                 t.significado.toLowerCase().includes(busca)) &&
-                !termosSelecionadosParaGeracao.some(sel => sel.item === t.item)
-            ).slice(0, 8);
-
-            if (correspondentes.length === 0) {
-                sugestoes.innerHTML = `<div style="padding: 10px; color: gray; font-style: italic; text-align: center;">Nenhum termo encontrado</div>`;
-            } else {
-                sugestoes.innerHTML = correspondentes.map(t => `
-                    <div class="vocab-sugestao-item" onclick="selecionarTermoVocab('${t.item.replace(/'/g, "\\'")}', '${t.leitura.replace(/'/g, "\\'")}')">
-                        <span style="font-weight: bold; font-size: 1.1em;">${t.item} <span style="font-weight: normal; font-size: 0.8em; color: gray;">(${t.leitura})</span></span>
-                        <span style="color: var(--highlight-color); font-size: 0.85em; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t.significado}</span>
-                    </div>
-                `).join('');
+            if (!conjuntos.includes('Geral')) {
+                conjuntos.unshift('Geral');
             }
-            sugestoes.style.display = 'block';
+            return conjuntos;
         }
 
-        window.addEventListener('click', (e) => {
-            const sugestoes = document.getElementById('ia-vocab-sugestoes');
-            if (sugestoes && e.target.id !== 'ia-vocab-search') {
-                sugestoes.style.display = 'none';
-            }
-        });
-
-        function selecionarTermoVocab(item, leitura) {
-            const termo = termosDeVocabulario.find(t => t.item === item);
-            if (termo && !termosSelecionadosParaGeracao.some(sel => sel.item === item)) {
-                termosSelecionadosParaGeracao.push(termo);
-                atualizarChipsSelecionados();
-            }
-            const input = document.getElementById('ia-vocab-search');
-            input.value = '';
-            document.getElementById('ia-vocab-sugestoes').style.display = 'none';
-        }
-
-        function removerTermoChip(item) {
-            termosSelecionadosParaGeracao = termosSelecionadosParaGeracao.filter(t => t.item !== item);
-            atualizarChipsSelecionados();
-        }
-
-        function atualizarChipsSelecionados() {
-            const container = document.getElementById('ia-termos-selecionados');
+        function renderizarPillsConjuntos() {
+            const container = document.getElementById('ia-conjuntos-pills');
             if (!container) return;
-            
-            if (termosSelecionadosParaGeracao.length === 0) {
-                container.innerHTML = `<span style="color: gray; font-size: 0.9em; font-style: italic;">Nenhum termo selecionado. O Sensei criará frases livres se não houver termos selecionados.</span>`;
+
+            if (conjuntosDeVocabulario.length === 0) {
+                container.innerHTML = `<span style="color: gray; font-style: italic;">Nenhum conjunto de vocabulário encontrado.</span>`;
                 return;
             }
 
-            container.innerHTML = termosSelecionadosParaGeracao.map(t => `
-                <div style="display: flex; align-items: center; gap: 6px; background: var(--secondary-color); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold; user-select: none;">
-                    <span>${t.item} <span style="font-weight: normal; font-size: 0.8em; opacity: 0.8;">(${t.leitura})</span></span>
-                    <span onclick="removerTermoChip('${t.item.replace(/'/g, "\\'")}')" style="cursor: pointer; opacity: 0.7; font-weight: bold; margin-left: 4px; padding: 0 2px;">✕</span>
-                </div>
-            `).join('');
+            container.innerHTML = conjuntosDeVocabulario.map(conj => {
+                const ativo = conjuntosSelecionadosParaGeracao.includes(conj);
+                return `<div class="conjunto-pill ${ativo ? 'ativo' : ''}" onclick="toggleConjuntoSelecao('${conj.replace(/'/g, "\\'")}')">${conj}</div>`;
+            }).join('');
+        }
+
+        function toggleConjuntoSelecao(conjunto) {
+            const index = conjuntosSelecionadosParaGeracao.indexOf(conjunto);
+            if (index === -1) {
+                conjuntosSelecionadosParaGeracao.push(conjunto);
+            } else {
+                conjuntosSelecionadosParaGeracao.splice(index, 1);
+            }
+            
+            renderizarPillsConjuntos();
+            atualizarPreviewTermosSelecionados();
+        }
+
+        function obterTermosDosConjuntosSelecionados() {
+            if (conjuntosSelecionadosParaGeracao.length === 0) {
+                return [];
+            }
+            return termosDeVocabulario.filter(t => {
+                const sets = extrairConjuntosDeTermo(t.notas);
+                return conjuntosSelecionadosParaGeracao.some(sel => sets.includes(sel));
+            });
+        }
+
+        function atualizarPreviewTermosSelecionados() {
+            const container = document.getElementById('ia-termos-selecionados-preview');
+            if (!container) return;
+
+            const termos = obterTermosDosConjuntosSelecionados();
+            if (conjuntosSelecionadosParaGeracao.length === 0) {
+                container.textContent = 'Nenhum conjunto selecionado. O Sensei criará frases livres.';
+                container.style.color = 'gray';
+            } else {
+                container.textContent = `✓ ${termos.length} termo(s) do vocabulário selecionado(s) a partir de: ${conjuntosSelecionadosParaGeracao.join(', ')}.`;
+                container.style.color = 'var(--highlight-color)';
+            }
         }
 
         async function carregarFrasesDinamicas() {
@@ -293,6 +310,17 @@
                 const itensExistentesVocab = new Set(termosDb.map(d => d.item));
                 const baseRevisaoFiltrados = (typeof dadosRevisao !== 'undefined' ? dadosRevisao : []).filter(d => !itensExistentesVocab.has(d.item));
                 termosDeVocabulario = [...baseRevisaoFiltrados, ...termosDb];
+
+                // Descobrir conjuntos de vocabulário disponíveis
+                const conjuntosVocabSet = new Set(['Geral']);
+                termosDeVocabulario.forEach(t => {
+                    const conjuntos = extrairConjuntosDeTermo(t.notas);
+                    conjuntos.forEach(c => conjuntosVocabSet.add(c));
+                });
+                conjuntosDeVocabulario = Array.from(conjuntosVocabSet);
+
+                renderizarPillsConjuntos();
+                atualizarPreviewTermosSelecionados();
 
                 // Preencher seletores HTML
                 atualizarSeletoresDeCategoria();
@@ -374,8 +402,10 @@
 
         async function gerarFrasesIA() {
             const tema = document.getElementById('ia-tema').value.trim();
-            if (!tema && termosSelecionadosParaGeracao.length === 0) {
-                alert("Por favor, digite um tema ou selecione ao menos um termo do vocabulário.");
+            const termosSelecionados = obterTermosDosConjuntosSelecionados();
+
+            if (!tema && termosSelecionados.length === 0) {
+                alert("Por favor, digite um tema ou selecione ao menos um conjunto do vocabulário.");
                 return;
             }
 
@@ -411,9 +441,9 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
 - "significado": a tradução exata em português.
 - "notas": uma breve nota gramatical contendo a análise da frase e a identificação dos blocos/palavras utilizados nela no formato exato: "Blocos usados: [bloco1] + [bloco2] + ...". Exemplo: "Blocos usados: 私 + は + 学生 + です."`;
 
-                if (termosSelecionadosParaGeracao.length > 0) {
-                    const termosListaStr = termosSelecionadosParaGeracao.map(t => `"${t.item}" (${t.significado})`).join(', ');
-                    prompt += `\n\nREQUISITO CRÍTICO: As frases geradas devem conter e ser formadas obrigatoriamente usando os seguintes termos do vocabulário do usuário: ${termosListaStr}. Tente fazer com que cada frase incorpore os termos fornecidos de maneira natural e gramaticalmente correta, garantindo que pelo menos um dos termos seja utilizado em cada uma das frases geradas.`;
+                if (termosSelecionados.length > 0) {
+                    const termosListaStr = termosSelecionados.map(t => `"${t.item}" (${t.significado})`).join(', ');
+                    prompt += `\n\nREQUISITO CRÍTICO: As frases geradas devem ser compostas e formadas obrigatoriamente utilizando EXCLUSIVAMENTE os seguintes termos de vocabulário do usuário: ${termosListaStr}. O Sensei IA deve construir frases combinando esses termos selecionados com partículas, verbos de ligação e estruturas simples adequadas para manter as frases naturais e corretas, mas sem adicionar novas palavras que não estejam listadas.`;
                 }
 
                 prompt += `\n\nSiga o formato estrito JSON.`;
