@@ -134,9 +134,9 @@
                 }
 
                 if (Array.isArray(resultado)) {
-                    // Combinar com os dados estáticos base, evitando duplicatas
+                    // Combinar com os dados estáticos base, evitando duplicatas e ignorando textos longos
                     const itensExistentes = new Set(dadosRevisao.map(d => d.item));
-                    const dadosDbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item));
+                    const dadosDbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto');
                     dadosRevisao = [...dadosRevisao, ...dadosDbFiltrados];
                 }
 

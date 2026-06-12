@@ -270,8 +270,15 @@
     <div class="layout-grid">
         <div class="painel">
             <h3>Inserir Texto em Japonês</h3>
-            <textarea id="input-texto" placeholder="Cole aqui a letra de uma música..."></textarea>
-            <button class="btn-processar" onclick="processarTexto()">Processar Texto</button>
+            <input type="text" id="titulo-texto" placeholder="Nome do texto..." style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color);">
+            <textarea id="input-texto" placeholder="Cole aqui a letra de uma música..." maxlength="600" oninput="atualizarContador()"></textarea>
+            <div style="text-align: right; font-size: 0.8em; color: gray; margin-bottom: 10px;" id="char-counter">0/600</div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-processar" onclick="processarTexto()">Processar Texto</button>
+                <button class="btn-processar" style="background-color: var(--primary-color);" onclick="salvarTextoCompleto()">Salvar Texto</button>
+            </div>
+            
             <div class="area-leitura" id="output-texto"></div>
         </div>
 
@@ -279,6 +286,15 @@
             <h3>Dicionário</h3>
             <div id="dic-conteudo">
                 <p class="dic-vazio">Clique em um termo destacado no texto para ver os detalhes.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="layout-grid" style="margin-top: 20px; grid-template-columns: 1fr;">
+        <div class="painel">
+            <h3>Textos Salvos</h3>
+            <div id="lista-textos-salvos" style="display: flex; flex-direction: column; gap: 10px;">
+                <p style="color: gray; text-align: center;">Carregando textos...</p>
             </div>
         </div>
     </div>
@@ -321,6 +337,7 @@
 
                 if (Array.isArray(resultado)) {
                     bancoDadosDinamico = resultado;
+                    renderizarTextosSalvos(resultado);
                 } else {
                     console.error("O banco não retornou uma lista. Resposta recebida:", resultado);
                     bancoDadosDinamico = [];
@@ -336,7 +353,7 @@
             let matches = [];
 
             bancoDadosDinamico.forEach(dado => {
-                if (dado && dado.item) { // Garante integridade do objeto
+                if (dado && dado.item && dado.categoria !== 'Texto') { // Garante integridade do objeto e não colore textos longos
                     let index = linha.indexOf(dado.item);
                     while (index !== -1) {
                         matches.push({ start: index, end: index + dado.item.length, dado: dado });
@@ -487,6 +504,91 @@
                 botao.textContent = "📥 Salvar no meu Banco";
                 botao.disabled = false;
             }
+        }
+
+        function atualizarContador() {
+            const texto = document.getElementById('input-texto').value;
+            document.getElementById('char-counter').textContent = `${texto.length}/600`;
+        }
+
+        async function salvarTextoCompleto() {
+            const titulo = document.getElementById('titulo-texto').value.trim();
+            const texto = document.getElementById('input-texto').value.trim();
+
+            if (!titulo || !texto) {
+                alert("Por favor, preencha o título e o texto.");
+                return;
+            }
+
+            if (texto.length > 600) {
+                alert("O texto excede o limite de 600 caracteres.");
+                return;
+            }
+
+            const botao = document.querySelector('button[onclick="salvarTextoCompleto()"]');
+            botao.textContent = "Salvando...";
+            botao.disabled = true;
+
+            const novoTexto = {
+                item: titulo,
+                leitura: '',
+                significado: '',
+                categoria: 'Texto',
+                notas: texto,
+                user_id: idDoUsuarioLogado
+            };
+
+            try {
+                const response = await fetch('/api/jisho?acao=salvar', {
+                    method: 'POST',
+                    headers: {
+                        "Authorization": tokenDeAcesso,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(novoTexto)
+                });
+
+                if (response.ok) {
+                    alert("Texto salvo com sucesso!");
+                    document.getElementById('titulo-texto').value = '';
+                    document.getElementById('input-texto').value = '';
+                    atualizarContador();
+                    document.getElementById('output-texto').innerHTML = '';
+                    carregarBancoDinamico(); // Recarrega a lista para mostrar o novo texto
+                } else {
+                    throw new Error("Falha ao salvar");
+                }
+            } catch (e) {
+                alert("Erro ao salvar texto no banco.");
+            } finally {
+                botao.textContent = "Salvar Texto";
+                botao.disabled = false;
+            }
+        }
+
+        function renderizarTextosSalvos(dados) {
+            const container = document.getElementById('lista-textos-salvos');
+            const textos = dados.filter(d => d.categoria === 'Texto');
+
+            if (textos.length === 0) {
+                container.innerHTML = '<p style="color: gray; text-align: center;">Nenhum texto salvo ainda.</p>';
+                return;
+            }
+
+            container.innerHTML = textos.map(t => `
+                <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 5px; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;" onmouseover="this.style.borderColor='var(--highlight-color)'" onmouseout="this.style.borderColor='var(--border-color)'" onclick="carregarTextoNoEditor('${t.item.replace(/'/g, "\\'")}', '${t.notas.replace(/'/g, "\\'").replace(/\n/g, '\\n')}')">
+                    <span style="font-weight: bold; font-size: 1.2em; color: var(--primary-color);">${t.item}</span>
+                    <span style="font-size: 0.9em; color: gray;">Abrir 📖</span>
+                </div>
+            `).join('');
+        }
+
+        function carregarTextoNoEditor(titulo, conteudo) {
+            document.getElementById('titulo-texto').value = titulo;
+            document.getElementById('input-texto').value = conteudo;
+            atualizarContador();
+            processarTexto();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         window.addEventListener('DOMContentLoaded', carregarBancoDinamico);
