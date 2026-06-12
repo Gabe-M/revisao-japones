@@ -206,12 +206,9 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     conjuntos = match[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
                 }
             }
-            // Se o termo for um dos termos básicos (dadosRevisao) e 'Geral' não estiver, adicionamos
-            if (itemJapones && typeof dadosRevisao !== 'undefined') {
-                const ehBasico = dadosRevisao.some(localItem => localItem.item === itemJapones);
-                if (ehBasico && !conjuntos.includes('Geral')) {
-                    conjuntos.unshift('Geral');
-                }
+            // Todos os termos sem exceção pertencem ao conjunto 'Geral'
+            if (!conjuntos.includes('Geral')) {
+                conjuntos.unshift('Geral');
             }
             return conjuntos;
         }
@@ -631,8 +628,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 // Limpa as notas para exibição
                 const notasLimpa = removerTagConjuntos(d.notas || '');
 
-                // Gera os badges dos conjuntos
-                const badgesHtml = conjuntosDoTermo.map(conj => 
+                // Gera os badges dos conjuntos (oculta visualmente a tag 'Geral')
+                const badgesHtml = conjuntosDoTermo.filter(conj => conj !== 'Geral').map(conj => 
                     `<span class="card-conjunto-badge">${conj}</span>`
                 ).join(' ');
 
