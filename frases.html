@@ -53,10 +53,25 @@
         .pagination button { background-color: var(--secondary-color); padding: 8px 15px; font-weight: bold; color: white; border: none; border-radius: 5px; cursor: pointer; }
         .pagination button:disabled { background-color: var(--border-color); color: gray; cursor: not-allowed; opacity: 0.6; }
         .page-info { font-weight: bold; font-size: 1.1em; color: var(--text-color); }
+        
+        .vocab-sugestao-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+            color: var(--text-color);
+        }
+        .vocab-sugestao-item:hover {
+            background-color: rgba(120, 120, 120, 0.1);
+        }
     </style>
 </head>
 <body>
 
+    <script src="vocabulario.js"></script>
     <script src="frases.js"></script>
 
     <div class="header-container">
@@ -108,6 +123,17 @@
                 </div>
             </div>
             
+            <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                <label style="font-weight: bold; font-size: 0.95em; color: var(--text-color);">🧠 Usar termos específicos do vocabulário (Opcional):</label>
+                <div style="position: relative; width: 100%;">
+                    <input type="text" id="ia-vocab-search" placeholder="Pesquise e selecione termos (ex: 私, 行く)..." oninput="buscarTermosVocab()" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); outline: none;">
+                    <div id="ia-vocab-sugestoes" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 5px; max-height: 200px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 8px rgba(0,0,0,0.15);"></div>
+                </div>
+                <div id="ia-termos-selecionados" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;">
+                    <span style="color: gray; font-size: 0.9em; font-style: italic;">Nenhum termo selecionado. O Sensei criará frases livres se não houver termos selecionados.</span>
+                </div>
+            </div>
+            
             <button class="tool-btn" onclick="gerarFrasesIA()" style="width: 100%;">🤖 Gerar Frases</button>
             
             <!-- Pré-visualização das frases geradas -->
@@ -150,6 +176,79 @@
         let frasesFiltradas = [];
         let categoriasDeFrases = ['Todos', 'Frase']; // Lista dinâmica de categorias
         let frasesGeradasTemporarias = [];
+        let termosDeVocabulario = [];
+        let termosSelecionadosParaGeracao = [];
+
+        function buscarTermosVocab() {
+            const input = document.getElementById('ia-vocab-search');
+            const sugestoes = document.getElementById('ia-vocab-sugestoes');
+            const busca = input.value.trim().toLowerCase();
+
+            if (!busca) {
+                sugestoes.style.display = 'none';
+                sugestoes.innerHTML = '';
+                return;
+            }
+
+            const correspondentes = termosDeVocabulario.filter(t => 
+                (t.item.toLowerCase().includes(busca) || 
+                 t.leitura.toLowerCase().includes(busca) || 
+                 t.significado.toLowerCase().includes(busca)) &&
+                !termosSelecionadosParaGeracao.some(sel => sel.item === t.item)
+            ).slice(0, 8);
+
+            if (correspondentes.length === 0) {
+                sugestoes.innerHTML = `<div style="padding: 10px; color: gray; font-style: italic; text-align: center;">Nenhum termo encontrado</div>`;
+            } else {
+                sugestoes.innerHTML = correspondentes.map(t => `
+                    <div class="vocab-sugestao-item" onclick="selecionarTermoVocab('${t.item.replace(/'/g, "\\'")}', '${t.leitura.replace(/'/g, "\\'")}')">
+                        <span style="font-weight: bold; font-size: 1.1em;">${t.item} <span style="font-weight: normal; font-size: 0.8em; color: gray;">(${t.leitura})</span></span>
+                        <span style="color: var(--highlight-color); font-size: 0.85em; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t.significado}</span>
+                    </div>
+                `).join('');
+            }
+            sugestoes.style.display = 'block';
+        }
+
+        window.addEventListener('click', (e) => {
+            const sugestoes = document.getElementById('ia-vocab-sugestoes');
+            if (sugestoes && e.target.id !== 'ia-vocab-search') {
+                sugestoes.style.display = 'none';
+            }
+        });
+
+        function selecionarTermoVocab(item, leitura) {
+            const termo = termosDeVocabulario.find(t => t.item === item);
+            if (termo && !termosSelecionadosParaGeracao.some(sel => sel.item === item)) {
+                termosSelecionadosParaGeracao.push(termo);
+                atualizarChipsSelecionados();
+            }
+            const input = document.getElementById('ia-vocab-search');
+            input.value = '';
+            document.getElementById('ia-vocab-sugestoes').style.display = 'none';
+        }
+
+        function removerTermoChip(item) {
+            termosSelecionadosParaGeracao = termosSelecionadosParaGeracao.filter(t => t.item !== item);
+            atualizarChipsSelecionados();
+        }
+
+        function atualizarChipsSelecionados() {
+            const container = document.getElementById('ia-termos-selecionados');
+            if (!container) return;
+            
+            if (termosSelecionadosParaGeracao.length === 0) {
+                container.innerHTML = `<span style="color: gray; font-size: 0.9em; font-style: italic;">Nenhum termo selecionado. O Sensei criará frases livres se não houver termos selecionados.</span>`;
+                return;
+            }
+
+            container.innerHTML = termosSelecionadosParaGeracao.map(t => `
+                <div style="display: flex; align-items: center; gap: 6px; background: var(--secondary-color); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.9em; font-weight: bold; user-select: none;">
+                    <span>${t.item} <span style="font-weight: normal; font-size: 0.8em; opacity: 0.8;">(${t.leitura})</span></span>
+                    <span onclick="removerTermoChip('${t.item.replace(/'/g, "\\'")}')" style="cursor: pointer; opacity: 0.7; font-weight: bold; margin-left: 4px; padding: 0 2px;">✕</span>
+                </div>
+            `).join('');
+        }
 
         async function carregarFrasesDinamicas() {
             try {
@@ -188,6 +287,12 @@
                     }
                 });
                 categoriasDeFrases = Array.from(sets);
+
+                // Preencher a lista de termos de vocabulário para seleção (unindo banco de dados e dadosRevisao local)
+                const termosDb = dadosDb.filter(d => d && d.item && d.categoria !== 'Texto' && !(d.categoria && d.categoria.startsWith('Frase')));
+                const itensExistentesVocab = new Set(termosDb.map(d => d.item));
+                const baseRevisaoFiltrados = (typeof dadosRevisao !== 'undefined' ? dadosRevisao : []).filter(d => !itensExistentesVocab.has(d.item));
+                termosDeVocabulario = [...baseRevisaoFiltrados, ...termosDb];
 
                 // Preencher seletores HTML
                 atualizarSeletoresDeCategoria();
@@ -269,8 +374,8 @@
 
         async function gerarFrasesIA() {
             const tema = document.getElementById('ia-tema').value.trim();
-            if (!tema) {
-                alert("Por favor, digite um tema para as frases.");
+            if (!tema && termosSelecionadosParaGeracao.length === 0) {
+                alert("Por favor, digite um tema ou selecione ao menos um termo do vocabulário.");
                 return;
             }
 
@@ -291,15 +396,27 @@
                     headers['X-Gemini-Key'] = apiKey;
                 }
 
-                const prompt = `Gere exatamente 3 frases úteis e práticas em japonês sobre o tema: "${tema}".
+                let prompt = '';
+                if (tema) {
+                    prompt = `Gere exatamente 3 frases úteis e práticas em japonês sobre o tema: "${tema}".`;
+                } else {
+                    prompt = `Gere exatamente 3 frases úteis e práticas em japonês utilizando e focando nos termos de vocabulário fornecidos pelo usuário.`;
+                }
+
+                prompt += `
 Retorne a resposta estritamente no formato de uma array JSON (sem formatação markdown, sem blocos de código \`\`\`json, apenas a array JSON direta).
 Cada objeto da array deve conter exatamente estas 4 chaves:
 - "item": a frase escrita em japonês (com kanji/kana).
 - "leitura": a leitura/transliteração em Romaji.
 - "significado": a tradução exata em português.
-- "notas": uma breve nota gramatical contendo a análise da frase e a identificação dos blocos/palavras utilizados nela no formato exato: "Blocos usados: [bloco1] + [bloco2] + ...". Exemplo: "Blocos usados: 私 + は + 学生 + です."
+- "notas": uma breve nota gramatical contendo a análise da frase e a identificação dos blocos/palavras utilizados nela no formato exato: "Blocos usados: [bloco1] + [bloco2] + ...". Exemplo: "Blocos usados: 私 + は + 学生 + です."`;
 
-Siga o formato estrito JSON.`;
+                if (termosSelecionadosParaGeracao.length > 0) {
+                    const termosListaStr = termosSelecionadosParaGeracao.map(t => `"${t.item}" (${t.significado})`).join(', ');
+                    prompt += `\n\nREQUISITO CRÍTICO: As frases geradas devem conter e ser formadas obrigatoriamente usando os seguintes termos do vocabulário do usuário: ${termosListaStr}. Tente fazer com que cada frase incorpore os termos fornecidos de maneira natural e gramaticalmente correta, garantindo que pelo menos um dos termos seja utilizado em cada uma das frases geradas.`;
+                }
+
+                prompt += `\n\nSiga o formato estrito JSON.`;
 
                 const response = await fetch('/api/ai', {
                     method: 'POST',
