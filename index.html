@@ -37,6 +37,18 @@
         .pagination button { background-color: var(--secondary-color); padding: 8px 15px; font-weight: bold; }
         .pagination button:disabled { background-color: var(--border-color); color: gray; cursor: not-allowed; opacity: 0.6; }
         .page-info { font-weight: bold; font-size: 1.1em; color: var(--text-color); }
+        
+        /* NOVO: Estilos do Modo Associação */
+        .switch input:checked + .slider { background-color: #27ae60; }
+        .switch input:checked + .slider:before { transform: translateX(22px); }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        .card.associando { border: 2px solid #27ae60 !important; background-color: rgba(39, 174, 96, 0.05) !important; }
+        .card.associado-sucesso { animation: pulse-green 0.6s ease-out; }
+        @keyframes pulse-green {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7); }
+            50% { transform: scale(1.04); box-shadow: 0 0 0 8px rgba(39, 174, 96, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
+        }
     </style>
 </head>
 <body>
@@ -53,6 +65,30 @@
         <a href="frases.html">💬 Frases Práticas</a>
         <a href="minigame.html">🎮 Minigame</a>
         <a href="textos.html">📄 Textos</a>
+    </div>
+
+    <!-- Painel de Organização de Conjuntos -->
+    <div class="controls" style="background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); max-width: 1200px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span style="font-weight: bold; font-size: 1.1em; color: var(--text-color);">🗂️ Organizar em Conjuntos:</span>
+            
+            <select id="ia-conjunto-select" onchange="toggleNovoConjuntoInput()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none;">
+                <!-- Preenchido via JS -->
+            </select>
+            
+            <div id="ia-novo-conjunto-div" style="display: none; align-items: center; gap: 8px;">
+                <input type="text" id="ia-novo-conjunto-nome" placeholder="Novo conjunto..." style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); outline: none;">
+                <button onclick="criarNovoConjunto()" style="background-color: var(--primary-color); padding: 8px 12px;">Criar</button>
+            </div>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 22px;">
+                <input type="checkbox" id="modo-associacao-chk" onchange="toggleModoAssociacao()" style="opacity: 0; width: 0; height: 0;">
+                <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 22px;"></span>
+            </label>
+            <span id="modo-associacao-label" style="font-weight: bold; color: gray;">Modo Associação Desativado</span>
+        </div>
     </div>
 
     <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo..." onkeyup="aplicarFiltros()">
@@ -86,12 +122,15 @@
             localStorage.setItem('tema', isDark ? 'light' : 'dark');
         }
 
-        // NOVO: Variáveis de estado para a paginação
+        // NOVO: Variáveis de estado para a paginação e conjuntos
         let filtroAtual = 'Todos';
         let dadosFiltrados = [];
         let dadosCombinados = [];
         let currentPage = 1;
-        const itemsPerPage = 12; // Você pode alterar este número para exibir mais ou menos cards por página
+        const itemsPerPage = 12;
+
+        let modoAssociacaoAtivo = false;
+        let categoriasDisponiveis = ['Kanji', 'Partícula', 'Verbo', 'Demonstrativo', 'Vocabulário'];
 
         async function carregarDados() {
             try {
@@ -113,37 +152,223 @@
                     dadosDb = resultado;
                 }
 
-                // Combinar o vocabulário estático (dadosRevisao) com o do banco de dados (dadosDb)
-                // Evitamos duplicados com base na propriedade 'item' (palavra em japonês) e ignoramos textos longos
-                const itensExistentes = new Set(dadosRevisao.map(d => d.item));
-                const dadosDbFiltrados = dadosDb.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto' && !(d.categoria && d.categoria.startsWith('Frase:')));
+                // Filtrar os dados dinâmicos
+                const dadosDbFiltrados = dadosDb.filter(d => d && d.item && d.categoria !== 'Texto' && !(d.categoria && d.categoria.startsWith('Frase:')));
 
-                dadosCombinados = [...dadosRevisao, ...dadosDbFiltrados];
+                // Evitamos duplicados com base na propriedade 'item' (palavra em japonês)
+                // Se o item base existe na DB, nós preferimos o da DB (pois pode ter tido a categoria atualizada!)
+                const itensDb = new Map(dadosDbFiltrados.map(d => [d.item, d]));
+                
+                const dadosRevisaoAtualizados = dadosRevisao.map(localItem => {
+                    if (itensDb.has(localItem.item)) {
+                        const dbItem = itensDb.get(localItem.item);
+                        // Removemos do map para que não seja adicionado novamente depois
+                        itensDb.delete(localItem.item);
+                        return dbItem;
+                    }
+                    return localItem;
+                });
+
+                dadosCombinados = [...dadosRevisaoAtualizados, ...itensDb.values()];
+
+                // Atualiza a lista de categorias disponíveis
+                const sets = new Set(['Kanji', 'Partícula', 'Verbo', 'Demonstrativo', 'Vocabulário']);
+                dadosCombinados.forEach(d => {
+                    if (d.categoria && d.categoria !== 'Texto' && !d.categoria.startsWith('Frase:')) {
+                        sets.add(d.categoria);
+                    }
+                });
+                categoriasDisponiveis = Array.from(sets);
+
+                atualizarSeletoresDeConjunto();
+                atualizarBotoesFiltro();
+
             } catch (e) {
                 console.error("Erro ao buscar dados do banco, usando dados locais.", e);
                 dadosCombinados = [...dadosRevisao];
+                atualizarSeletoresDeConjunto();
+                atualizarBotoesFiltro();
+            }
+        }
+
+        function atualizarSeletoresDeConjunto() {
+            const select = document.getElementById('ia-conjunto-select');
+            const currentVal = select.value;
+            
+            select.innerHTML = categoriasDisponiveis.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            select.innerHTML += `<option value="novo">Criar Novo Conjunto...</option>`;
+
+            if (categoriasDisponiveis.includes(currentVal)) {
+                select.value = currentVal;
+            } else {
+                select.value = 'Vocabulário';
+            }
+        }
+
+        function atualizarBotoesFiltro() {
+            const container = document.getElementById('botoes-filtro');
+            container.innerHTML = `<button onclick="mudarCategoria('Todos')" class="${filtroAtual === 'Todos' ? 'active' : ''}">Todos</button>` +
+                categoriasDisponiveis.map(cat => {
+                    let label = cat;
+                    if (cat === 'Kanji') label = 'Kanjis';
+                    if (cat === 'Partícula') label = 'Partículas';
+                    if (cat === 'Verbo') label = 'Verbos';
+                    if (cat === 'Demonstrativo') label = 'Demonstrativos';
+                    if (cat === 'Vocabulário') label = 'Vocabulário';
+                    return `<button onclick="mudarCategoria('${cat}')" class="${filtroAtual === cat ? 'active' : ''}">${label}</button>`;
+                }).join('');
+        }
+
+        function toggleModoAssociacao() {
+            const chk = document.getElementById('modo-associacao-chk');
+            const label = document.getElementById('modo-associacao-label');
+            modoAssociacaoAtivo = chk.checked;
+            
+            if (modoAssociacaoAtivo) {
+                label.textContent = "Modo Associação ATIVO 🟢";
+                label.style.color = "#27ae60";
+                document.querySelectorAll('.card').forEach(c => c.classList.add('associando'));
+            } else {
+                label.textContent = "Modo Associação Desativado";
+                label.style.color = "gray";
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('associando'));
+            }
+        }
+
+        function toggleNovoConjuntoInput() {
+            const select = document.getElementById('ia-conjunto-select');
+            const divNovo = document.getElementById('ia-novo-conjunto-div');
+            if (select.value === 'novo') {
+                divNovo.style.display = 'flex';
+                document.getElementById('ia-novo-conjunto-nome').focus();
+            } else {
+                divNovo.style.display = 'none';
+            }
+        }
+
+        function criarNovoConjunto() {
+            const nomeInput = document.getElementById('ia-novo-conjunto-nome');
+            const nome = nomeInput.value.trim();
+            if (!nome) {
+                alert("Por favor, digite um nome para o conjunto.");
+                return;
+            }
+
+            if (nome === 'Texto' || nome.startsWith('Frase:') || nome === 'Todos') {
+                alert("Nome de conjunto reservado ou inválido.");
+                return;
+            }
+
+            if (!categoriasDisponiveis.includes(nome)) {
+                categoriasDisponiveis.push(nome);
+                atualizarSeletoresDeConjunto();
+                atualizarBotoesFiltro();
+            }
+            
+            const select = document.getElementById('ia-conjunto-select');
+            select.value = nome;
+            toggleNovoConjuntoInput();
+            nomeInput.value = '';
+            
+            const chk = document.getElementById('modo-associacao-chk');
+            chk.checked = true;
+            toggleModoAssociacao();
+        }
+
+        async function gerenciarCliqueCard(elementoCard, termoObj, event) {
+            if (modoAssociacaoAtivo) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                const conjuntoSelecionado = document.getElementById('ia-conjunto-select').value;
+                if (conjuntoSelecionado === 'novo') {
+                    alert("Crie ou selecione um conjunto primeiro.");
+                    return;
+                }
+
+                elementoCard.style.opacity = '0.6';
+                
+                try {
+                    let idDoTermo = termoObj.id;
+                    
+                    if (idDoTermo) {
+                        const response = await fetch(`/api/jisho?acao=atualizar&id=${idDoTermo}`, {
+                            method: 'PATCH',
+                            headers: {
+                                "Authorization": tokenDeAcesso,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ categoria: conjuntoSelecionado })
+                        });
+                        if (!response.ok) throw new Error();
+                    } else {
+                        const novoTermo = {
+                            item: termoObj.item,
+                            leitura: termoObj.leitura,
+                            significado: termoObj.significado,
+                            categoria: conjuntoSelecionado,
+                            notas: termoObj.notas || 'Termo base associado.',
+                            user_id: idDoUsuarioLogado
+                        };
+                        
+                        const response = await fetch('/api/jisho?acao=salvar', {
+                            method: 'POST',
+                            headers: {
+                                "Authorization": tokenDeAcesso,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(novoTermo)
+                        });
+                        if (!response.ok) throw new Error();
+                        const salvo = await response.json();
+                        idDoTermo = Array.isArray(salvo) ? salvo[0]?.id : salvo.id;
+                    }
+
+                    const index = dadosCombinados.findIndex(d => d.item === termoObj.item);
+                    if (index !== -1) {
+                        dadosCombinados[index].categoria = conjuntoSelecionado;
+                        if (idDoTermo) dadosCombinados[index].id = idDoTermo;
+                        termoObj.categoria = conjuntoSelecionado;
+                        termoObj.id = idDoTermo;
+                    }
+
+                    elementoCard.style.opacity = '1';
+                    elementoCard.querySelector('.card-categoria-label').textContent = conjuntoSelecionado;
+                    
+                    elementoCard.classList.add('associado-sucesso');
+                    setTimeout(() => {
+                        elementoCard.classList.remove('associado-sucesso');
+                    }, 600);
+
+                } catch (e) {
+                    console.error("Falha ao associar termo", e);
+                    elementoCard.style.opacity = '1';
+                    alert("Erro ao salvar associação no banco de dados.");
+                }
+            } else {
+                const det = elementoCard.querySelector('details');
+                det.open = !det.open;
             }
         }
 
         function mudarCategoria(cat) {
             filtroAtual = cat;
-            document.querySelectorAll('#botoes-filtro button').forEach(b => b.classList.toggle('active', b.textContent.includes(cat) || (cat === 'Todos' && b.textContent === 'Todos')));
+            document.querySelectorAll('#botoes-filtro button').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('onclick').includes(`'${cat}'`));
+            });
             aplicarFiltros();
         }
 
-        // Modificado para armazenar os dados e reiniciar a página
         function aplicarFiltros() {
             const texto = document.getElementById('searchInput').value.toLowerCase();
             dadosFiltrados = dadosCombinados.filter(d => 
                 (filtroAtual === 'Todos' || d.categoria === filtroAtual) &&
                 (d.item.toLowerCase().includes(texto) || d.leitura.toLowerCase().includes(texto) || d.significado.toLowerCase().includes(texto))
             );
-            currentPage = 1; // Sempre volta para a página 1 ao pesquisar ou mudar categoria
+            currentPage = 1;
             renderizarPagina();
         }
-        
 
-        // NOVO: Função que corta os dados apenas para a página atual
         function renderizarPagina() {
             const startIndex = (currentPage - 1) * itemsPerPage;
             const endIndex = startIndex + itemsPerPage;
@@ -153,13 +378,12 @@
             renderizarControlesPaginacao();
         }
 
-        // NOVO: Função que gera os botões de próxima e anterior
         function renderizarControlesPaginacao() {
             const container = document.getElementById('pagination-controls');
             const totalPages = Math.ceil(dadosFiltrados.length / itemsPerPage);
             
             if (totalPages <= 1) {
-                container.innerHTML = ''; // Oculta a paginação se houver apenas 1 página
+                container.innerHTML = '';
                 return;
             }
 
@@ -170,11 +394,10 @@
             `;
         }
 
-        // NOVO: Função de troca de página
         function mudarPagina(direcao) {
             currentPage += direcao;
             renderizarPagina();
-            window.scrollTo({ top: 0, behavior: 'smooth' }); // Rola a tela para o topo suavemente
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function renderizarCards(dados) {
@@ -184,20 +407,23 @@
                 return;
             }
 
-            container.innerHTML = dados.map(d => `
-                <div class="card" onclick="const det = this.querySelector('details'); det.open = !det.open;" style="cursor: pointer;">
-                    <div style="display:flex; justify-content:space-between; font-size:0.8em; color:gray; pointer-events: none;">
-                        <span>${d.categoria}</span><span>${d.leitura}</span>
+            container.innerHTML = dados.map(d => {
+                const termoJson = JSON.stringify(d).replace(/"/g, '&quot;');
+                return `
+                    <div class="card ${modoAssociacaoAtivo ? 'associando' : ''}" onclick="gerenciarCliqueCard(this, ${termoJson}, event)" style="cursor: pointer;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.8em; color:gray; pointer-events: none;">
+                            <span class="card-categoria-label">${d.categoria}</span><span>${d.leitura}</span>
+                        </div>
+                        <p class="item-title" style="pointer-events: none;">${d.item}</p>
+                        <details onclick="event.stopPropagation();">
+                            <summary>Tradução e Notas</summary>
+                            <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
+                            <p style="font-size:0.9em; opacity:0.8;">${d.notas}</p>
+                            <button style="margin-top: 10px; width: 100%; font-size: 0.9em; background-color: var(--secondary-color);" onclick="event.stopPropagation(); window.TutorIA && window.TutorIA.perguntar('Explique de forma bem resumida e direta a palavra: ${d.item} (${d.leitura})')">🤖 Perguntar ao Sensei IA</button>
+                        </details>
                     </div>
-                    <p class="item-title" style="pointer-events: none;">${d.item}</p>
-                    <details onclick="event.stopPropagation();">
-                        <summary>Tradução e Notas</summary>
-                        <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
-                        <p style="font-size:0.9em; opacity:0.8;">${d.notas}</p>
-                        <button style="margin-top: 10px; width: 100%; font-size: 0.9em; background-color: var(--secondary-color);" onclick="event.stopPropagation(); window.TutorIA && window.TutorIA.perguntar('Explique de forma bem resumida e direta a palavra: ${d.item} (${d.leitura})')">🤖 Perguntar ao Sensei IA</button>
-                    </details>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         window.addEventListener('DOMContentLoaded', async (event) => {

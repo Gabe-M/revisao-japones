@@ -56,6 +56,39 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Falha no servidor', mensagem: error.message });
         }
     }
+ 
+    // AÇÃO 4: Atualizar termo (ex: trocar de conjunto/categoria)
+    if (acao === 'atualizar' && req.method === 'PATCH') {
+        const { id } = req.query;
+        if (!id) return res.status(400).json({ error: 'ID ausente para atualização' });
+        try {
+            const corpo = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+            
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario?id=eq.${id}`, {
+                method: 'PATCH',
+                headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": tokenUsuario,
+                    "Content-Type": "application/json",
+                    "Prefer": "return=representation"
+                },
+                body: JSON.stringify(corpo)
+            });
+
+            const resultado = await response.json();
+
+            if (!response.ok) {
+                return res.status(response.status).json({
+                    error: 'O Supabase rejeitou a atualização',
+                    detalhes: resultado
+                });
+            }
+
+            return res.status(200).json(resultado);
+        } catch (error) {
+            return res.status(500).json({ error: 'Falha no servidor ao atualizar', mensagem: error.message });
+        }
+    }
 
     // AÇÃO 3: Traduzir no Jisho
     if (!termo) return res.status(400).json({ error: 'Termo ausente' });
