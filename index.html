@@ -331,8 +331,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 conjuntosDisponiveis.unshift('Geral');
             }
 
-            let html = `<option value="Todos">Todos os Conjuntos</option>`;
-            html += conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
+            let html = conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
             html += `<option value="novo">Criar Novo Conjunto...</option>`;
             select.innerHTML = html;
 
@@ -364,8 +363,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             const chk = document.getElementById('modo-associacao-chk');
             const select = document.getElementById('ia-conjunto-select');
             
-            if (chk.checked && (select.value === 'Todos' || select.value === 'novo')) {
-                alert("Por favor, selecione ou crie um conjunto específico antes de ativar o Modo Associação.");
+            if (chk.checked && select.value === 'novo') {
+                alert("Por favor, crie um conjunto específico antes de ativar o Modo Associação.");
                 chk.checked = false;
                 return;
             }
@@ -399,7 +398,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             const select = document.getElementById('ia-conjunto-select');
             const chk = document.getElementById('modo-associacao-chk');
             
-            if (select.value === 'Todos' || select.value === 'novo') {
+            if (select.value === 'novo') {
                 if (chk.checked) {
                     chk.checked = false;
                     modoAssociacaoAtivo = false;
@@ -560,13 +559,13 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             // Sincroniza o label de visualização da pasta ativa
             const labelPasta = document.getElementById('ia-nome-pasta-ativa');
             if (labelPasta) {
-                labelPasta.textContent = filtroConjunto === 'Todos' ? 'Todos os Conjuntos' : filtroConjunto;
+                labelPasta.textContent = filtroConjunto;
             }
             
             dadosFiltrados = dadosCombinados.filter(d => {
                 // 1. Filtro de Conjunto (apenas se o modo de associação estiver desativado)
                 let pertenceAoConjunto = true;
-                if (!modoAssociacaoAtivo && filtroConjunto !== 'Todos' && filtroConjunto !== 'novo') {
+                if (!modoAssociacaoAtivo && filtroConjunto !== 'novo') {
                     const conjuntosDoTermo = extrairConjuntos(d.notas, d.item);
                     pertenceAoConjunto = conjuntosDoTermo.includes(filtroConjunto);
                 }
@@ -879,11 +878,11 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             if (!select) return;
             
             // Filtra para garantir que apenas conjuntos reais entrem na lista de opções (ignorando "novo")
-            const opcoes = ['Todos', ...conjuntosDisponiveis.filter(c => c !== 'novo' && c !== 'Todos')];
+            const opcoes = [...conjuntosDisponiveis.filter(c => c !== 'novo' && c !== 'Todos')];
             
             // Garante que 'Geral' esteja na lista se não estiver por algum motivo
             if (!opcoes.includes('Geral')) {
-                opcoes.splice(1, 0, 'Geral');
+                opcoes.unshift('Geral');
             }
 
             const valorAtual = select.value;
