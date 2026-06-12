@@ -89,8 +89,41 @@
         // NOVO: Variáveis de estado para a paginação
         let filtroAtual = 'Todos';
         let dadosFiltrados = [];
+        let dadosCombinados = [];
         let currentPage = 1;
         const itemsPerPage = 12; // Você pode alterar este número para exibir mais ou menos cards por página
+
+        async function carregarDados() {
+            try {
+                const response = await fetch('/api/jisho?acao=listar', {
+                    headers: { "Authorization": tokenDeAcesso }
+                });
+                const resultado = await response.json();
+
+                // Trava automática de JWT expirado
+                if (resultado && resultado.code === "PGRST303") {
+                    console.warn("Sessão expirada. Redirecionando para o login...");
+                    localStorage.removeItem('supabase_session');
+                    window.location.href = "login.html";
+                    return;
+                }
+
+                let dadosDb = [];
+                if (Array.isArray(resultado)) {
+                    dadosDb = resultado;
+                }
+
+                // Combinar o vocabulário estático (dadosRevisao) com o do banco de dados (dadosDb)
+                // Evitamos duplicados com base na propriedade 'item' (palavra em japonês)
+                const itensExistentes = new Set(dadosRevisao.map(d => d.item));
+                const dadosDbFiltrados = dadosDb.filter(d => d && d.item && !itensExistentes.has(d.item));
+
+                dadosCombinados = [...dadosRevisao, ...dadosDbFiltrados];
+            } catch (e) {
+                console.error("Erro ao buscar dados do banco, usando dados locais.", e);
+                dadosCombinados = [...dadosRevisao];
+            }
+        }
 
         function mudarCategoria(cat) {
             filtroAtual = cat;
@@ -101,7 +134,7 @@
         // Modificado para armazenar os dados e reiniciar a página
         function aplicarFiltros() {
             const texto = document.getElementById('searchInput').value.toLowerCase();
-            dadosFiltrados = dadosRevisao.filter(d => 
+            dadosFiltrados = dadosCombinados.filter(d => 
                 (filtroAtual === 'Todos' || d.categoria === filtroAtual) &&
                 (d.item.toLowerCase().includes(texto) || d.leitura.toLowerCase().includes(texto) || d.significado.toLowerCase().includes(texto))
             );
@@ -166,7 +199,9 @@
             `).join('');
         }
 
-        window.addEventListener('DOMContentLoaded', (event) => {
+        window.addEventListener('DOMContentLoaded', async (event) => {
+            await carregarDados();
+            
             const urlParams = new URLSearchParams(window.location.search);
             const termoBusca = urlParams.get('termo');
             

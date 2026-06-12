@@ -119,17 +119,33 @@
         let totalTermos = 0;
         let respostaRevelada = false;
         async function iniciarJogo() {
-    try {
-        const response = await fetch('/api/jisho?acao=listar', {
-            headers: { "Authorization": tokenDeAcesso }
-        });
-        dadosRevisao = await response.json();
-        inicializarBaralho();
-        sortearTermo();
-    } catch (e) {
-        document.getElementById('card-termo').textContent = "Erro ao carregar";
-    }
-}
+            try {
+                const response = await fetch('/api/jisho?acao=listar', {
+                    headers: { "Authorization": tokenDeAcesso }
+                });
+                const resultado = await response.json();
+
+                // Trava automática de JWT expirado
+                if (resultado && resultado.code === "PGRST303") {
+                    console.warn("Sessão expirada. Redirecionando para o login...");
+                    localStorage.removeItem('supabase_session');
+                    window.location.href = "login.html";
+                    return;
+                }
+
+                if (Array.isArray(resultado)) {
+                    // Combinar com os dados estáticos base, evitando duplicatas
+                    const itensExistentes = new Set(dadosRevisao.map(d => d.item));
+                    const dadosDbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item));
+                    dadosRevisao = [...dadosRevisao, ...dadosDbFiltrados];
+                }
+
+                inicializarBaralho();
+                sortearTermo();
+            } catch (e) {
+                document.getElementById('card-termo').textContent = "Erro ao carregar";
+            }
+        }
 window.addEventListener('DOMContentLoaded', iniciarJogo);
         function inicializarBaralho() {
             baralho = [...dadosRevisao];
@@ -182,10 +198,7 @@ window.addEventListener('DOMContentLoaded', iniciarJogo);
             }
         });
 
-        window.addEventListener('DOMContentLoaded', () => {
-            inicializarBaralho();
-            sortearTermo();
-        });
+        // O jogo é inicializado dinamicamente via o listener de iniciarJogo acima.
     </script>
 </body>
 </html>
