@@ -429,7 +429,7 @@
                 <p class="dic-leitura">${termo.leitura}</p>
                 <p class="dic-significado">${termo.significado}</p>
                 <div class="dic-notas"><strong>Notas:</strong><br>${termo.notas || 'Nenhuma nota registrada.'}</div>
-                <button class="btn-processar" style="background-color: var(--primary-color); margin-top: 15px;" onclick="window.TutorIA && window.TutorIA.perguntar('Explique de forma bem resumida e direta o termo: ${termo.item} (${termo.leitura || \'\'})')">🤖 Perguntar ao Sensei IA</button>
+                <button class="btn-processar" style="background-color: var(--primary-color); margin-top: 15px;" onclick="window.TutorIA && window.TutorIA.perguntar('Explique de forma bem resumida e direta o termo: ${termo.item} (${termo.leitura || ''})')">🤖 Perguntar ao Sensei IA</button>
             `;
         }
 
