@@ -248,6 +248,9 @@
                 select.value = 'novo';
             }
 
+            // Garante que o campo de input de novo conjunto apareça se a opção for "novo"
+            toggleNovoConjuntoInput();
+
             // Atualiza também o filtro ao lado da busca
             const filtroSelect = document.getElementById('filtro-conjunto-select');
             const currentFiltroVal = filtroSelect.value;
