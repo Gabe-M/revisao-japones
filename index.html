@@ -93,6 +93,77 @@
         </div>
     </div>
 
+    <!-- Painel de Importação de Vocabulário via JSON -->
+    <div class="controls" style="background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); max-width: 1200px; margin: 0 auto 20px; flex-direction: column; align-items: stretch; display: flex; gap: 10px; box-sizing: border-box;">
+        <div onclick="togglePainelImportacao()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 1.1em; color: var(--text-color); user-select: none;">
+            <span>📤 Importar Vocabulário via JSON</span>
+            <span id="ia-import-icon">▼</span>
+        </div>
+        
+        <div id="ia-painel-importacao-content" style="display: none; flex-direction: column; gap: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; margin-top: 5px;">
+            <p style="margin: 0; font-size: 0.95em; opacity: 0.9; line-height: 1.5; text-align: left; width: 100%;">
+                Você pode importar múltiplos termos em lote enviando um arquivo <code>.json</code>.
+                Use a sua <strong>IA pessoal</strong> (ex: ChatGPT, Claude) para formatar seus dados utilizando o prompt abaixo:
+            </p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; width: 100%;">
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; width: 100%;">
+                        <span style="font-weight: bold; font-size: 0.9em; text-align: left;">1. Formato JSON Esperado:</span>
+                        <button onclick="copiarTexto('json-exemplo-pre', this)" style="padding: 4px 8px; font-size: 0.8em; background-color: var(--secondary-color);">Copiar Exemplo</button>
+                    </div>
+                    <pre id="json-exemplo-pre" style="margin: 0; background: var(--bg-color); color: var(--text-color); padding: 10px; border-radius: 5px; font-size: 0.85em; overflow-x: auto; border: 1px solid var(--border-color); max-height: 150px; text-align: left; box-sizing: border-box;">[
+  {
+    "item": "日本語",
+    "leitura": "Nihongo",
+    "significado": "Língua Japonesa",
+    "categoria": "Vocabulário",
+    "notas": "Notas opcionais (opcional)"
+  }
+]</pre>
+                </div>
+                
+                <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; width: 100%;">
+                        <span style="font-weight: bold; font-size: 0.9em; text-align: left;">2. Prompt para sua IA Pessoal:</span>
+                        <button onclick="copiarTexto('ia-prompt-text', this)" style="padding: 4px 8px; font-size: 0.8em; background-color: var(--secondary-color);">Copiar Prompt</button>
+                    </div>
+                    <textarea id="ia-prompt-text" readonly style="margin: 0; width: 100%; height: 150px; background: var(--bg-color); color: var(--text-color); padding: 10px; border-radius: 5px; font-size: 0.85em; resize: none; border: 1px solid var(--border-color); box-sizing: border-box; outline: none; font-family: inherit; text-align: left;">Por favor, atue como um formatador de dados. Vou te passar minhas anotações de estudo de japonês. Extraia as palavras, leituras, significados e categorias gramaticais, e formate-as estritamente como um array JSON com a seguinte estrutura:
+
+[
+  {
+    "item": "palavra em japonês",
+    "leitura": "leitura em romaji ou kana",
+    "significado": "tradução em português",
+    "categoria": "tipo gramatical (deve ser estritamente um destes: Kanji, Verbo, Partícula, Demonstrativo, Vocabulário)",
+    "notas": "explicação ou notas extras (opcional)"
+  }
+]
+
+Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o array JSON válido.</textarea>
+                </div>
+            </div>
+            
+            <div style="background: var(--bg-color); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; margin-top: 5px; width: 100%; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span style="font-weight: bold; color: var(--text-color);">Salvar no Conjunto:</span>
+                    <select id="ia-import-conjunto-select" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer;">
+                        <!-- Preenchido dinamicamente via JS -->
+                    </select>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <input type="file" id="ia-import-file-input" accept=".json" onchange="atualizarNomeArquivoImport(this)" style="display: none;">
+                    <button onclick="document.getElementById('ia-import-file-input').click()" style="background-color: var(--secondary-color); padding: 8px 12px;">📁 Escolher Arquivo</button>
+                    <span id="ia-import-file-name" style="font-size: 0.9em; color: gray; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Nenhum arquivo</span>
+                    
+                    <button onclick="processarImportacaoJSON()" id="ia-btn-confirmar-import" style="background-color: #27ae60; padding: 8px 15px; font-weight: bold;">📤 Importar</button>
+                </div>
+            </div>
+            <div id="ia-import-feedback" style="display: none; font-weight: bold; text-align: center; font-size: 0.95em; padding: 5px; width: 100%; box-sizing: border-box;"></div>
+        </div>
+    </div>
+
     <div style="display: flex; gap: 15px; max-width: 500px; margin: 0 auto 20px; align-items: center; justify-content: center; width: 100%;">
         <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo..." onkeyup="aplicarFiltros()" style="margin: 0; flex: 1; width: auto; max-width: none;">
     </div>
@@ -584,6 +655,208 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        // NOVO: Funções para Importação via JSON
+        function togglePainelImportacao() {
+            const content = document.getElementById('ia-painel-importacao-content');
+            const icon = document.getElementById('ia-import-icon');
+            if (content.style.display === 'none') {
+                content.style.display = 'flex';
+                icon.textContent = '▲';
+                atualizarSeletorImportacao();
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▼';
+            }
+        }
+
+        function atualizarSeletorImportacao() {
+            const select = document.getElementById('ia-import-conjunto-select');
+            let html = conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
+            html += `<option value="novo">Criar Novo Conjunto...</option>`;
+            select.innerHTML = html;
+            select.value = 'Geral';
+        }
+
+        // Listener para criar novo conjunto a partir da tela de importação
+        window.addEventListener('DOMContentLoaded', () => {
+            const select = document.getElementById('ia-import-conjunto-select');
+            if (select) {
+                select.addEventListener('change', function() {
+                    if (this.value === 'novo') {
+                        const nome = prompt("Digite o nome do novo conjunto:").trim();
+                        if (!nome || nome === 'Texto' || nome.startsWith('Frase:') || nome === 'Todos') {
+                            alert("Nome inválido ou reservado.");
+                            this.value = 'Geral';
+                            return;
+                        }
+                        if (!conjuntosDisponiveis.includes(nome)) {
+                            conjuntosDisponiveis.push(nome);
+                            atualizarSeletoresDeConjunto();
+                            atualizarSeletorImportacao();
+                        }
+                        this.value = nome;
+                    }
+                });
+            }
+        });
+
+        async function copiarTexto(elementoId, botao) {
+            const elem = document.getElementById(elementoId);
+            let texto = '';
+            if (elem.tagName === 'TEXTAREA' || elem.tagName === 'INPUT') {
+                texto = elem.value;
+            } else {
+                texto = elem.innerText;
+            }
+            
+            try {
+                await navigator.clipboard.writeText(texto);
+                const textoOriginal = botao.textContent;
+                botao.textContent = 'Copiado! ✓';
+                botao.style.backgroundColor = '#27ae60';
+                setTimeout(() => {
+                    botao.textContent = textoOriginal;
+                    botao.style.backgroundColor = 'var(--secondary-color)';
+                }, 2000);
+            } catch (err) {
+                console.error('Falha ao copiar texto', err);
+            }
+        }
+
+        function atualizarNomeArquivoImport(input) {
+            const label = document.getElementById('ia-import-file-name');
+            if (input.files && input.files[0]) {
+                label.textContent = input.files[0].name;
+                label.style.color = 'var(--text-color)';
+            } else {
+                label.textContent = 'Nenhum arquivo';
+                label.style.color = 'gray';
+            }
+        }
+
+        async function processarImportacaoJSON() {
+            const fileInput = document.getElementById('ia-import-file-input');
+            const conjuntoSelecionado = document.getElementById('ia-import-conjunto-select').value;
+            const feedback = document.getElementById('ia-import-feedback');
+            const btn = document.getElementById('ia-btn-confirmar-import');
+            
+            if (!fileInput.files || !fileInput.files[0]) {
+                alert("Por favor, selecione um arquivo JSON primeiro.");
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            feedback.style.display = 'block';
+            feedback.style.color = 'var(--text-color)';
+            feedback.textContent = 'Lendo arquivo...';
+            btn.disabled = true;
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const dados = JSON.parse(e.target.result);
+                    
+                    if (!Array.isArray(dados)) {
+                        throw new Error("O JSON deve ser um array contendo uma lista de objetos.");
+                    }
+                    
+                    if (dados.length === 0) {
+                        throw new Error("O arquivo JSON está vazio.");
+                    }
+                    
+                    const termosFormatados = [];
+                    for (let i = 0; i < dados.length; i++) {
+                        const item = dados[i];
+                        if (!item.item || !item.leitura || !item.significado) {
+                            throw new Error(`Item nº ${i + 1} inválido. Deve conter "item", "leitura" e "significado".`);
+                        }
+                        
+                        const notasLimpa = removerTagConjuntos(item.notes || item.notas || '');
+                        const novasNotas = atualizarNotasComConjuntos(notasLimpa, [conjuntoSelecionado]);
+                        
+                        termosFormatados.push({
+                            item: item.item.trim(),
+                            leitura: item.leitura.trim(),
+                            significado: item.significado.trim(),
+                            categoria: item.categoria ? item.categoria.trim() : 'Vocabulário',
+                            notas: novasNotas,
+                            user_id: idDoUsuarioLogado
+                        });
+                    }
+                    
+                    feedback.textContent = `Enviando ${termosFormatados.length} termos para o servidor...`;
+                    
+                    const response = await fetch('/api/jisho?acao=salvar', {
+                        method: 'POST',
+                        headers: {
+                            "Authorization": tokenDeAcesso,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(termosFormatados)
+                    });
+                    
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.error || "Erro do servidor ao salvar os dados.");
+                    }
+                    
+                    const salvos = await response.json();
+                    const salvosArray = Array.isArray(salvos) ? salvos : [salvos];
+                    
+                    salvosArray.forEach(salvo => {
+                        if (!salvo || !salvo.item) return;
+                        
+                        const index = dadosCombinados.findIndex(d => d.item === salvo.item);
+                        if (index !== -1) {
+                            dadosCombinados[index] = salvo;
+                        } else {
+                            dadosCombinados.push(salvo);
+                        }
+                    });
+                    
+                    const conjuntosSet = new Set(['Geral']);
+                    dadosCombinados.forEach(d => {
+                        const conjuntos = extrairConjuntos(d.notas, d.item);
+                        conjuntos.forEach(c => conjuntosSet.add(c));
+                    });
+                    conjuntosDisponiveis = Array.from(conjuntosSet);
+                    
+                    atualizarSeletoresDeConjunto();
+                    
+                    // Selecionar o conjunto importado
+                    document.getElementById('ia-conjunto-select').value = conjuntoSelecionado;
+                    
+                    // Desligar Modo Associação
+                    const chk = document.getElementById('modo-associacao-chk');
+                    chk.checked = false;
+                    modoAssociacaoAtivo = false;
+                    document.getElementById('modo-associacao-label').textContent = "Modo Associação Desativado";
+                    document.getElementById('modo-associacao-label').style.color = "gray";
+                    
+                    aplicarFiltros();
+                    
+                    feedback.style.color = '#27ae60';
+                    feedback.textContent = `Sucesso! ${termosFormatados.length} termos importados e associados ao conjunto "${conjuntoSelecionado}".`;
+                    
+                    fileInput.value = '';
+                    document.getElementById('ia-import-file-name').textContent = 'Nenhum arquivo';
+                    document.getElementById('ia-import-file-name').style.color = 'gray';
+                    
+                    setTimeout(() => {
+                        feedback.style.display = 'none';
+                    }, 5000);
+                    
+                } catch (err) {
+                    console.error("Erro na importação JSON", err);
+                    feedback.style.color = '#e74c3c';
+                    feedback.textContent = `Erro: ${err.message}`;
+                } finally {
+                    btn.disabled = false;
+                }
+            };
+            reader.readAsText(file);
         }
 
         window.addEventListener('DOMContentLoaded', async (event) => {
