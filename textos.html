@@ -577,12 +577,20 @@
                 return;
             }
 
-            container.innerHTML = textos.map(t => `
-                <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 5px; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;" onmouseover="this.style.borderColor='var(--highlight-color)'" onmouseout="this.style.borderColor='var(--border-color)'" onclick="carregarTextoNoEditor('${t.item.replace(/'/g, "\\'")}', '${t.notas.replace(/'/g, "\\'").replace(/\n/g, '\\n')}')">
+            container.innerHTML = '';
+            textos.forEach(t => {
+                const div = document.createElement('div');
+                div.style.cssText = "background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 5px; padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;";
+                div.onmouseover = () => { div.style.borderColor = 'var(--highlight-color)'; };
+                div.onmouseout = () => { div.style.borderColor = 'var(--border-color)'; };
+                div.onclick = () => { carregarTextoNoEditor(t.item, t.notas); };
+
+                div.innerHTML = `
                     <span style="font-weight: bold; font-size: 1.2em; color: var(--primary-color);">${t.item}</span>
                     <span style="font-size: 0.9em; color: gray;">Abrir 📖</span>
-                </div>
-            `).join('');
+                `;
+                container.appendChild(div);
+            });
         }
 
         function carregarTextoNoEditor(titulo, conteudo) {
