@@ -130,9 +130,43 @@
         }
 
         .linha-texto {
-            margin: 0 0 10px 0;
+            margin: 0;
+            display: inline-block;
+        }
+
+        .bloco-linha {
+            margin: 0 0 12px 0;
             border-bottom: 1px dashed var(--border-color);
-            padding-bottom: 5px;
+            padding-bottom: 8px;
+        }
+
+        .btn-traduzir-linha {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.75em;
+            opacity: 0.5;
+            padding: 2px 6px;
+            margin-left: 8px;
+            color: var(--highlight-color);
+            border-radius: 4px;
+            transition: 0.2s;
+            vertical-align: middle;
+        }
+        .btn-traduzir-linha:hover {
+            opacity: 1;
+            background-color: rgba(230, 126, 34, 0.15);
+        }
+        .traducao-container {
+            font-size: 0.8em;
+            color: var(--learned-color);
+            font-style: italic;
+            margin-top: 6px;
+            padding: 6px 10px;
+            background-color: rgba(41, 128, 185, 0.05);
+            border-left: 3px solid var(--learned-color);
+            border-radius: 3px;
+            line-height: 1.4;
         }
 
         .termo-destaque {
@@ -386,7 +420,15 @@
             // CORREÇÃO DA SINTAXE: Removido o '=' duplicado
             let lacunaFinal = linha.substring(curr);
             if (lacunaFinal) result += processarLacuna(lacunaFinal);
-            return `<p class="linha-texto">${result}</p>`;
+            
+            const textoEscapado = linha.replace(/"/g, '&quot;');
+            return `
+                <div class="bloco-linha">
+                    <p class="linha-texto">${result}</p>
+                    <button class="btn-traduzir-linha" data-texto="${textoEscapado}" onclick="traduzirLinhaCompleta(this)" title="Traduzir linha completa para Português">🌐 Traduzir</button>
+                    <div class="traducao-container" style="display: none;"></div>
+                </div>
+            `;
         }
 
         function processarLacuna(textoDesconhecido) {
@@ -599,6 +641,67 @@
             atualizarContador();
             processarTexto();
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function traduzirLinhaCompleta(botao) {
+            const container = botao.nextElementSibling;
+            const textoOriginal = botao.getAttribute('data-texto');
+
+            if (!textoOriginal) return;
+
+            // Se já estiver visível, fecha
+            if (container.style.display === 'block') {
+                container.style.display = 'none';
+                botao.innerHTML = '🌐 Traduzir';
+                return;
+            }
+
+            // Se já tiver a tradução carregada, apenas abre
+            if (container.getAttribute('data-carregado') === 'true') {
+                container.style.display = 'block';
+                botao.innerHTML = '🙈 Ocultar';
+                return;
+            }
+
+            botao.innerHTML = '⏳ Traduzindo...';
+            botao.disabled = true;
+
+            try {
+                const apiKey = localStorage.getItem('gemini_api_key');
+                const headers = { 'Content-Type': 'application/json' };
+                if (apiKey) {
+                    headers['X-Gemini-Key'] = apiKey;
+                }
+
+                const prompt = `Traduza a seguinte linha de japonês para português brasileiro de forma direta e natural. Retorne APENAS a tradução em português, sem qualquer introdução, explicação ou caractere adicional: "${textoOriginal}"`;
+
+                const response = await fetch('/api/ai', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        messages: [
+                            { role: 'user', parts: [{ text: prompt }] }
+                        ]
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Erro na resposta do servidor');
+
+                const traducao = data.reply.trim().replace(/^"|"$/g, ''); // Limpa aspas extras que a IA possa colocar
+
+                container.innerHTML = `<strong>Tradução:</strong> ${traducao}`;
+                container.setAttribute('data-carregado', 'true');
+                container.style.display = 'block';
+                botao.innerHTML = '🙈 Ocultar';
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = `<span style="color:var(--unlearned-color)">❌ Erro ao traduzir: ${e.message}</span>`;
+                container.style.display = 'block';
+                botao.innerHTML = '🌐 Traduzir';
+            } finally {
+                botao.disabled = false;
+            }
         }
 
         window.addEventListener('DOMContentLoaded', carregarBancoDinamico);
