@@ -134,9 +134,9 @@
                 }
 
                 if (Array.isArray(resultado)) {
-                    // Combinar com os dados estáticos base, evitando duplicatas e ignorando textos longos e frases
+                    // Combinar com os dados estáticos base, evitando duplicatas e ignorando apenas textos longos
                     const itensExistentes = new Set(dadosRevisao.map(d => d.item));
-                    const dadosDbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto' && !(d.categoria && d.categoria.startsWith('Frase:')));
+                    const dadosDbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto');
                     dadosRevisao = [...dadosRevisao, ...dadosDbFiltrados];
                 }
             } catch (e) {
@@ -172,7 +172,18 @@ window.addEventListener('DOMContentLoaded', iniciarJogo);
             const exibidos = totalTermos - faltam;
             document.getElementById('card-categoria').innerHTML = `${termoAtual.categoria} <span style="float:right;">${exibidos}/${totalTermos}</span>`;
 
-            document.getElementById('card-termo').textContent = termoAtual.item;
+            const cardTermo = document.getElementById('card-termo');
+            cardTermo.textContent = termoAtual.item;
+            
+            // Ajusta o tamanho da fonte dinamicamente de acordo com a extensão do termo
+            if (termoAtual.item.length > 15) {
+                cardTermo.style.fontSize = '2.2em';
+            } else if (termoAtual.item.length > 8) {
+                cardTermo.style.fontSize = '3.5em';
+            } else {
+                cardTermo.style.fontSize = '6em';
+            }
+
             document.getElementById('card-leitura').textContent = termoAtual.leitura;
             document.getElementById('card-significado').textContent = termoAtual.significado;
             document.getElementById('card-notas').textContent = termoAtual.notas;
