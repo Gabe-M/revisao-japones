@@ -87,24 +87,62 @@ export default async function handler(req, res) {
                 card = dadosAtuais[0];
             }
 
-            // Algoritmo simplificado de 2 botões
-            let novoIntervalo = 0;
-            let novasRepeticoes = 0;
             const agora = Date.now();
 
-            if (estado === 'errei') {
-                novasRepeticoes = 0;
-                novoIntervalo = 0;
-                card.lapses = (card.lapses || 0) + 1;
-            } else if (estado === 'acertei') {
-                novasRepeticoes = card.repetitions + 1;
-                // Escala fixa: 1, 3, 7, 14, 30, 90, 180...
-                const escala = [1, 3, 7, 14, 30, 90, 180, 360];
-                const index = Math.min(novasRepeticoes - 1, escala.length - 1);
-                novoIntervalo = escala[index];
+            // ===== ALGORITMO PROGRESSIVO =====
+            // Fase de Aprendizado (rep < 2): ciclos dentro da sessao
+            //   rep=0 -> errei: due = agora (volta na sessao), rep=0
+            //   rep=0 -> acertei: due = agora+10min, rep=1
+            //   rep=1 -> errei: due = agora (volta na sessao), rep=0
+            //   rep=1 -> acertei: due = agora+1dia, rep=2 (GRADUADO)
+            //
+            // Fase de Revisao (rep >= 2): intervalos crescentes
+            //   errei: volta para rep=1, due = agora (ciclo de 10min na proxima sessao)
+            //   acertei: rep++, intervalo = escala[rep-2]
+            //   Escala (dias): 1, 2, 4, 7, 15, 30, 60, 120, 180, 365
+
+            const ESCALA_REVISAO = [1, 2, 4, 7, 15, 30, 60, 120, 180, 365];
+            const MINUTOS_10 = 10 * 60 * 1000; // 10 min em ms
+            const DIA_MS = 24 * 60 * 60 * 1000;
+
+            let novasRepeticoes = card.repetitions || 0;
+            let novoIntervalo = 0; // em dias (0 = mesma sessao)
+            let novaDue = agora;
+            const novosLapses = estado === 'errei' ? (card.lapses || 0) + 1 : (card.lapses || 0);
+
+            if (novasRepeticoes < 2) {
+                // FASE DE APRENDIZADO
+                if (estado === 'errei') {
+                    novasRepeticoes = 0;
+                    novoIntervalo = 0;
+                    novaDue = agora; // volta imediatamente na sessao
+                } else {
+                    novasRepeticoes = novasRepeticoes + 1;
+                    if (novasRepeticoes === 1) {
+                        // 1a vez certa: volta em 10 min na sessao
+                        novoIntervalo = 0;
+                        novaDue = agora + MINUTOS_10;
+                    } else {
+                        // 2a vez certa: GRADUADO para revisao (1 dia)
+                        novoIntervalo = 1;
+                        novaDue = agora + DIA_MS;
+                    }
+                }
+            } else {
+                // FASE DE REVISAO
+                if (estado === 'errei') {
+                    // Volta para aprendizado
+                    novasRepeticoes = 1;
+                    novoIntervalo = 0;
+                    novaDue = agora + MINUTOS_10; // aparece na proxima sessao em 10 min
+                } else {
+                    novasRepeticoes = novasRepeticoes + 1;
+                    const idxEscala = Math.min(novasRepeticoes - 2, ESCALA_REVISAO.length - 1);
+                    novoIntervalo = ESCALA_REVISAO[idxEscala];
+                    novaDue = agora + novoIntervalo * DIA_MS;
+                }
             }
 
-            const novaDue = agora + novoIntervalo * 24 * 60 * 60 * 1000;
 
             const payload = {
                 user_id: user_id,
@@ -113,7 +151,7 @@ export default async function handler(req, res) {
                 interval: novoIntervalo,
                 repetitions: novasRepeticoes,
                 due: novaDue,
-                lapses: card.lapses
+                lapses: novosLapses
             };
 
             const responsePatch = await fetch(`${SUPABASE_URL}/rest/v1/srs_progresso`, {

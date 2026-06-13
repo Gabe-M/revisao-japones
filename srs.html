@@ -588,25 +588,38 @@
             return prog[item] || { ease: 2.5, interval: 0, repetitions: 0, due: 0, lapses: 0 };
         }
 
+        // Espelha a lógica do backend para preview nos botões
+        // rep=0 (novo): errei -> <1min; acertei -> 10min (volta na sessao)
+        // rep=1 (aprendendo): errei -> <1min; acertei -> 1 dia
+        // rep>=2 (revisao): errei -> 10min (volta na sessao); acertei -> intervalo crescente
         function formatarIntervalo(card, estado) {
-            if (estado === 'errei') return '< 1 min';
-            const rep = (card.repetitions || 0) + 1;
-            const escala = [1, 3, 7, 14, 30, 90, 180, 360];
-            const d = escala[Math.min(rep - 1, escala.length - 1)];
+            const rep = card.repetitions || 0;
+            if (estado === 'errei') {
+                if (rep >= 2) return '10 min'; // revisao: volta na sessao
+                return '< 1 min';              // aprendizado: volta imediatamente
+            }
+            // acertei
+            if (rep === 0) return '10 min';   // 1a vez certa: 10 min na sessao
+            if (rep === 1) return '1 dia';     // 2a vez certa: gradua pra revisao
+            // em revisao: escala inteligente
+            const escala = [1, 2, 4, 7, 15, 30, 60, 120, 180, 365];
+            const idx = Math.min(rep - 1, escala.length - 1);
+            const d = escala[idx];
             if (d === 1) return '1 dia';
             if (d < 30) return `${d} dias`;
             if (d < 365) return `${Math.round(d/30)} mês(es)`;
             return `${(d/365).toFixed(1)} ano(s)`;
         }
 
-        // O algoritmo de cálculo de memória e intervalos agora roda no backend
+        // O algoritmo de cálculo de memória e intervalos roda no backend, com etapas progressivas.
 
         // ===== ESTADO =====
         let todosTermos = [];
         let conjuntosDisponiveis = [];
         let conjuntoAtivo = 'Todos';
-        let fila = [];
-        let filaReaprender = [];
+        let fila = [];             // Cards principais da sessao
+        let filaReaprender = [];   // Cards errados: voltam IMEDIATAMENTE
+        let filaAprendendo = [];   // Cards em aprendizado (10min): voltam no fim da sessao
         let termoAtual = null;
         let revelado = false;
         let progresso = {};
@@ -808,6 +821,7 @@
 
             fila = [...devidos, ...novos];
             filaReaprender = [];
+            filaAprendendo = [];
             sessaoStats = { novos: novos.length, acertos: 0, erros: 0, total: fila.length };
 
             contChips.novos = novos.length;
@@ -832,13 +846,18 @@
         }
 
         function proximoCard() {
-            // Pega do fila principal; se vazia tenta reaprendizado
-            if (fila.length === 0 && filaReaprender.length === 0) {
+            // Ordem de prioridade: erros imediatos > fila principal > cards em aprendizado (10min)
+            if (fila.length === 0 && filaReaprender.length === 0 && filaAprendendo.length === 0) {
                 finalizarSessao();
                 return;
             }
 
-            if (fila.length === 0) {
+            if (fila.length === 0 && filaReaprender.length === 0) {
+                // Passou por todos os termos principais: agora revisa os que estao em aprendizado
+                fila = [...filaAprendendo];
+                filaAprendendo = [];
+                shuffle(fila);
+            } else if (fila.length === 0) {
                 fila = [...filaReaprender];
                 filaReaprender = [];
                 shuffle(fila);
@@ -908,6 +927,10 @@
             document.getElementById('rating-buttons').style.opacity = '0.5';
             document.getElementById('rating-buttons').style.pointerEvents = 'none';
 
+            const cardAnterior = getCardData(progresso, termoAtual.item);
+            const repAnterior = cardAnterior.repetitions || 0;
+            let novosDadosLocais = null;
+
             try {
                 const payload = { user_id: idDoUsuarioLogado, item: termoAtual.item, estado: estado };
                 const response = await fetch('/api/srs?acao=avaliar', {
@@ -917,13 +940,13 @@
                 });
 
                 if (response.ok) {
-                    const novoDado = await response.json();
+                    novosDadosLocais = await response.json();
                     progresso[termoAtual.item] = {
-                        ease: novoDado.ease || 2.5,
-                        interval: novoDado.interval,
-                        repetitions: novoDado.repetitions,
-                        due: Number(novoDado.due),
-                        lapses: novoDado.lapses
+                        ease: novosDadosLocais.ease || 2.5,
+                        interval: novosDadosLocais.interval,
+                        repetitions: novosDadosLocais.repetitions,
+                        due: Number(novosDadosLocais.due),
+                        lapses: novosDadosLocais.lapses
                     };
                     salvarProgressoLocal(progresso);
                 }
@@ -935,8 +958,28 @@
             document.getElementById('rating-buttons').style.pointerEvents = 'auto';
 
             sessaoStats.total++;
-            if (estado === 'acertei') sessaoStats.acertos++;
-            else { sessaoStats.erros++; filaReaprender.push(termoAtual); }
+
+            if (estado === 'acertei') {
+                sessaoStats.acertos++;
+                // Se o card ainda estava em aprendizado (rep=0 antes de acertar),
+                // precisa voltar na sessao em ~10 min (ciclo de aprendizado)
+                if (repAnterior === 0) {
+                    // Adiciona ao final da fila para revisitar na sessao atual
+                    filaAprendendo.push(termoAtual);
+                }
+                // rep=1 -> graduou para revisao de 1 dia, nao volta na sessao
+                // rep>=2 -> revisao normal, nao volta na sessao
+            } else {
+                // Errei
+                sessaoStats.erros++;
+                if (repAnterior >= 2) {
+                    // Card em revisao: volta para etapa de aprendizado (10 min)
+                    filaAprendendo.push(termoAtual);
+                } else {
+                    // Card ainda aprendendo: recoloca imediatamente na fila
+                    filaReaprender.push(termoAtual);
+                }
+            }
 
             proximoCard();
         }
