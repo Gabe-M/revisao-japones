@@ -63,7 +63,87 @@ export default async function handler(req, res) {
         }
     }
 
-    // AÇÃO 3: Deletar progresso do SRS
+    // AÇÃO 3: Avaliar termo (Algoritmo SRS Backend)
+    if (req.method === 'PATCH' || acao === 'avaliar') {
+        try {
+            const corpo = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+            const { item, estado, user_id } = corpo; // estado: "errei" ou "acertei"
+            
+            if (!item || !estado || !user_id) {
+                return res.status(400).json({ error: 'Item, estado e user_id são obrigatórios' });
+            }
+
+            // Busca o estado atual
+            const responseAtual = await fetch(`${SUPABASE_URL}/rest/v1/srs_progresso?item=eq.${encodeURIComponent(item)}&select=*`, {
+                headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": tokenUsuario
+                }
+            });
+            const dadosAtuais = await responseAtual.json();
+            
+            let card = { ease: 2.5, interval: 0, repetitions: 0, due: 0, lapses: 0 };
+            if (responseAtual.ok && dadosAtuais && dadosAtuais.length > 0) {
+                card = dadosAtuais[0];
+            }
+
+            // Algoritmo simplificado de 2 botões
+            let novoIntervalo = 0;
+            let novasRepeticoes = 0;
+            const agora = Date.now();
+
+            if (estado === 'errei') {
+                novasRepeticoes = 0;
+                novoIntervalo = 0;
+                card.lapses = (card.lapses || 0) + 1;
+            } else if (estado === 'acertei') {
+                novasRepeticoes = card.repetitions + 1;
+                // Escala fixa: 1, 3, 7, 14, 30, 90, 180...
+                const escala = [1, 3, 7, 14, 30, 90, 180, 360];
+                const index = Math.min(novasRepeticoes - 1, escala.length - 1);
+                novoIntervalo = escala[index];
+            }
+
+            const novaDue = agora + novoIntervalo * 24 * 60 * 60 * 1000;
+
+            const payload = {
+                user_id: user_id,
+                item: item,
+                ease: 2.5,
+                interval: novoIntervalo,
+                repetitions: novasRepeticoes,
+                due: novaDue,
+                lapses: card.lapses
+            };
+
+            const responsePatch = await fetch(`${SUPABASE_URL}/rest/v1/srs_progresso`, {
+                method: 'POST', // UPSERT
+                headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": tokenUsuario,
+                    "Content-Type": "application/json",
+                    "Prefer": "resolution=merge-duplicates,return=representation"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const resultado = await responsePatch.json();
+
+            if (!responsePatch.ok) {
+                return res.status(responsePatch.status).json({
+                    error: 'O Supabase rejeitou a gravação no PATCH',
+                    detalhes: resultado
+                });
+            }
+
+            // Retorna o novo estado (o primeiro elemento do array retornado pelo upsert)
+            return res.status(200).json(Array.isArray(resultado) ? resultado[0] : resultado);
+        } catch (error) {
+            return res.status(500).json({ error: 'Falha no servidor ao avaliar SRS', mensagem: error.message });
+        }
+    }
+
+    // AÇÃO 4: Deletar progresso do SRS
     if (acao === 'deletar' && req.method === 'POST') {
         try {
             const corpo = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
