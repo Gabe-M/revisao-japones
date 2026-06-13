@@ -4,33 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Revisão de Japonês - Vocabulário</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #f4f4f9; --text-color: #333; --card-bg: #ffffff;
+            --bg-color: #f0f2f5; --text-color: #2c3e50; --card-bg: rgba(255, 255, 255, 0.95);
             --primary-color: #2c3e50; --secondary-color: #34495e;
-            --border-color: #dddddd; --highlight-color: #e67e22;
+            --border-color: rgba(0, 0, 0, 0.06); --highlight-color: #e67e22;
+            --shadow-subtle: 0 4px 15px rgba(0,0,0,0.03);
+            --shadow-hover: 0 10px 25px rgba(0,0,0,0.08);
+            --card-radius: 16px;
         }
         [data-theme="dark"] {
-            --bg-color: #121212; --text-color: #e0e0e0; --card-bg: #1e1e1e;
-            --primary-color: #34495e; --secondary-color: #4b6584;
-            --border-color: #333333; --highlight-color: #d35400;
+            --bg-color: #121212; --text-color: #f0f0f0; --card-bg: rgba(30, 30, 30, 0.85);
+            --primary-color: #2c3e50; --secondary-color: #4b6584;
+            --border-color: rgba(255, 255, 255, 0.08); --highlight-color: #d35400;
+            --shadow-subtle: 0 4px 15px rgba(0,0,0,0.3);
+            --shadow-hover: 0 10px 25px rgba(0,0,0,0.5);
         }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: 0.3s; }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: background 0.3s, color 0.3s; }
         .nav-menu { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-        .nav-menu a { padding: 10px 20px; text-decoration: none; background: var(--primary-color); color: white; border-radius: 5px; font-weight: bold; }
+        .nav-menu a { padding: 10px 20px; text-decoration: none; background: var(--primary-color); color: white; border-radius: 8px; font-weight: 600; letter-spacing: 0.5px; transition: 0.2s; }
+        .nav-menu a:hover { transform: translateY(-2px); opacity: 0.9; }
         .nav-menu a.ativo { background: var(--highlight-color); }
-        .header-container { display: flex; justify-content: space-between; max-width: 1200px; margin: 0 auto 20px; }
-        .search-bar { width: 100%; max-width: 500px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-color); margin: 0 auto 20px; display: block; outline: none; }
-        .search-bar:focus { border-color: var(--highlight-color); }
-        .controls { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; max-width: 1200px; margin: 0 auto 30px; }
-        button { padding: 10px 15px; border: none; background: var(--primary-color); color: white; border-radius: 5px; cursor: pointer; }
-        button.active { box-shadow: 0 0 0 3px var(--highlight-color); }
-        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; transition: 0.2s; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 5px 10px rgba(0,0,0,0.1); }
-        .item-title { font-size: 2.2em; text-align: center; margin: 10px 0; }
-        details { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border-color); }
-        summary { cursor: pointer; font-weight: bold; color: var(--highlight-color); display: none; }
+        .header-container { display: flex; justify-content: space-between; max-width: 1200px; margin: 0 auto 20px; align-items: center; }
+        .header-container h1 { font-weight: 700; letter-spacing: -0.5px; margin: 0; }
+        .search-bar { width: 100%; max-width: 500px; padding: 14px 20px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-bg); color: var(--text-color); margin: 0 auto 20px; display: block; outline: none; font-size: 1.05em; transition: 0.2s; box-shadow: var(--shadow-subtle); backdrop-filter: blur(10px); }
+        .search-bar:focus { border-color: var(--highlight-color); box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.2); }
+        .controls { display: flex; justify-content: center; gap: 12px; margin-bottom: 30px; flex-wrap: wrap; max-width: 1200px; margin: 0 auto 30px; }
+        button { padding: 10px 16px; border: none; background: var(--primary-color); color: white; border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; transition: 0.2s; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button.active { background: var(--highlight-color); }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; }
+        
+        /* CARD PREMIUM */
+        .card { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: var(--card-radius); 
+            padding: 24px; 
+            display: flex; 
+            flex-direction: column; 
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: var(--shadow-subtle);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+        .card:hover { 
+            transform: translateY(-6px) scale(1.01); 
+            box-shadow: var(--shadow-hover); 
+            border-color: var(--highlight-color);
+        }
+        .item-title { 
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 3em; 
+            text-align: center; 
+            margin: 10px 0; 
+            font-weight: 700;
+            color: var(--primary-color);
+            transition: color 0.3s;
+        }
+        [data-theme="dark"] .item-title { color: var(--text-color); }
+        .card:hover .item-title { color: var(--highlight-color); }
+        
+        .card-leitura {
+            text-align: center;
+            font-size: 1.1em;
+            color: gray;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        
+        /* BADGES */
+        .card-categoria-label { 
+            background: rgba(52, 73, 94, 0.1); 
+            color: var(--secondary-color); 
+            padding: 4px 10px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            font-size: 0.75em;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        [data-theme="dark"] .card-categoria-label { background: rgba(255, 255, 255, 0.1); color: #bdc3c7; }
+        .card-conjunto-badge { 
+            background-color: rgba(230, 126, 34, 0.12); 
+            color: var(--highlight-color); 
+            padding: 4px 10px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            font-size: 0.75em; 
+        }
+
+        details { margin-top: auto; padding-top: 15px; border-top: 1px dashed var(--border-color); }
+        summary { cursor: pointer; font-weight: 700; color: var(--highlight-color); display: none; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px; }
         
         /* NOVO: Estilos de Paginação */
         .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 40px; padding-bottom: 20px; }
@@ -653,14 +722,14 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
 
                 return `
                     <div class="${classes}" onclick="gerenciarCliqueCard(this, ${termoJson}, event)" style="cursor: pointer;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.85em; color:gray; pointer-events: none; margin-bottom: 8px; gap: 5px; flex-wrap: wrap;">
-                            <div style="display:flex; gap: 4px; align-items:center; flex-wrap: wrap;">
-                                <span class="card-categoria-label" style="background: var(--secondary-color); color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.9em;">${d.categoria}</span>
-                                ${badgesHtml}
-                            </div>
-                            <span>${d.leitura}</span>
+                        <div style="display:flex; justify-content:center; align-items:center; pointer-events: none; margin-bottom: 15px; gap: 6px; flex-wrap: wrap;">
+                            <span class="card-categoria-label">${d.categoria}</span>
+                            ${badgesHtml}
                         </div>
-                        <p class="item-title" style="pointer-events: none;">${d.item}</p>
+                        <div style="pointer-events: none; flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
+                            <div class="card-leitura">${d.leitura || ' '}</div>
+                            <div class="item-title">${d.item}</div>
+                        </div>
                         <details onclick="event.stopPropagation();">
                             <summary>Tradução e Notas</summary>
                             <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
