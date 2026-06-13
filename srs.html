@@ -584,12 +584,36 @@
         // Cada card tem: { ease, interval, repetitions, due, lapses }
         const SRS_KEY = `srs_v1_${idDoUsuarioLogado}`;
 
-        function carregarProgresso() {
+        function carregarProgressoLocal() {
             try { return JSON.parse(localStorage.getItem(SRS_KEY)) || {}; }
             catch { return {}; }
         }
-        function salvarProgresso(prog) {
+        function salvarProgressoLocal(prog) {
             localStorage.setItem(SRS_KEY, JSON.stringify(prog));
+        }
+
+        async function salvarProgressoDb(item, dados) {
+            try {
+                const payload = {
+                    user_id: idDoUsuarioLogado,
+                    item: item,
+                    ease: dados.ease,
+                    interval: dados.interval,
+                    repetitions: dados.repetitions,
+                    due: dados.due,
+                    lapses: dados.lapses
+                };
+                await fetch('/api/srs?acao=salvar', {
+                    method: 'POST',
+                    headers: {
+                        "Authorization": tokenDeAcesso,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+            } catch (error) {
+                console.error(`Erro ao salvar no banco para o item "${item}":`, error);
+            }
         }
 
         function getCardData(prog, item) {
@@ -696,7 +720,79 @@
                 conjuntosDisponiveis = ['Todos', 'Geral'];
             }
 
-            progresso = carregarProgresso();
+            // Carregar progresso SRS do Banco de Dados e mesclar
+            progresso = {};
+            const progressoLocal = carregarProgressoLocal();
+            let progressoDb = {};
+
+            try {
+                const responseSrs = await fetch('/api/srs?acao=listar', {
+                    headers: { "Authorization": tokenDeAcesso }
+                });
+                if (responseSrs.ok) {
+                    const dadosSrs = await responseSrs.json();
+                    if (Array.isArray(dadosSrs)) {
+                        dadosSrs.forEach(row => {
+                            progressoDb[row.item] = {
+                                ease: row.ease,
+                                interval: row.interval,
+                                repetitions: row.repetitions,
+                                due: Number(row.due),
+                                lapses: row.lapses
+                            };
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar progresso do banco:', error);
+            }
+
+            // Mesclar progresso (Local vs DB)
+            progresso = { ...progressoDb };
+            const itensParaSincronizar = [];
+
+            for (const item in progressoLocal) {
+                if (!progressoDb[item]) {
+                    progresso[item] = progressoLocal[item];
+                    itensParaSincronizar.push({
+                        user_id: idDoUsuarioLogado,
+                        item: item,
+                        ...progressoLocal[item]
+                    });
+                } else {
+                    const loc = progressoLocal[item];
+                    const db = progressoDb[item];
+                    if (loc.repetitions > db.repetitions || (loc.repetitions === db.repetitions && loc.due > db.due)) {
+                        progresso[item] = loc;
+                        itensParaSincronizar.push({
+                            user_id: idDoUsuarioLogado,
+                            item: item,
+                            ...loc
+                        });
+                    }
+                }
+            }
+
+            // Atualiza cache local
+            salvarProgressoLocal(progresso);
+
+            // Se houver itens locais novos/mais recentes, sincroniza com o banco em lote (upsert)
+            if (itensParaSincronizar.length > 0) {
+                console.log(`Sincronizando ${itensParaSincronizar.length} itens locais com o banco...`);
+                try {
+                    await fetch('/api/srs?acao=salvar', {
+                        method: 'POST',
+                        headers: {
+                            "Authorization": tokenDeAcesso,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(itensParaSincronizar)
+                    });
+                } catch (err) {
+                    console.error('Falha ao sincronizar itens locais com o banco:', err);
+                }
+            }
+
             renderizarConfig();
         }
 
@@ -864,7 +960,8 @@
             const card = getCardData(progresso, termoAtual.item);
             const novoDado = calcularNovosDados(card, qualidade);
             progresso[termoAtual.item] = novoDado;
-            salvarProgresso(progresso);
+            salvarProgressoLocal(progresso);
+            salvarProgressoDb(termoAtual.item, novoDado);
 
             sessaoStats.total++;
             if (qualidade >= 3) sessaoStats.acertos++;
@@ -903,15 +1000,34 @@
             document.getElementById('tela-fim').style.display = 'none';
             document.getElementById('tela-config').style.display = 'block';
             document.getElementById('btn-resetar').style.display = 'none';
-            progresso = carregarProgresso();
+            progresso = carregarProgressoLocal();
             renderizarConfig();
         }
 
-        function confirmarReset() {
+        async function confirmarReset() {
             if (confirm('Resetar o progresso do conjunto "' + conjuntoAtivo + '"? Isso não pode ser desfeito.')) {
                 const termos = termosDoConjunto();
-                termos.forEach(t => delete progresso[t.item]);
-                salvarProgresso(progresso);
+                const itensParaDeletar = [];
+                termos.forEach(t => {
+                    delete progresso[t.item];
+                    itensParaDeletar.push(t.item);
+                });
+                salvarProgressoLocal(progresso);
+
+                if (itensParaDeletar.length > 0) {
+                    try {
+                        await fetch('/api/srs?acao=deletar', {
+                            method: 'POST',
+                            headers: {
+                                "Authorization": tokenDeAcesso,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ itens: itensParaDeletar })
+                        });
+                    } catch (err) {
+                        console.error('Erro ao deletar progresso do banco:', err);
+                    }
+                }
                 voltarConfig();
             }
         }
