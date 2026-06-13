@@ -456,11 +456,10 @@
 
             let result = '';
             let curr = 0;
-
             for (let m of validMatches) {
                 let lacuna = linha.substring(curr, m.start);
                 if (lacuna) result += processarLacuna(lacuna);
-                result += `<span class="termo-destaque aprendido" onclick="exibirDetalhes('${m.dado.item}', this)">${linha.substring(m.start, m.end)}</span>`;
+                result += `<span class="termo-destaque aprendido" onclick="irParaCard('${m.dado.item.replace(/'/g, "\\'")}')">${linha.substring(m.start, m.end)}</span>`;
                 curr = m.end;
             }
 
@@ -508,6 +507,10 @@
             elementoSpan.classList.add('ativo');
         }
 
+        function irParaCard(termo) {
+            window.location.href = `index.html?termo=${encodeURIComponent(termo)}`;
+        }
+
         function exibirDetalhes(termoString, elementoSpan) {
             atualizarDestaqueVisual(elementoSpan);
             const termo = bancoDadosDinamico.find(d => d.item === termoString);
@@ -529,6 +532,7 @@
                 <p class="dic-significado">${termo.significado}</p>
                 <div class="dic-notas"><strong>Notas:</strong><br>${notasLimpa || 'Nenhuma nota registrada.'}</div>
                 <button class="btn-processar" style="background-color: var(--primary-color); margin-top: 15px;" onclick="window.TutorIA && window.TutorIA.perguntar('Explique de forma bem resumida e direta o termo: ${termo.item} (${termo.leitura || ''})')">🤖 Perguntar ao Sensei IA</button>
+                <button class="btn-ver-card" style="width: 100%; margin-top: 10px;" onclick="irParaCard('${termo.item.replace(/'/g, "\\'")}')">📖 Ver Card do Termo</button>
             `;
         }
 
@@ -654,7 +658,7 @@
                     if (spanAtivo) {
                         spanAtivo.classList.remove('desconhecido');
                         spanAtivo.classList.add('aprendido');
-                        spanAtivo.onclick = () => exibirDetalhes(item, spanAtivo);
+                        spanAtivo.onclick = () => irParaCard(item);
                     }
                     exibirDetalhes(item, spanAtivo);
                 } else {
