@@ -527,9 +527,11 @@
             <div class="rating-buttons" id="rating-buttons">
                 <button class="btn-rate again" onclick="avaliar('errei')">
                     <span class="label">🟥 Errei (Again)</span>
+                    <span class="interval" id="int-errei">—</span>
                 </button>
                 <button class="btn-rate easy" onclick="avaliar('acertei')">
                     <span class="label">🟩 Acertei (Good)</span>
+                    <span class="interval" id="int-acertei">—</span>
                 </button>
             </div>
         </div>
@@ -584,6 +586,17 @@
 
         function getCardData(prog, item) {
             return prog[item] || { ease: 2.5, interval: 0, repetitions: 0, due: 0, lapses: 0 };
+        }
+
+        function formatarIntervalo(card, estado) {
+            if (estado === 'errei') return '< 1 min';
+            const rep = (card.repetitions || 0) + 1;
+            const escala = [1, 3, 7, 14, 30, 90, 180, 360];
+            const d = escala[Math.min(rep - 1, escala.length - 1)];
+            if (d === 1) return '1 dia';
+            if (d < 30) return `${d} dias`;
+            if (d < 365) return `${Math.round(d/30)} mês(es)`;
+            return `${(d/365).toFixed(1)} ano(s)`;
         }
 
         // O algoritmo de cálculo de memória e intervalos agora roda no backend
@@ -741,6 +754,7 @@
                 else if (card.due <= agora) devidos++;
                 else aprendidos++;
             });
+            novos = Math.min(novos, 20); // Limita a interface a 20 novos por sessão
             return { novos, devidos, aprendidos, total: termos.length };
         }
 
@@ -779,7 +793,7 @@
             const termos = termosDoConjunto();
             const agora = Date.now();
 
-            const novos = termos.filter(t => getCardData(progresso, t.item).repetitions === 0);
+            let novos = termos.filter(t => getCardData(progresso, t.item).repetitions === 0);
             const devidos = termos.filter(t => {
                 const c = getCardData(progresso, t.item);
                 return c.repetitions > 0 && c.due <= agora;
@@ -788,6 +802,9 @@
             // Embaralha cada lista separadamente
             shuffle(novos);
             shuffle(devidos);
+
+            // Limita os novos a 20 por sessão para não sobrecarregar
+            novos = novos.slice(0, 20);
 
             fila = [...devidos, ...novos];
             filaReaprender = [];
@@ -875,6 +892,13 @@
             document.getElementById('btn-reveal').style.display = 'none';
             document.getElementById('avaliar-hint').style.display = 'block';
             document.getElementById('rating-buttons').classList.add('visivel');
+
+            // Mostrar intervalos esperados nos botões
+            const card = getCardData(progresso, termoAtual.item);
+            const elErrei = document.getElementById('int-errei');
+            if (elErrei) elErrei.textContent = formatarIntervalo(card, 'errei');
+            const elAcertei = document.getElementById('int-acertei');
+            if (elAcertei) elAcertei.textContent = formatarIntervalo(card, 'acertei');
         }
 
         async function avaliar(estado) {
