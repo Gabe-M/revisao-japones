@@ -99,9 +99,9 @@ export default async function handler(req, res) {
             // Fase de Revisao (rep >= 2): intervalos crescentes
             //   errei: volta para rep=1, due = agora (ciclo de 10min na proxima sessao)
             //   acertei: rep++, intervalo = escala[rep-2]
-            //   Escala (dias): 1, 2, 4, 7, 15, 30, 60, 120, 180, 365
+            //   Escala gradual e inteligente (dias): 1, 2, 3, 5, 8, 14, 21, 30, 45, 60, 90, 135, 180, 270, 365
 
-            const ESCALA_REVISAO = [1, 2, 4, 7, 15, 30, 60, 120, 180, 365];
+            const ESCALA_REVISAO = [1, 2, 3, 5, 8, 14, 21, 30, 45, 60, 90, 135, 180, 270, 365];
             const MINUTOS_10 = 10 * 60 * 1000; // 10 min em ms
             const DIA_MS = 24 * 60 * 60 * 1000;
 

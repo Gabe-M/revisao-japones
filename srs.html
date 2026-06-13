@@ -601,8 +601,8 @@
             // acertei
             if (rep === 0) return '10 min';   // 1a vez certa: 10 min na sessao
             if (rep === 1) return '1 dia';     // 2a vez certa: gradua pra revisao
-            // em revisao: escala inteligente
-            const escala = [1, 2, 4, 7, 15, 30, 60, 120, 180, 365];
+            // em revisao: escala inteligente baseada em espacamento gradual
+            const escala = [1, 2, 3, 5, 8, 14, 21, 30, 45, 60, 90, 135, 180, 270, 365];
             const idx = Math.min(rep - 1, escala.length - 1);
             const d = escala[idx];
             if (d === 1) return '1 dia';
