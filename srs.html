@@ -427,7 +427,11 @@
     <script>
         // CONTROLE DE LOGIN
         const sessaoLocalStorage = localStorage.getItem('supabase_session');
-        if (!sessaoLocalStorage) { window.location.href = "login.html"; }
+        if (!sessaoLocalStorage) { 
+            window.location.href = "login.html"; 
+        } else if (!localStorage.getItem('ia_preference')) {
+            window.location.href = "setup.html";
+        }
         const sessao = JSON.parse(sessaoLocalStorage);
         const tokenDeAcesso = `Bearer ${sessao.access_token}`;
         const idDoUsuarioLogado = sessao.user.id;

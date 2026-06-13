@@ -231,21 +231,12 @@
                 </div>
             </div>
             
-            <div id="tutor-config-panel" style="border-bottom: 2px solid var(--tutor-border); padding: 15px;">
-                <p style="margin-top:0; font-weight: bold; font-size: 1em; color: var(--tutor-primary);">🔑 Configurar Chave de API (Grátis)</p>
-                <p style="font-size:0.85em; line-height:1.4; color:gray; margin-bottom: 12px;">
-                    O Sensei IA precisa de sua própria chave gratuita para rodar:
-                    <br><br>
-                    1. Acesse o <strong><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--tutor-user-msg); font-weight:bold; text-decoration:underline;">Google AI Studio</a></strong> e faça login com sua conta Google.<br>
-                    2. Clique em <strong>"Create API key"</strong> para gerar sua chave gratuita.<br>
-                    3. Cole a chave (começa com <code>AIzaSy</code>) no campo abaixo e clique em <strong>Salvar Chave</strong>.
+            <div id="tutor-config-panel" style="border-bottom: 2px solid var(--tutor-border); padding: 15px; text-align: center;">
+                <p style="margin-top:0; font-weight: bold; font-size: 1em; color: var(--tutor-primary);">⚙️ Configurações da IA</p>
+                <p style="font-size:0.85em; line-height:1.4; color:gray; margin-bottom: 15px;">
+                    Você pode alterar a configuração de limite de velocidade da IA escolhendo entre usar a chave do servidor ou sua chave própria.
                 </p>
-                <div style="background-color: #fdf2e9; border-left: 3px solid #e67e22; padding: 8px; margin-bottom: 12px; border-radius: 4px;">
-                    <strong style="color: #d35400; font-size: 0.85em; display: block; margin-bottom: 3px;">⚠️ Aviso de Segurança:</strong>
-                    <span style="color: #e67e22; font-size: 0.8em; line-height: 1.2; display: block;">Este é um site de estudos pessoal do desenvolvedor. Por precaução, <strong>NÃO</strong> recomendamos e pedimos que não insira chaves associadas a faturamento ativo de cartão de crédito. Use apenas contas gratuitas de teste para evitar qualquer risco caso sua chave seja exposta.</span>
-                </div>
-                <input type="password" id="tutor-api-key-input" placeholder="Cole sua chave aqui (AIzaSy...)">
-                <button id="tutor-save-key" style="width: 100%; padding: 8px 12px; font-weight: bold; border-radius: 6px;">Salvar Chave</button>
+                <button id="tutor-btn-setup-redirect" style="width: 100%; padding: 8px 12px; font-weight: bold; border-radius: 6px; background-color: var(--tutor-primary); color: white; border: none; cursor: pointer;">Configurar IA (Setup)</button>
             </div>
 
             <div id="tutor-messages">
@@ -266,17 +257,14 @@
     const btnClose = document.getElementById('tutor-btn-close');
     const btnConfig = document.getElementById('tutor-btn-config');
     const configPanel = document.getElementById('tutor-config-panel');
-    const inputKey = document.getElementById('tutor-api-key-input');
-    const btnSaveKey = document.getElementById('tutor-save-key');
+    const btnSetupRedirect = document.getElementById('tutor-btn-setup-redirect');
     const messagesBox = document.getElementById('tutor-messages');
     const inputField = document.getElementById('tutor-input');
     const btnSend = document.getElementById('tutor-send');
 
-    // Inicializa Input Key
-    inputKey.value = state.apiKey;
-
     // Alerta o usuário no chat caso a chave não esteja configurada
-    if (!state.apiKey) {
+    const iaPref = localStorage.getItem('ia_preference');
+    if (iaPref === 'custom' && !state.apiKey) {
         const divWarning = document.createElement('div');
         divWarning.className = 'tutor-msg tutor-msg-ai';
         divWarning.style.border = '1px solid #e67e22';
@@ -298,16 +286,9 @@
     btnConfig.addEventListener('click', () => {
         configPanel.style.display = configPanel.style.display === 'block' ? 'none' : 'block';
     });
-    btnSaveKey.addEventListener('click', () => {
-        const val = inputKey.value.trim();
-        state.apiKey = val;
-        if(val) {
-            localStorage.setItem('gemini_api_key', val);
-        } else {
-            localStorage.removeItem('gemini_api_key');
-        }
-        configPanel.style.display = 'none';
-        addMessage("Configuração salva! A chave será usada nas requisições.", "ai");
+    
+    btnSetupRedirect.addEventListener('click', () => {
+        window.location.href = "setup.html";
     });
 
     inputField.addEventListener('keypress', (e) => {

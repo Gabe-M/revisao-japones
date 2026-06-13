@@ -71,6 +71,8 @@
         const sessaoLocalStorage = localStorage.getItem('supabase_session');
         if (!sessaoLocalStorage) {
             window.location.href = "login.html"; // Redireciona se não tiver logado
+        } else if (!localStorage.getItem('ia_preference')) {
+            window.location.href = "setup.html"; // Força setup da IA
         }
         const sessao = JSON.parse(sessaoLocalStorage);
         const tokenDeAcesso = `Bearer ${sessao.access_token}`;

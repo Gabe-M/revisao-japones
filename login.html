@@ -22,19 +22,6 @@
         <input type="email" id="email" placeholder="Seu E-mail">
         <input type="password" id="senha" placeholder="Sua Senha">
         
-        <div style="margin-top: 15px; border-top: 1px dashed #dddddd; padding-top: 15px; margin-bottom: 15px;">
-            <label style="font-size: 0.85em; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 5px; text-align: left;">🔑 Chave de API do Gemini (Grátis):</label>
-            <p style="font-size: 0.75em; color: gray; margin: 0 0 10px 0; line-height: 1.3; text-align: left;">
-                Necessária para conversar com o Sensei IA. Caso não tenha, gere sua chave gratuita no 
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #2980b9; text-decoration: underline; font-weight: bold;">Google AI Studio</a>.
-            </p>
-            <div style="background-color: #fdf2e9; border-left: 3px solid #e67e22; padding: 8px; margin-bottom: 10px; border-radius: 4px;">
-                <strong style="color: #d35400; font-size: 0.75em; display: block; margin-bottom: 3px;">⚠️ Aviso de Segurança:</strong>
-                <span style="color: #e67e22; font-size: 0.7em; line-height: 1.2; display: block;">Este é um site de estudos pessoal do desenvolvedor. Por precaução, <strong>NÃO</strong> recomendamos e pedimos que não insira chaves de API associadas a cartões de crédito ou faturamento ativo, para evitar qualquer risco de cobrança indesejada caso sua chave seja vazada do seu próprio dispositivo. Use apenas contas gratuitas de teste.</span>
-            </div>
-            <input type="password" id="gemini_key" placeholder="Cole sua chave (AIzaSy...) ou deixe em branco" style="margin-bottom: 0;">
-        </div>
-        
         <button class="btn-primary" onclick="autenticar('login')">Entrar</button>
         <button class="btn-secondary" onclick="autenticar('cadastro')">Criar Nova Conta</button>
     </div>
@@ -46,16 +33,9 @@
         const SUPABASE_KEY = "sb_publishable_qanav-1ayeNA40f692w2Xg_qqGnFcuG";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Preenche a chave se já estiver salva no navegador
-        const savedApiKey = localStorage.getItem('gemini_api_key');
-        if (savedApiKey) {
-            document.getElementById('gemini_key').value = savedApiKey;
-        }
-
         async function autenticar(tipo) {
             const email = document.getElementById('email').value;
             const senha = document.getElementById('senha').value;
-            const geminiKey = document.getElementById('gemini_key').value.trim();
 
             if (!email || !senha) return alert("Preencha todos os campos.");
 
@@ -69,16 +49,10 @@
             if (resultado.error) {
                 alert("Erro: " + resultado.error.message);
             } else {
-                // Salva ou remove a chave de API do Gemini conforme o preenchimento do campo
-                if (geminiKey) {
-                    localStorage.setItem('gemini_api_key', geminiKey);
-                } else {
-                    localStorage.removeItem('gemini_api_key');
-                }
-
                 // Salva a sessão no cache do navegador local e redireciona
                 localStorage.setItem('supabase_session', JSON.stringify(resultado.data.session));
-                window.location.href = "index.html";
+                // Redireciona para o passo intermediário de setup da IA se necessário, senão ele vai passar e ir pro index
+                window.location.href = "setup.html";
             }
         }
     </script>

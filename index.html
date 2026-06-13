@@ -268,7 +268,9 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         // Cole este bloco no início da tag <script> das suas páginas para controlar o login:
         const sessaoLocalStorage = localStorage.getItem('supabase_session');
         if (!sessaoLocalStorage) {
-        window.location.href = "login.html"; // Redireciona se não tiver logado
+            window.location.href = "login.html"; // Redireciona se não tiver logado
+        } else if (!localStorage.getItem('ia_preference')) {
+            window.location.href = "setup.html"; // Força o fluxo de setup da IA
         }
         const sessao = JSON.parse(sessaoLocalStorage);
         const tokenDeAcesso = `Bearer ${sessao.access_token}`;
