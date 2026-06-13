@@ -137,7 +137,7 @@
                     // Combinar com os dados estáticos base, evitando duplicatas e ignorando apenas textos longos
                     const itensExistentes = new Set(dadosRevisao.map(d => d.item));
                     const dadosDbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto');
-                    dadosRevisao = [...dadosRevisao, ...dadosDbFiltrados];
+                    dadosRevisao.push(...dadosDbFiltrados);
                 }
             } catch (e) {
                 console.error("Erro ao buscar dados do banco para o minigame, usando dados locais.", e);
