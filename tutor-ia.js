@@ -240,6 +240,10 @@
                     2. Clique em <strong>"Create API key"</strong> para gerar sua chave gratuita.<br>
                     3. Cole a chave (começa com <code>AIzaSy</code>) no campo abaixo e clique em <strong>Salvar Chave</strong>.
                 </p>
+                <div style="background-color: #fdf2e9; border-left: 3px solid #e67e22; padding: 8px; margin-bottom: 12px; border-radius: 4px;">
+                    <strong style="color: #d35400; font-size: 0.85em; display: block; margin-bottom: 3px;">⚠️ Aviso de Segurança:</strong>
+                    <span style="color: #e67e22; font-size: 0.8em; line-height: 1.2; display: block;">Este é um site de estudos pessoal do desenvolvedor. Por precaução, <strong>NÃO</strong> recomendamos e pedimos que não insira chaves associadas a faturamento ativo de cartão de crédito. Use apenas contas gratuitas de teste para evitar qualquer risco caso sua chave seja exposta.</span>
+                </div>
                 <input type="password" id="tutor-api-key-input" placeholder="Cole sua chave aqui (AIzaSy...)">
                 <button id="tutor-save-key" style="width: 100%; padding: 8px 12px; font-weight: bold; border-radius: 6px;">Salvar Chave</button>
             </div>
