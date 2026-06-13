@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisão Espaçada - Japonês</title>
+    <meta name="description" content="Pratique japonês com repetição espaçada (SRS). Revise os termos no momento certo para memorização de longo prazo.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ===== TEMA E VARIÁVEIS ===== */
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface2: #22263a;
+            --border: #2e3347;
+            --text: #e8eaf0;
+            --text-muted: #7b8099;
+            --accent: #6c63ff;
+            --accent-soft: rgba(108, 99, 255, 0.15);
+            --green: #22c55e;
+            --green-soft: rgba(34, 197, 94, 0.15);
+            --yellow: #f59e0b;
+            --yellow-soft: rgba(245, 158, 11, 0.15);
+            --red: #ef4444;
+            --red-soft: rgba(239, 68, 68, 0.15);
+            --blue: #3b82f6;
+            --blue-soft: rgba(59, 130, 246, 0.15);
+            --card-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            --radius: 16px;
+        }
+        [data-theme="light"] {
+            --bg: #f0f2f8;
+            --surface: #ffffff;
+            --surface2: #f4f5fb;
+            --border: #e0e3f0;
+            --text: #1a1d27;
+            --text-muted: #6b7280;
+            --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* ===== HEADER ===== */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 24px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .top-bar h1 { font-size: 1.1em; font-weight: 700; }
+        .top-bar-right { display: flex; gap: 10px; align-items: center; }
+        .btn-icon {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 7px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+        .btn-icon:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* ===== NAV ===== */
+        .nav-menu {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 20px;
+            flex-wrap: wrap;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-menu a {
+            padding: 8px 16px;
+            text-decoration: none;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85em;
+            transition: 0.2s;
+        }
+        .nav-menu a:hover { color: var(--text); border-color: var(--accent); }
+        .nav-menu a.ativo { background: var(--accent); color: white; border-color: var(--accent); }
+
+        /* ===== TELA DE CONFIGURAÇÃO ===== */
+        #tela-config {
+            max-width: 560px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .config-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 30px;
+            box-shadow: var(--card-shadow);
+        }
+        .config-card h2 {
+            font-size: 1.4em;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .config-card .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9em;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        .stat-box {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+        .stat-box .val {
+            font-size: 1.8em;
+            font-weight: 800;
+        }
+        .stat-box .lbl {
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .stat-box.new .val { color: var(--blue); }
+        .stat-box.due .val { color: var(--yellow); }
+        .stat-box.rev .val { color: var(--green); }
+
+        .section-label {
+            font-size: 0.8em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .conjunto-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .pill {
+            padding: 7px 14px;
+            border-radius: 20px;
+            background: var(--surface2);
+            border: 1.5px solid var(--border);
+            color: var(--text);
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            user-select: none;
+        }
+        .pill:hover { border-color: var(--accent); color: var(--accent); }
+        .pill.ativo { background: var(--accent); color: white; border-color: var(--accent); }
+
+        .btn-start {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--accent) 0%, #9c6bff 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 4px 20px rgba(108,99,255,0.4);
+        }
+        .btn-start:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(108,99,255,0.5); }
+        .btn-start:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* ===== TELA DO JOGO ===== */
+        #tela-jogo { display: none; max-width: 640px; margin: 0 auto; padding: 24px 20px; }
+
+        .progress-container { margin-bottom: 20px; }
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+        .progress-info strong { color: var(--text); }
+        .progress-bar-bg {
+            height: 6px;
+            background: var(--border);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #9c6bff);
+            border-radius: 99px;
+            transition: width 0.4s ease;
+        }
+
+        /* Chip de status da sessão */
+        .session-chips {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .chip {
+            padding: 5px 12px;
+            border-radius: 99px;
+            font-size: 0.78em;
+            font-weight: 700;
+        }
+        .chip.new { background: var(--blue-soft); color: var(--blue); }
+        .chip.learning { background: var(--yellow-soft); color: var(--yellow); }
+        .chip.review { background: var(--green-soft); color: var(--green); }
+
+        /* ===== FLASHCARD 3D ===== */
+        .scene {
+            width: 100%;
+            perspective: 1000px;
+            margin-bottom: 24px;
+        }
+        .card-3d {
+            width: 100%;
+            min-height: 320px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-3d.flipped { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute;
+            width: 100%;
+            min-height: 320px;
+            backface-visibility: hidden;
+            border-radius: var(--radius);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 28px;
+            box-shadow: var(--card-shadow);
+            cursor: pointer;
+            border: 1px solid var(--border);
+        }
+        .card-face.front {
+            background: var(--surface);
+        }
+        .card-face.back {
+            background: var(--surface);
+            transform: rotateY(180deg);
+            justify-content: flex-start;
+            padding-top: 24px;
+        }
+
+        .card-badge {
+            position: absolute;
+            top: 16px;
+            left: 20px;
+            font-size: 0.75em;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .card-status-badge {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            font-size: 0.75em;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 99px;
+        }
+        .card-status-badge.new { background: var(--blue-soft); color: var(--blue); }
+        .card-status-badge.learning { background: var(--yellow-soft); color: var(--yellow); }
+        .card-status-badge.review { background: var(--green-soft); color: var(--green); }
+
+        .card-hint {
+            font-size: 0.8em;
+            color: var(--text-muted);
+            margin-top: auto;
+            opacity: 0.7;
+        }
+
+        .card-termo {
+            font-size: 5em;
+            font-weight: 800;
+            text-align: center;
+            line-height: 1.1;
+            word-break: break-word;
+        }
+
+        /* Back face */
+        .back-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; width: 100%; }
+        .back-termo { font-size: 2em; font-weight: 800; }
+        .back-leitura { font-size: 0.9em; color: var(--text-muted); font-family: monospace; }
+        .back-divider { width: 100%; height: 1px; background: var(--border); margin: 16px 0; }
+        .back-significado { font-size: 1.6em; font-weight: 700; color: var(--accent); text-align: center; width: 100%; }
+        .back-notas { font-size: 0.875em; color: var(--text-muted); line-height: 1.6; text-align: center; width: 100%; margin-top: 12px; }
+
+        /* ===== BOTÕES DE AVALIAÇÃO ===== */
+        .avaliar-hint {
+            text-align: center;
+            font-size: 0.82em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+        .btn-reveal {
+            width: 100%;
+            padding: 16px;
+            background: var(--surface);
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-reveal:hover { background: var(--accent); color: white; }
+
+        .rating-buttons {
+            display: none;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        .rating-buttons.visivel { display: grid; animation: fadeUp 0.2s ease; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .btn-rate {
+            padding: 14px 8px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-rate .label { font-size: 0.95em; }
+        .btn-rate .interval { font-size: 0.72em; font-weight: 500; opacity: 0.8; }
+        .btn-rate:hover { transform: translateY(-3px); }
+        .btn-rate.again { background: var(--red-soft); color: var(--red); }
+        .btn-rate.again:hover { background: var(--red); color: white; }
+        .btn-rate.hard { background: var(--yellow-soft); color: var(--yellow); }
+        .btn-rate.hard:hover { background: var(--yellow); color: white; }
+        .btn-rate.good { background: var(--blue-soft); color: var(--blue); }
+        .btn-rate.good:hover { background: var(--blue); color: white; }
+        .btn-rate.easy { background: var(--green-soft); color: var(--green); }
+        .btn-rate.easy:hover { background: var(--green); color: white; }
+
+        /* ===== TELA DE CONCLUSÃO ===== */
+        #tela-fim {
+            display: none;
+            max-width: 480px;
+            margin: 60px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .fim-icon { font-size: 4em; margin-bottom: 16px; }
+        #tela-fim h2 { font-size: 1.8em; font-weight: 800; margin-bottom: 8px; }
+        #tela-fim p { color: var(--text-muted); font-size: 0.95em; line-height: 1.6; margin-bottom: 24px; }
+        .fim-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 24px; }
+        .fim-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 10px; }
+        .fim-stat .num { font-size: 2em; font-weight: 800; }
+        .fim-stat .desc { font-size: 0.75em; color: var(--text-muted); margin-top: 4px; }
+        .fim-stat.correct .num { color: var(--green); }
+        .fim-stat.lapse .num { color: var(--red); }
+        .fim-stat.total .num { color: var(--accent); }
+
+        /* ===== LOADING ===== */
+        .loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            gap: 16px;
+            color: var(--text-muted);
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 480px) {
+            .rating-buttons { grid-template-columns: repeat(2, 1fr); }
+            .card-termo { font-size: 3.5em; }
+        }
+    </style>
+</head>
+<body>
+
+    <script src="vocabulario.js"></script>
+    <script>
+        // CONTROLE DE LOGIN
+        const sessaoLocalStorage = localStorage.getItem('supabase_session');
+        if (!sessaoLocalStorage) { window.location.href = "login.html"; }
+        const sessao = JSON.parse(sessaoLocalStorage);
+        const tokenDeAcesso = `Bearer ${sessao.access_token}`;
+        const idDoUsuarioLogado = sessao.user.id;
+    </script>
+
+    <div class="top-bar">
+        <h1>🧠 Repetição Espaçada</h1>
+        <div class="top-bar-right">
+            <button class="btn-icon" onclick="toggleTheme()">🌙 Tema</button>
+            <button class="btn-icon" id="btn-resetar" onclick="confirmarReset()" style="display:none;">🗑️ Resetar</button>
+        </div>
+    </div>
+
+    <nav class="nav-menu">
+        <a href="index.html">📚 Vocabulário</a>
+        <a href="frases.html">💬 Frases</a>
+        <a href="minigame.html">🎮 Minigame</a>
+        <a href="srs.html" class="ativo">🧠 SRS</a>
+        <a href="textos.html">📄 Textos</a>
+    </nav>
+
+    <!-- ===== TELA DE CONFIGURAÇÃO ===== -->
+    <div id="tela-config">
+        <div class="config-card" id="config-loading">
+            <div class="loading-screen">
+                <div class="spinner"></div>
+                <span>Carregando termos do banco...</span>
+            </div>
+        </div>
+
+        <div class="config-card" id="config-form" style="display:none;">
+            <h2>Revisão de Hoje</h2>
+            <p class="subtitle">O algoritmo SM-2 agenda cada termo no momento ideal para memorização de longo prazo. Seu progresso é salvo automaticamente.</p>
+
+            <div class="stats-row">
+                <div class="stat-box new"><div class="val" id="stat-novos">0</div><div class="lbl">Novos</div></div>
+                <div class="stat-box due"><div class="val" id="stat-devidos">0</div><div class="lbl">Pra Revisar</div></div>
+                <div class="stat-box rev"><div class="val" id="stat-aprendidos">0</div><div class="lbl">Aprendidos</div></div>
+            </div>
+
+            <div class="section-label">Filtrar por Conjunto</div>
+            <div class="conjunto-grid" id="conjunto-pills">
+                <!-- Preenchido via JS -->
+            </div>
+
+            <button class="btn-start" id="btn-iniciar" onclick="iniciarSessao()">
+                ▶ Iniciar Sessão
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== TELA DO JOGO ===== -->
+    <div id="tela-jogo">
+        <div class="progress-container">
+            <div class="progress-info">
+                <span>Sessão: <strong id="prog-atual">0</strong> / <strong id="prog-total">0</strong></span>
+                <span id="prog-label" style="color: var(--text-muted);"></span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+            </div>
+        </div>
+
+        <div class="session-chips">
+            <span class="chip new">🔵 Novos: <span id="chip-novos">0</span></span>
+            <span class="chip learning">🟡 Aprendendo: <span id="chip-aprendendo">0</span></span>
+            <span class="chip review">🟢 Revisão: <span id="chip-revisao">0</span></span>
+        </div>
+
+        <div class="scene" onclick="revelarCard()">
+            <div class="card-3d" id="card-3d">
+                <!-- FRENTE -->
+                <div class="card-face front">
+                    <span class="card-badge" id="card-categoria-f">Categoria</span>
+                    <span class="card-status-badge new" id="card-status">Novo</span>
+                    <p class="card-termo" id="card-termo">?</p>
+                    <span class="card-hint">Clique para revelar →</span>
+                </div>
+                <!-- VERSO -->
+                <div class="card-face back">
+                    <div class="back-header">
+                        <div>
+                            <div class="back-termo" id="card-termo-b">?</div>
+                            <div class="back-leitura" id="card-leitura">—</div>
+                        </div>
+                    </div>
+                    <div class="back-significado" id="card-significado">—</div>
+                    <div class="back-divider"></div>
+                    <div class="back-notas" id="card-notas">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="area-botoes">
+            <button class="btn-reveal" id="btn-reveal" onclick="revelarCard()">👁 Revelar Resposta</button>
+            <p class="avaliar-hint" id="avaliar-hint" style="display:none;">Como você se saiu?</p>
+            <div class="rating-buttons" id="rating-buttons">
+                <button class="btn-rate again" onclick="avaliar(0)">
+                    <span class="label">😖 Errei</span>
+                    <span class="interval" id="int-0">< 1 min</span>
+                </button>
+                <button class="btn-rate hard" onclick="avaliar(2)">
+                    <span class="label">😓 Difícil</span>
+                    <span class="interval" id="int-2">—</span>
+                </button>
+                <button class="btn-rate good" onclick="avaliar(3)">
+                    <span class="label">😊 Bom</span>
+                    <span class="interval" id="int-3">—</span>
+                </button>
+                <button class="btn-rate easy" onclick="avaliar(4)">
+                    <span class="label">😄 Fácil</span>
+                    <span class="interval" id="int-4">—</span>
+                </button>
+            </div>
+        </div>
+
+        <p style="text-align:center; font-size:0.8em; color:var(--text-muted); margin-top:20px;">
+            Teclas: <b>1</b> = Errei &nbsp;|&nbsp; <b>2</b> = Difícil &nbsp;|&nbsp; <b>3</b> = Bom &nbsp;|&nbsp; <b>4</b> = Fácil &nbsp;|&nbsp; <b>Espaço</b> = Revelar
+        </p>
+    </div>
+
+    <!-- ===== TELA DE FIM ===== -->
+    <div id="tela-fim">
+        <div class="fim-icon">🎉</div>
+        <h2>Sessão Concluída!</h2>
+        <p>Você revisou todos os termos de hoje. O algoritmo já agendou a próxima revisão de cada um.</p>
+        <div class="fim-stats">
+            <div class="fim-stat total"><div class="num" id="fim-total">0</div><div class="desc">Revistos</div></div>
+            <div class="fim-stat correct"><div class="num" id="fim-acertos">0</div><div class="desc">Acertos</div></div>
+            <div class="fim-stat lapse"><div class="num" id="fim-erros">0</div><div class="desc">Erros</div></div>
+        </div>
+        <button class="btn-start" onclick="voltarConfig()">🔄 Nova Sessão</button>
+    </div>
+
+    <script>
+        // ===== TEMA =====
+        if (localStorage.getItem('tema') === 'dark' || !localStorage.getItem('tema')) {
+            document.body.removeAttribute('data-theme');
+        } else {
+            document.body.setAttribute('data-theme', 'light');
+        }
+        function toggleTheme() {
+            const isLight = document.body.getAttribute('data-theme') === 'light';
+            if (isLight) {
+                document.body.removeAttribute('data-theme');
+                localStorage.setItem('tema', 'dark');
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                localStorage.setItem('tema', 'light');
+            }
+        }
+
+        // ===== ALGORITMO SM-2 =====
+        // Cada card tem: { ease, interval, repetitions, due, lapses }
+        const SRS_KEY = `srs_v1_${idDoUsuarioLogado}`;
+
+        function carregarProgresso() {
+            try { return JSON.parse(localStorage.getItem(SRS_KEY)) || {}; }
+            catch { return {}; }
+        }
+        function salvarProgresso(prog) {
+            localStorage.setItem(SRS_KEY, JSON.stringify(prog));
+        }
+
+        function getCardData(prog, item) {
+            return prog[item] || { ease: 2.5, interval: 0, repetitions: 0, due: 0, lapses: 0 };
+        }
+
+        function calcularNovosDados(card, qualidade) {
+            // qualidade: 0 = errou, 2 = difícil, 3 = bom, 4 = fácil
+            let { ease, interval, repetitions, lapses } = card;
+
+            if (qualidade < 3) {
+                // Errou ou Difícil: reinicia
+                if (qualidade === 0) { lapses++; repetitions = 0; interval = 1; }
+                else { interval = Math.max(1, Math.floor(interval * 1.2)); }
+            } else {
+                // Acertou (Bom ou Fácil)
+                if (repetitions === 0) { interval = 1; }
+                else if (repetitions === 1) { interval = 6; }
+                else { interval = Math.round(interval * ease); }
+                repetitions++;
+            }
+
+            // Atualiza fator de facilidade (ease)
+            ease = Math.max(1.3, ease + 0.1 - (5 - qualidade) * (0.08 + (5 - qualidade) * 0.02));
+
+            // Multiplica por bônus de fácil
+            if (qualidade === 4) interval = Math.round(interval * 1.3);
+
+            const now = Date.now();
+            const due = now + interval * 24 * 60 * 60 * 1000;
+
+            return { ease, interval, repetitions, due, lapses };
+        }
+
+        function formatarIntervalo(card, qualidade) {
+            const novo = calcularNovosDados(card, qualidade);
+            const d = novo.interval;
+            if (d < 1) return '< 1 dia';
+            if (d === 1) return '1 dia';
+            if (d < 30) return `${d} dias`;
+            if (d < 365) return `${Math.round(d/30)} mês(es)`;
+            return `${(d/365).toFixed(1)} ano(s)`;
+        }
+
+        // ===== ESTADO =====
+        let todosTermos = [];
+        let conjuntosDisponiveis = [];
+        let conjuntoAtivo = 'Todos';
+        let fila = [];
+        let filaReaprender = [];
+        let termoAtual = null;
+        let revelado = false;
+        let progresso = {};
+        let sessaoStats = { novos: 0, acertos: 0, erros: 0, total: 0 };
+        let contChips = { novos: 0, aprendendo: 0, revisao: 0 };
+
+        // ===== UTILS =====
+        function extrairConjuntos(notas) {
+            const conjuntos = ['Geral'];
+            if (notas) {
+                const match = notas.match(/\[Conjuntos:\s*([^\]]+)\]/);
+                if (match) {
+                    match[1].split(',').map(s => s.trim()).filter(Boolean).forEach(c => {
+                        if (!conjuntos.includes(c)) conjuntos.push(c);
+                    });
+                }
+            }
+            return conjuntos;
+        }
+
+        // ===== CARGA DE DADOS =====
+        async function carregarDados() {
+            try {
+                const response = await fetch('/api/jisho?acao=listar', {
+                    headers: { "Authorization": tokenDeAcesso }
+                });
+                const resultado = await response.json();
+
+                if (resultado && resultado.code === "PGRST303") {
+                    localStorage.removeItem('supabase_session');
+                    window.location.href = "login.html";
+                    return;
+                }
+
+                let dadosDb = [];
+                if (Array.isArray(resultado)) {
+                    dadosDb = resultado.filter(d => d && d.item && d.categoria !== 'Texto');
+                }
+
+                // Combinar banco + estáticos (preferindo banco)
+                const mapDb = new Map(dadosDb.map(d => [d.item, d]));
+                const base = dadosRevisao.filter(d => d.categoria !== 'Texto' && !d.categoria?.startsWith('Frase')).map(d => mapDb.has(d.item) ? mapDb.get(d.item) : d);
+                const extras = dadosDb.filter(d => !dadosRevisao.some(r => r.item === d.item));
+                todosTermos = [...base, ...extras];
+
+                // Descobrir conjuntos
+                const conjSet = new Set(['Todos', 'Geral']);
+                todosTermos.forEach(t => extrairConjuntos(t.notas).forEach(c => conjSet.add(c)));
+                conjuntosDisponiveis = Array.from(conjSet);
+
+            } catch (e) {
+                console.error('Erro ao carregar dados:', e);
+                todosTermos = dadosRevisao.filter(d => d.categoria !== 'Texto');
+                conjuntosDisponiveis = ['Todos', 'Geral'];
+            }
+
+            progresso = carregarProgresso();
+            renderizarConfig();
+        }
+
+        function termosDoConjunto() {
+            if (conjuntoAtivo === 'Todos') return todosTermos;
+            return todosTermos.filter(t => extrairConjuntos(t.notas).includes(conjuntoAtivo));
+        }
+
+        function calcularEstatisticas() {
+            const termos = termosDoConjunto();
+            const agora = Date.now();
+            let novos = 0, devidos = 0, aprendidos = 0;
+            termos.forEach(t => {
+                const card = getCardData(progresso, t.item);
+                if (card.repetitions === 0) novos++;
+                else if (card.due <= agora) devidos++;
+                else aprendidos++;
+            });
+            return { novos, devidos, aprendidos, total: termos.length };
+        }
+
+        function renderizarConfig() {
+            document.getElementById('config-loading').style.display = 'none';
+            document.getElementById('config-form').style.display = 'block';
+
+            // Pills
+            const pillContainer = document.getElementById('conjunto-pills');
+            pillContainer.innerHTML = conjuntosDisponiveis.map(c => `
+                <div class="pill ${c === conjuntoAtivo ? 'ativo' : ''}" onclick="selecionarConjunto('${c.replace(/'/g, "\\'")}')">
+                    ${c === 'Todos' ? '🌐 Todos' : c}
+                </div>
+            `).join('');
+
+            // Stats
+            const { novos, devidos, aprendidos } = calcularEstatisticas();
+            document.getElementById('stat-novos').textContent = novos;
+            document.getElementById('stat-devidos').textContent = devidos;
+            document.getElementById('stat-aprendidos').textContent = aprendidos;
+
+            const total = novos + devidos;
+            document.getElementById('btn-iniciar').disabled = total === 0;
+            document.getElementById('btn-iniciar').textContent = total === 0
+                ? '✅ Nada para revisar hoje!'
+                : `▶ Iniciar Sessão (${total} termos)`;
+        }
+
+        function selecionarConjunto(conj) {
+            conjuntoAtivo = conj;
+            renderizarConfig();
+        }
+
+        // ===== SESSÃO =====
+        function iniciarSessao() {
+            const termos = termosDoConjunto();
+            const agora = Date.now();
+
+            const novos = termos.filter(t => getCardData(progresso, t.item).repetitions === 0);
+            const devidos = termos.filter(t => {
+                const c = getCardData(progresso, t.item);
+                return c.repetitions > 0 && c.due <= agora;
+            });
+
+            // Embaralha cada lista separadamente
+            shuffle(novos);
+            shuffle(devidos);
+
+            fila = [...devidos, ...novos];
+            filaReaprender = [];
+            sessaoStats = { novos: novos.length, acertos: 0, erros: 0, total: fila.length };
+
+            contChips.novos = novos.length;
+            contChips.aprendendo = 0;
+            contChips.revisao = devidos.length;
+
+            if (fila.length === 0) return;
+
+            document.getElementById('tela-config').style.display = 'none';
+            document.getElementById('tela-jogo').style.display = 'block';
+            document.getElementById('btn-resetar').style.display = '';
+
+            atualizarProgresso();
+            proximoCard();
+        }
+
+        function shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
+
+        function proximoCard() {
+            // Pega do fila principal; se vazia tenta reaprendizado
+            if (fila.length === 0 && filaReaprender.length === 0) {
+                finalizarSessao();
+                return;
+            }
+
+            if (fila.length === 0) {
+                fila = [...filaReaprender];
+                filaReaprender = [];
+                shuffle(fila);
+            }
+
+            termoAtual = fila.shift();
+            revelado = false;
+
+            const card = getCardData(progresso, termoAtual.item);
+            const agora = Date.now();
+            let statusLabel = 'Novo';
+            let statusClass = 'new';
+            if (card.repetitions > 0 && card.due <= agora) { statusLabel = 'Revisão'; statusClass = 'review'; }
+            else if (card.repetitions > 0) { statusLabel = 'Aprendendo'; statusClass = 'learning'; }
+
+            // Frente do card
+            const cardEl = document.getElementById('card-3d');
+            cardEl.classList.remove('flipped');
+
+            document.getElementById('card-categoria-f').textContent = termoAtual.categoria || '';
+            const statusEl = document.getElementById('card-status');
+            statusEl.textContent = statusLabel;
+            statusEl.className = `card-status-badge ${statusClass}`;
+
+            const termoEl = document.getElementById('card-termo');
+            termoEl.textContent = termoAtual.item;
+            const len = termoAtual.item.length;
+            termoEl.style.fontSize = len > 15 ? '2em' : len > 8 ? '3em' : '4.5em';
+
+            // Verso
+            document.getElementById('card-termo-b').textContent = termoAtual.item;
+            document.getElementById('card-leitura').textContent = termoAtual.leitura || '—';
+            document.getElementById('card-significado').textContent = termoAtual.significado || '—';
+            const notasLimpa = (termoAtual.notas || '').replace(/\[Conjuntos:[^\]]+\]/g, '').trim();
+            document.getElementById('card-notas').textContent = notasLimpa || '—';
+
+            // UI
+            document.getElementById('btn-reveal').style.display = 'block';
+            document.getElementById('avaliar-hint').style.display = 'none';
+            document.getElementById('rating-buttons').classList.remove('visivel');
+
+            atualizarProgresso();
+            atualizarChips();
+        }
+
+        function revelarCard() {
+            if (revelado) return;
+            revelado = true;
+
+            document.getElementById('card-3d').classList.add('flipped');
+            document.getElementById('btn-reveal').style.display = 'none';
+            document.getElementById('avaliar-hint').style.display = 'block';
+            document.getElementById('rating-buttons').classList.add('visivel');
+
+            // Mostrar intervalos nos botões
+            const card = getCardData(progresso, termoAtual.item);
+            [0, 2, 3, 4].forEach(q => {
+                const el = document.getElementById(`int-${q}`);
+                if (el) el.textContent = formatarIntervalo(card, q);
+            });
+        }
+
+        function avaliar(qualidade) {
+            if (!revelado || !termoAtual) return;
+
+            const card = getCardData(progresso, termoAtual.item);
+            const novoDado = calcularNovosDados(card, qualidade);
+            progresso[termoAtual.item] = novoDado;
+            salvarProgresso(progresso);
+
+            sessaoStats.total++;
+            if (qualidade >= 3) sessaoStats.acertos++;
+            else { sessaoStats.erros++; filaReaprender.push(termoAtual); }
+
+            proximoCard();
+        }
+
+        function atualizarProgresso() {
+            const total = sessaoStats.novos + (fila.length + filaReaprender.length);
+            const feitos = sessaoStats.total;
+            const grand = feitos + fila.length + filaReaprender.length;
+
+            document.getElementById('prog-atual').textContent = feitos;
+            document.getElementById('prog-total').textContent = grand;
+            const pct = grand > 0 ? (feitos / grand) * 100 : 0;
+            document.getElementById('progress-fill').style.width = `${pct}%`;
+            document.getElementById('prog-label').textContent = `${Math.round(pct)}%`;
+        }
+
+        function atualizarChips() {
+            document.getElementById('chip-novos').textContent = contChips.novos;
+            document.getElementById('chip-aprendendo').textContent = contChips.aprendendo;
+            document.getElementById('chip-revisao').textContent = contChips.revisao;
+        }
+
+        function finalizarSessao() {
+            document.getElementById('tela-jogo').style.display = 'none';
+            document.getElementById('tela-fim').style.display = 'block';
+            document.getElementById('fim-total').textContent = sessaoStats.total;
+            document.getElementById('fim-acertos').textContent = sessaoStats.acertos;
+            document.getElementById('fim-erros').textContent = sessaoStats.erros;
+        }
+
+        function voltarConfig() {
+            document.getElementById('tela-fim').style.display = 'none';
+            document.getElementById('tela-config').style.display = 'block';
+            document.getElementById('btn-resetar').style.display = 'none';
+            progresso = carregarProgresso();
+            renderizarConfig();
+        }
+
+        function confirmarReset() {
+            if (confirm('Resetar o progresso do conjunto "' + conjuntoAtivo + '"? Isso não pode ser desfeito.')) {
+                const termos = termosDoConjunto();
+                termos.forEach(t => delete progresso[t.item]);
+                salvarProgresso(progresso);
+                voltarConfig();
+            }
+        }
+
+        // ===== TECLADO =====
+        window.addEventListener('keydown', e => {
+            if (document.getElementById('tela-jogo').style.display === 'none') return;
+            if (e.code === 'Space') { e.preventDefault(); revelarCard(); }
+            if (e.key === '1') avaliar(0);
+            if (e.key === '2') avaliar(2);
+            if (e.key === '3') avaliar(3);
+            if (e.key === '4') avaliar(4);
+        });
+
+        // ===== INIT =====
+        window.addEventListener('DOMContentLoaded', carregarDados);
+    </script>
+</body>
+</html>
