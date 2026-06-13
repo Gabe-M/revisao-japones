@@ -13,19 +13,21 @@ export default async function handler(req, res) {
     }
 
     // A chave pode vir do cabeçalho enviado pelo cliente (se ele configurar uma própria)
-    // Ou da variável de ambiente, ou de uma chave padrão definida pelo usuário
+    // Ou da variável de ambiente configurada no servidor
     const clientKey = req.headers['x-gemini-key'];
-    // Decodifica a chave padrão em base64 para evitar bloqueios do Git/GitHub Push Protection
-    const defaultKeyEncoded = "QVEuQWI4Uk42SWgtV1I1MnRkR3UzUy1NWVJBaVhxa2NTeFIwNFN2SV9SeV9yTUFENkJUMWc=";
-    const defaultKey = Buffer.from(defaultKeyEncoded, 'base64').toString('utf-8');
-    let apiKey = clientKey || process.env.GEMINI_API_KEY || defaultKey;
-
-    if (!apiKey) {
-        return res.status(401).json({ error: 'Nenhuma chave de API fornecida. Configure no painel do Sensei IA.' });
+    let apiKey = clientKey || process.env.GEMINI_API_KEY;
+    
+    // Remove aspas caso o usuário tenha colado com aspas
+    if (apiKey) {
+        apiKey = apiKey.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
     }
 
-    // Remove aspas caso o usuário tenha colado com aspas
-    apiKey = apiKey.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+    if (!apiKey || apiKey === 'undefined') {
+        return res.status(401).json({ 
+            error: 'Chave de API do Gemini não configurada.',
+            message: 'Você precisa gerar sua própria chave de API gratuita do Gemini no Google AI Studio (https://aistudio.google.com/app/apikey) e configurá-la nas configurações do Sensei IA (ícone de engrenagem ⚙️).'
+        });
+    }
 
     try {
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;

@@ -231,11 +231,17 @@
                 </div>
             </div>
             
-            <div id="tutor-config-panel">
-                <p style="margin-top:0;"><strong>Chave de API do Gemini (Grátis)</strong></p>
-                <p style="font-size:0.85em; color:gray;">Obtenha sua chave gratuita no <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--tutor-user-msg);">Google AI Studio</a>. Fica salva apenas no seu navegador.</p>
-                <input type="password" id="tutor-api-key-input" placeholder="Cole sua chave aqui (opcional se houver no server)...">
-                <button id="tutor-save-key">Salvar Chave</button>
+            <div id="tutor-config-panel" style="border-bottom: 2px solid var(--tutor-border); padding: 15px;">
+                <p style="margin-top:0; font-weight: bold; font-size: 1em; color: var(--tutor-primary);">🔑 Configurar Chave de API (Grátis)</p>
+                <p style="font-size:0.85em; line-height:1.4; color:gray; margin-bottom: 12px;">
+                    O Sensei IA precisa de sua própria chave gratuita para rodar:
+                    <br><br>
+                    1. Acesse o <strong><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--tutor-user-msg); font-weight:bold; text-decoration:underline;">Google AI Studio</a></strong> e faça login com sua conta Google.<br>
+                    2. Clique em <strong>"Create API key"</strong> para gerar sua chave gratuita.<br>
+                    3. Cole a chave (começa com <code>AIzaSy</code>) no campo abaixo e clique em <strong>Salvar Chave</strong>.
+                </p>
+                <input type="password" id="tutor-api-key-input" placeholder="Cole sua chave aqui (AIzaSy...)">
+                <button id="tutor-save-key" style="width: 100%; padding: 8px 12px; font-weight: bold; border-radius: 6px;">Salvar Chave</button>
             </div>
 
             <div id="tutor-messages">
@@ -264,6 +270,23 @@
 
     // Inicializa Input Key
     inputKey.value = state.apiKey;
+
+    // Alerta o usuário no chat caso a chave não esteja configurada
+    if (!state.apiKey) {
+        const divWarning = document.createElement('div');
+        divWarning.className = 'tutor-msg tutor-msg-ai';
+        divWarning.style.border = '1px solid #e67e22';
+        divWarning.style.background = 'rgba(230, 126, 34, 0.08)';
+        divWarning.style.marginTop = '10px';
+        divWarning.innerHTML = `
+            <strong>⚠️ Atenção: Chave de API ausente!</strong><br><br>
+            Para conversar com o Sensei e traduzir os termos, você precisa configurar sua própria chave gratuita:<br><br>
+            1. Acesse o <strong><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--tutor-user-msg); font-weight:bold; text-decoration:underline;">Google AI Studio</a></strong>.<br>
+            2. Crie uma chave de API gratuita.<br>
+            3. Clique no ícone de engrenagem <strong>⚙️</strong> no topo do chat, cole a chave e clique em salvar.
+        `;
+        messagesBox.appendChild(divWarning);
+    }
 
     // Eventos de UI
     fab.addEventListener('click', toggleChat);
@@ -369,7 +392,7 @@
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Erro desconhecido da API');
+                throw new Error(data.message || data.error || 'Erro desconhecido da API');
             }
 
             const aiReply = data.reply;
