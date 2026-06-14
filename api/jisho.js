@@ -14,8 +14,10 @@ export default async function handler(req, res) {
             const response = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario?select=*&order=item.asc`, {
                 headers: {
                     "apikey": SUPABASE_KEY,
-                    "Authorization": tokenUsuario
-                }
+                    "Authorization": tokenUsuario,
+                    "Cache-Control": "no-cache"
+                },
+                cache: 'no-store'
             });
             const dados = await response.json();
             return res.status(200).json(dados);
@@ -38,6 +40,7 @@ export default async function handler(req, res) {
                     "Content-Type": "application/json",
                     "Prefer": "return=representation"
                 },
+                cache: 'no-store',
                 body: JSON.stringify(corpo)
             });
 
@@ -72,6 +75,7 @@ export default async function handler(req, res) {
                     "Content-Type": "application/json",
                     "Prefer": "return=representation"
                 },
+                cache: 'no-store',
                 body: JSON.stringify(corpo)
             });
 
@@ -104,7 +108,8 @@ export default async function handler(req, res) {
                     "apikey": SUPABASE_KEY,
                     "Authorization": tokenUsuario,
                     "Prefer": "return=representation"
-                }
+                },
+                cache: 'no-store'
             });
 
             const resultado = await response.json();
@@ -114,6 +119,11 @@ export default async function handler(req, res) {
                     error: 'O Supabase rejeitou a exclusão',
                     detalhes: resultado
                 });
+            }
+
+            // se o array vier vazio, nada foi excluido (possivel erro de RLS ou ID inexistente)
+            if (Array.isArray(resultado) && resultado.length === 0) {
+                return res.status(404).json({ error: 'Nenhum registro excluído (ID não encontrado ou RLS bloqueou).' });
             }
 
             return res.status(200).json(resultado);
