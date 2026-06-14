@@ -639,14 +639,14 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
             }
 
             container.innerHTML = frasesPagina.map(d => `
-                <div class="frase-card" onclick="if(event.shiftKey){ event.stopPropagation(); if('${d.id}' && '${d.id}' !== 'undefined') { excluirFraseDoCard('${d.id}', '${d.item.replace(/'/g, \\'\\'\\')}'); } else { alert('Esta frase padrão não pode ser excluída permanentemente.'); } } else { const det = this.querySelector('details'); det.open = !det.open; }" style="cursor: pointer;">
+                <div class="frase-card" onclick="if(event.shiftKey){ event.stopPropagation(); if('${d.id}' && '${d.id}' !== 'undefined') { excluirFraseDoCard('${d.id}'); } else { alert('Esta frase padrão não pode ser excluída permanentemente.'); } } else { const det = this.querySelector('details'); det.open = !det.open; }" style="cursor: pointer;">
                     <p class="frase-texto">${processarTextoComBlocos(d.item, d.notas)}</p>
                     <p class="frase-romaji" style="display: ${romajiOculto ? 'none' : 'block'}; pointer-events: none;">${d.leitura}</p>
                     <details onclick="event.stopPropagation();">
                         <summary>Significado e Análise</summary>
                         <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
                         <p style="font-size:0.9em;">${d.notas}</p>
-                        ${d.id ? `<button style="margin-top: 8px; width: 100%; font-size: 0.9em; background-color: #c0392b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="event.stopPropagation(); excluirFraseDoCard('${d.id}', '${d.item.replace(/'/g, "\\'")}')">🗑️ Excluir Frase</button>` : ''}
+                        ${d.id ? `<button style="margin-top: 8px; width: 100%; font-size: 0.9em; background-color: #c0392b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="event.stopPropagation(); excluirFraseDoCard('${d.id}')">🗑️ Excluir Frase</button>` : ''}
                     </details>
                 </div>
             `).join('');
@@ -654,7 +654,9 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
             renderizarControlesPaginacao();
         }
 
-        async function excluirFraseDoCard(id, item) {
+        async function excluirFraseDoCard(id) {
+            const frase = frasesCombinadas.find(f => f.id === id);
+            const item = frase ? frase.item : "esta frase";
             if (!confirm(`Tem certeza que deseja excluir a frase "${item}"?`)) {
                 return;
             }
