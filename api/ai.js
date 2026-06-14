@@ -42,8 +42,34 @@ export default async function handler(req, res) {
         const payload = {
             contents: messages,
             systemInstruction: {
-                parts: [{ text: "Você é o Sensei IA, um tutor de japonês para brasileiros. Responda de forma extremamente OBJETIVA, DIRETA e CURTA. Evite saudações longas, rodeios ou explicações prolixas. Se o usuário perguntar sobre uma palavra ou frase, dê a tradução, a leitura e explique a gramática essencial em no máximo 3 ou 4 tópicos curtos. Use Markdown para destacar partículas e termos importantes." }]
+                parts: [{ text: "Você é o Sensei IA, um tutor de japonês para brasileiros. Responda de forma extremamente OBJETIVA, DIRETA e CURTA. Evite saudações longas, rodeios ou explicações prolixas. Se o usuário perguntar sobre uma palavra ou frase, dê a tradução, a leitura e explique a gramática essencial em no máximo 3 ou 4 tópicos curtos. Use Markdown para destacar partículas e termos importantes. Se o usuário pedir para adicionar, salvar ou guardar um ou mais termos, você DEVE chamar a função 'adicionarTermos'." }]
             },
+            tools: [{
+                functionDeclarations: [{
+                    name: "adicionarTermos",
+                    description: "Adiciona termos ou palavras ao banco de dados do usuário. Chame esta função APENAS quando o usuário pedir explicitamente para adicionar/salvar palavras.",
+                    parameters: {
+                        type: "OBJECT",
+                        properties: {
+                            termos: {
+                                type: "ARRAY",
+                                items: {
+                                    type: "OBJECT",
+                                    properties: {
+                                        item: { type: "STRING", description: "A palavra em japonês (kanji/kana)" },
+                                        leitura: { type: "STRING", description: "A leitura em romaji ou kana" },
+                                        significado: { type: "STRING", description: "A tradução em português" },
+                                        categoria: { type: "STRING", description: "Classe gramatical. Escolha estritamente entre: Kanji, Verbo, Partícula, Demonstrativo ou Vocabulário" },
+                                        conjunto: { type: "STRING", description: "A pasta ou categoria personalizada onde ficará. Se o usuário não especificar explicitamente, envie 'Geral'." }
+                                    },
+                                    required: ["item", "leitura", "significado", "categoria", "conjunto"]
+                                }
+                            }
+                        },
+                        required: ["termos"]
+                    }
+                }]
+            }],
             generationConfig: {
                 temperature: 0.7
             }
@@ -70,7 +96,17 @@ export default async function handler(req, res) {
             return res.status(response.status).json({ error: 'Falha ao conectar com o Gemini', detalhes: data });
         }
 
-        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui formular uma resposta.";
+        const part = data.candidates?.[0]?.content?.parts?.[0];
+        
+        if (part?.functionCall && part.functionCall.name === "adicionarTermos") {
+            return res.status(200).json({ 
+                reply: "Entendido! Estou adicionando ao seu banco de dados...",
+                action: 'add_terms',
+                terms: part.functionCall.args.termos
+            });
+        }
+
+        const textResponse = part?.text || "Desculpe, não consegui formular uma resposta.";
         
         return res.status(200).json({ reply: textResponse });
 

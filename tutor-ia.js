@@ -383,6 +383,10 @@
             const aiReply = data.reply;
             addMessage(aiReply, 'ai');
             state.messages.push({ role: 'model', parts: [{ text: aiReply }] });
+            
+            if (data.action === 'add_terms' && data.terms && data.terms.length > 0) {
+                await salvarTermosIA(data.terms);
+            }
 
         } catch (error) {
             console.error(error);
@@ -393,6 +397,60 @@
             state.isWaiting = false;
             btnSend.disabled = false;
             hideTyping();
+        }
+    }
+
+    async function salvarTermosIA(termos) {
+        try {
+            const sessaoLocalStorage = localStorage.getItem('supabase_session');
+            if (!sessaoLocalStorage) {
+                addMessage("❌ Você precisa estar logado para salvar termos.", 'ai');
+                return;
+            }
+            const sessao = JSON.parse(sessaoLocalStorage);
+            const tokenDeAcesso = `Bearer ${sessao.access_token}`;
+            const idDoUsuarioLogado = sessao.user.id;
+
+            let salvos = 0;
+            for (const t of termos) {
+                const notas = t.conjunto ? `[Conjuntos: ${t.conjunto}]` : `[Conjuntos: Geral]`;
+                
+                const novoTermo = {
+                    item: t.item,
+                    leitura: t.leitura,
+                    significado: t.significado,
+                    categoria: t.categoria || 'Vocabulário',
+                    notas: notas,
+                    user_id: idDoUsuarioLogado
+                };
+
+                const res = await fetch('/api/jisho?acao=salvar', {
+                    method: 'POST',
+                    headers: {
+                        "Authorization": tokenDeAcesso,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(novoTermo)
+                });
+                
+                if (res.ok) {
+                    salvos++;
+                }
+            }
+            
+            if (salvos > 0) {
+                addMessage(`✅ Sucesso! ${salvos} termo(s) adicionado(s) ao seu banco de dados. Atualize a página se necessário.`, 'ai');
+                // Se a função carregarDados existir no escopo global, tenta atualizar a view
+                if (typeof window.carregarDados === 'function') {
+                    window.carregarDados();
+                }
+            } else {
+                addMessage("⚠️ Não foi possível salvar os termos.", 'ai');
+            }
+            
+        } catch (error) {
+            console.error("Erro ao salvar termos da IA", error);
+            addMessage("❌ Erro interno ao tentar salvar no banco de dados.", 'ai');
         }
     }
 
