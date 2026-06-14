@@ -42,7 +42,7 @@ export default async function handler(req, res) {
         const payload = {
             contents: messages,
             systemInstruction: {
-                parts: [{ text: "Você é o Sensei IA, um tutor de japonês para brasileiros. Responda de forma extremamente OBJETIVA, DIRETA e CURTA. Evite saudações longas, rodeios ou explicações prolixas. Se o usuário perguntar sobre uma palavra ou frase, dê a tradução, a leitura e explique a gramática essencial em no máximo 3 ou 4 tópicos curtos. Use Markdown para destacar partículas e termos importantes. Se o usuário pedir para adicionar, salvar ou guardar um ou mais termos, você DEVE chamar a função 'adicionarTermos'." }]
+                parts: [{ text: "Você é o Sensei IA, um tutor de japonês para brasileiros. Responda de forma extremamente OBJETIVA, DIRETA e CURTA. Evite saudações longas, rodeios ou explicações prolixas. Se o usuário perguntar sobre uma palavra ou frase, dê a tradução, a leitura e explique a gramática essencial em no máximo 3 ou 4 tópicos curtos. Use Markdown para destacar partículas e termos importantes. Se o usuário pedir para adicionar, salvar ou guardar um ou mais termos, você DEVE chamar a função 'adicionarTermos'. Analise com extrema atenção a classe gramatical do termo antes de classificar." }]
             },
             tools: [{
                 functionDeclarations: [{
@@ -59,7 +59,15 @@ export default async function handler(req, res) {
                                         item: { type: "STRING", description: "A palavra em japonês (kanji/kana)" },
                                         leitura: { type: "STRING", description: "A leitura em romaji ou kana" },
                                         significado: { type: "STRING", description: "A tradução em português" },
-                                        categoria: { type: "STRING", description: "Classe gramatical. Escolha estritamente entre: Kanji, Verbo, Partícula, Demonstrativo ou Vocabulário" },
+                                        categoria: { 
+                                            type: "STRING", 
+                                            description: "Classe gramatical correta do termo. Regras cruciais: " +
+                                                         "1) Se for um verbo (termina em -u, -ru, -tsu, etc., ou em forma polida -masu, -te, -ta), deve ser categorizado como 'Verbo', NUNCA 'Vocabulário'. " +
+                                                         "2) Se for uma partícula (は, が, を, に, で, etc.), deve ser 'Partícula'. " +
+                                                         "3) Se for pronome/adjetivo demonstrativo (kono, sore, dore, etc.), deve ser 'Demonstrativo'. " +
+                                                         "4) Se for um único Kanji isolado, deve ser 'Kanji'. " +
+                                                         "5) Se for um substantivo, adjetivo, advérbio ou expressão comum, use 'Vocabulário'."
+                                        },
                                         conjunto: { type: "STRING", description: "A pasta ou categoria personalizada onde ficará. Se o usuário não especificar explicitamente, envie 'Geral'." }
                                     },
                                     required: ["item", "leitura", "significado", "categoria", "conjunto"]
