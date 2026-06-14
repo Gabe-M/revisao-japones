@@ -37,7 +37,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'A lista de mensagens está vazia.' });
         }
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
         const payload = {
             contents: messages,
             systemInstruction: {
