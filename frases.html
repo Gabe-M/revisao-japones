@@ -640,11 +640,37 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
                         <summary>Significado e Análise</summary>
                         <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
                         <p style="font-size:0.9em;">${d.notas}</p>
+                        ${d.id ? `<button style="margin-top: 8px; width: 100%; font-size: 0.9em; background-color: #c0392b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="event.stopPropagation(); excluirFraseDoCard('${d.id}', '${d.item.replace(/'/g, "\\'")}')">🗑️ Excluir Frase</button>` : ''}
                     </details>
                 </div>
             `).join('');
 
             renderizarControlesPaginacao();
+        }
+
+        async function excluirFraseDoCard(id, item) {
+            if (!confirm(`Tem certeza que deseja excluir a frase "${item}"?`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/jisho?acao=deletar&id=${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        "Authorization": tokenDeAcesso
+                    }
+                });
+
+                if (response.ok) {
+                    alert("Frase excluída com sucesso!");
+                    await carregarFrasesDinamicas();
+                } else {
+                    const err = await response.json();
+                    alert("Erro ao excluir: " + (err.error || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                console.error("Erro ao excluir frase:", error);
+                alert("Erro interno ao tentar excluir.");
+            }
         }
 
         function renderizarControlesPaginacao() {

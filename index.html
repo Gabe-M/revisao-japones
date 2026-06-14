@@ -594,7 +594,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     // Re-renderizar página atual para atualizar badges e estados
                     renderizarPagina();
                     
-                    // Animar o card atualizado
+                    // Animar o card updated
                     const newCardElement = Array.from(document.querySelectorAll('.card')).find(c => 
                         c.querySelector('.item-title')?.textContent === termoObj.item
                     );
@@ -613,6 +613,32 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             } else {
                 const det = elementoCard.querySelector('details');
                 det.open = !det.open;
+            }
+        }
+
+        async function excluirTermoDoCard(id, item) {
+            if (!confirm(`Tem certeza que deseja excluir o termo "${item}"?`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/api/jisho?acao=deletar&id=${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        "Authorization": tokenDeAcesso
+                    }
+                });
+
+                if (response.ok) {
+                    alert("Termo excluído com sucesso!");
+                    await carregarDados();
+                    aplicarFiltros();
+                } else {
+                    const err = await response.json();
+                    alert("Erro ao excluir: " + (err.error || 'Erro desconhecido'));
+                }
+            } catch (error) {
+                console.error("Erro ao excluir termo:", error);
+                alert("Erro interno ao tentar excluir.");
             }
         }
 
@@ -737,6 +763,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
                             <p style="font-size:0.9em; opacity:0.8;">${notasLimpa}</p>
                             <button style="margin-top: 10px; width: 100%; font-size: 0.9em; background-color: var(--secondary-color);" onclick="event.stopPropagation(); window.TutorIA && window.TutorIA.perguntar('Explique de forma bem resumida e direta a palavra: ${d.item} (${d.leitura})')">🤖 Perguntar ao Sensei IA</button>
+                            ${d.id ? `<button style="margin-top: 8px; width: 100%; font-size: 0.9em; background-color: #c0392b; color: white;" onclick="event.stopPropagation(); excluirTermoDoCard('${d.id}', '${d.item.replace(/'/g, "\\'")}')">🗑️ Excluir Termo</button>` : ''}
                         </details>
                     </div>
                 `;
