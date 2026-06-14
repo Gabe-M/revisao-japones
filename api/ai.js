@@ -41,7 +41,9 @@ export default async function handler(req, res) {
         const payload = {
             contents: messages,
             systemInstruction: {
-                parts: [{ text: "Você é o Sensei IA, um tutor de japonês para brasileiros. Responda de forma extremamente OBJETIVA, DIRETA e CURTA. Evite saudações longas, rodeios ou explicações prolixas. Se o usuário perguntar sobre uma palavra ou frase, dê a tradução, a leitura e explique a gramática essencial em no máximo 3 ou 4 tópicos curtos. Use Markdown para destacar partículas e termos importantes. Se o usuário pedir para adicionar, salvar ou guardar um ou mais termos, você DEVE chamar a função 'adicionarTermos'. Se o usuário pedir para remover, deletar ou excluir um ou mais termos do banco de dados ou vocabulário, você DEVE chamar a função 'removerTermos'. Analise com extrema atenção a classe gramatical do termo antes de classificar." }]
+                parts: [{ text: "Você é o Sensei IA, um tutor de japonês para brasileiros. Responda de forma extremamente OBJETIVA, DIRETA e CURTA. Evite saudações longas, rodeios ou explicações prolixas. Se o usuário perguntar sobre uma palavra ou frase, dê a tradução, a leitura e explique a gramática essencial em no máximo 3 ou 4 tópicos curtos. Use Markdown para destacar partículas e termos importantes. " +
+                                "REGRA CRÍTICA DE SALVAR: Se o usuário pedir para adicionar, salvar, guardar ou registrar um ou mais termos/palavras no vocabulário/banco de dados (ex: 'adicione X', 'salve Y'), você DEVE obrigatoriamente chamar a função 'adicionarTermos'. Se o usuário não fornecer tradução, leitura ou categoria gramatical, você DEVE deduzir ou pesquisar em seu conhecimento de japonês para preenchê-los e chamar a função imediatamente. " +
+                                "REGRA CRÍTICA DE REMOVER: Se o usuário pedir para remover, deletar, excluir ou apagar um ou mais termos (ex: 'delete X', 'remova Y'), você DEVE obrigatoriamente chamar a função 'removerTermos'. Converta o termo que o usuário deseja remover para a grafia correta em japonês (Kanji/Kana) para passar para a função." }]
             },
             tools: [{
                 functionDeclarations: [
@@ -56,19 +58,31 @@ export default async function handler(req, res) {
                                     items: {
                                         type: "OBJECT",
                                         properties: {
-                                            item: { type: "STRING", description: "A palavra em japonês (kanji/kana)" },
-                                            leitura: { type: "STRING", description: "A leitura em romaji ou kana" },
-                                            significado: { type: "STRING", description: "A tradução em português" },
+                                            item: { 
+                                                type: "STRING", 
+                                                description: "A palavra escrita em japonês original (Kanji se houver, ou Hiragana/Katakana, ex: '猫', '食べる', '車'). NUNCA preencha este campo com Romaji ou Português." 
+                                            },
+                                            leitura: { 
+                                                type: "STRING", 
+                                                description: "A leitura/pronúncia do termo em Romaji ou Hiragana/Katakana (ex: 'Neko', 'Taberu', 'Kuruma'). Se o usuário não forneceu a pronúncia, deduza você mesmo." 
+                                            },
+                                            significado: { 
+                                                type: "STRING", 
+                                                description: "O significado/tradução exata do termo em português (ex: 'Gato', 'Comer', 'Carro'). Se o usuário não forneceu a tradução, deduza você mesmo." 
+                                            },
                                             categoria: { 
                                                 type: "STRING", 
                                                 description: "Classe gramatical correta do termo. Regras cruciais: " +
                                                              "1) Se for um verbo (termina em -u, -ru, -tsu, etc., ou em forma polida -masu, -te, -ta), deve ser categorizado como 'Verbo', NUNCA 'Vocabulário'. " +
-                                                             "2) Se for uma partícula (は, が, を, に, で, etc.), deve ser 'Partícula'. " +
+                                                             "2) Se for uma partícula (は, が, を, に, de, etc.), deve ser 'Partícula'. " +
                                                              "3) Se for pronome/adjetivo demonstrativo (kono, sore, dore, etc.), deve ser 'Demonstrativo'. " +
                                                              "4) Se for um único Kanji isolado, deve ser 'Kanji'. " +
                                                              "5) Se for um substantivo, adjetivo, advérbio ou expressão comum, use 'Vocabulário'."
                                             },
-                                            conjunto: { type: "STRING", description: "A pasta ou categoria personalizada onde ficará. Se o usuário não especificar explicitamente, envie 'Geral'." }
+                                            conjunto: { 
+                                                type: "STRING", 
+                                                description: "A pasta ou conjunto (categoria personalizada) onde o termo ficará. Se o usuário não especificar explicitamente na mensagem, preencha como 'Geral'." 
+                                            }
                                         },
                                         required: ["item", "leitura", "significado", "categoria", "conjunto"]
                                     }
@@ -85,10 +99,10 @@ export default async function handler(req, res) {
                             properties: {
                                 termos: {
                                     type: "ARRAY",
-                                    description: "Lista das palavras em japonês (kanji/kana) a serem removidas.",
+                                    description: "Lista das palavras escritas EM JAPONÊS (Kanji ou Hiragana/Katakana original, ex: '食べる', '私') a serem removidas. Se o usuário pedir para remover usando Romaji (ex: 'taberu') ou tradução (ex: 'comer'), você deve converter para a grafia japonesa correspondente antes de preencher a lista.",
                                     items: {
                                         type: "STRING",
-                                        description: "A palavra em japonês a ser removida"
+                                        description: "A palavra em japonês a ser removida (Kanji ou Hiragana/Katakana)"
                                     }
                                 }
                             },
