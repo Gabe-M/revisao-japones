@@ -450,7 +450,13 @@
             if (removidos > 0) {
                 addMessage(`✅ Sucesso! ${removidos} termo(s) removido(s) do seu banco de dados. Atualize a página se necessário.`, 'ai');
                 if (typeof window.carregarDados === 'function') {
-                    window.carregarDados();
+                    window.carregarDados().then(() => {
+                        if (typeof window.aplicarFiltros === 'function') {
+                            window.aplicarFiltros();
+                        }
+                    });
+                } else if (typeof window.carregarFrasesDinamicas === 'function') {
+                    window.carregarFrasesDinamicas();
                 }
             }
             if (padroesDoSistema.length > 0) {
@@ -479,7 +485,13 @@
 
             // Obter termos existentes no banco de dados
             const responseDb = await fetch('/api/jisho?acao=listar', {
-                headers: { "Authorization": tokenDeAcesso }
+                headers: { 
+                    "Authorization": tokenDeAcesso,
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0"
+                },
+                cache: "no-store"
             });
             const dadosDb = responseDb.ok ? await responseDb.json() : [];
             

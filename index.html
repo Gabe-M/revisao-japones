@@ -325,7 +325,13 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         async function carregarDados() {
             try {
                 const response = await fetch('/api/jisho?acao=listar', {
-                    headers: { "Authorization": tokenDeAcesso }
+                    headers: { 
+                        "Authorization": tokenDeAcesso,
+                        "Cache-Control": "no-cache, no-store, must-revalidate",
+                        "Pragma": "no-cache",
+                        "Expires": "0"
+                    },
+                    cache: "no-store"
                 });
                 const resultado = await response.json();
 
@@ -512,6 +518,17 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         }
 
         async function gerenciarCliqueCard(elementoCard, termoObj, event) {
+            if (event.shiftKey) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (termoObj.id) {
+                    await excluirTermoDoCard(termoObj.id, termoObj.item);
+                } else {
+                    alert("Este termo padrão não pode ser excluído permanentemente.");
+                }
+                return;
+            }
+
             if (modoAssociacaoAtivo) {
                 event.preventDefault();
                 event.stopPropagation();

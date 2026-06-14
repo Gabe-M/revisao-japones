@@ -273,7 +273,13 @@
         async function carregarFrasesDinamicas() {
             try {
                 const response = await fetch('/api/jisho?acao=listar', {
-                    headers: { "Authorization": tokenDeAcesso }
+                    headers: { 
+                        "Authorization": tokenDeAcesso,
+                        "Cache-Control": "no-cache, no-store, must-revalidate",
+                        "Pragma": "no-cache",
+                        "Expires": "0"
+                    },
+                    cache: "no-store"
                 });
                 const resultado = await response.json();
 
@@ -633,7 +639,7 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
             }
 
             container.innerHTML = frasesPagina.map(d => `
-                <div class="frase-card" onclick="const det = this.querySelector('details'); det.open = !det.open;" style="cursor: pointer;">
+                <div class="frase-card" onclick="if(event.shiftKey){ event.stopPropagation(); if('${d.id}' && '${d.id}' !== 'undefined') { excluirFraseDoCard('${d.id}', '${d.item.replace(/'/g, \\'\\'\\')}'); } else { alert('Esta frase padrão não pode ser excluída permanentemente.'); } } else { const det = this.querySelector('details'); det.open = !det.open; }" style="cursor: pointer;">
                     <p class="frase-texto">${processarTextoComBlocos(d.item, d.notas)}</p>
                     <p class="frase-romaji" style="display: ${romajiOculto ? 'none' : 'block'}; pointer-events: none;">${d.leitura}</p>
                     <details onclick="event.stopPropagation();">

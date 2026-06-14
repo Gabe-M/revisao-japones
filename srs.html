@@ -648,7 +648,13 @@
         async function carregarDados() {
             try {
                 const response = await fetch('/api/jisho?acao=listar', {
-                    headers: { "Authorization": tokenDeAcesso }
+                    headers: { 
+                        "Authorization": tokenDeAcesso,
+                        "Cache-Control": "no-cache, no-store, must-revalidate",
+                        "Pragma": "no-cache",
+                        "Expires": "0"
+                    },
+                    cache: "no-store"
                 });
                 const resultado = await response.json();
 
@@ -687,7 +693,13 @@
 
             try {
                 const responseSrs = await fetch('/api/srs?acao=listar', {
-                    headers: { "Authorization": tokenDeAcesso }
+                    headers: { 
+                        "Authorization": tokenDeAcesso,
+                        "Cache-Control": "no-cache, no-store, must-revalidate",
+                        "Pragma": "no-cache",
+                        "Expires": "0"
+                    },
+                    cache: "no-store"
                 });
                 if (responseSrs.ok) {
                     const dadosSrs = await responseSrs.json();

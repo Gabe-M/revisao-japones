@@ -124,7 +124,13 @@
         async function iniciarJogo() {
             try {
                 const response = await fetch('/api/jisho?acao=listar', {
-                    headers: { "Authorization": tokenDeAcesso }
+                    headers: { 
+                        "Authorization": tokenDeAcesso,
+                        "Cache-Control": "no-cache, no-store, must-revalidate",
+                        "Pragma": "no-cache",
+                        "Expires": "0"
+                    },
+                    cache: "no-store"
                 });
                 const resultado = await response.json();
 
