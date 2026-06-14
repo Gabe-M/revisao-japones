@@ -90,6 +90,38 @@ export default async function handler(req, res) {
         }
     }
 
+    // AÇÃO 5: Deletar termo
+    if (acao === 'deletar' && (req.method === 'DELETE' || req.method === 'POST')) {
+        const { id, item } = req.query;
+        if (!id && !item) {
+            return res.status(400).json({ error: 'ID ou Item ausente para exclusão' });
+        }
+        try {
+            let urlParam = id ? `id=eq.${id}` : `item=eq.${encodeURIComponent(item)}`;
+            const response = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario?${urlParam}`, {
+                method: 'DELETE',
+                headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": tokenUsuario,
+                    "Prefer": "return=representation"
+                }
+            });
+
+            const resultado = await response.json();
+
+            if (!response.ok) {
+                return res.status(response.status).json({
+                    error: 'O Supabase rejeitou a exclusão',
+                    detalhes: resultado
+                });
+            }
+
+            return res.status(200).json(resultado);
+        } catch (error) {
+            return res.status(500).json({ error: 'Falha no servidor ao deletar', mensagem: error.message });
+        }
+    }
+
     // AÇÃO 3: Traduzir no Jisho
     if (!termo) return res.status(400).json({ error: 'Termo ausente' });
 

@@ -386,6 +386,8 @@
             
             if (data.action === 'add_terms' && data.terms && data.terms.length > 0) {
                 await salvarTermosIA(data.terms);
+            } else if (data.action === 'remove_terms' && data.terms && data.terms.length > 0) {
+                await removerTermosIA(data.terms);
             }
 
         } catch (error) {
@@ -397,6 +399,70 @@
             state.isWaiting = false;
             btnSend.disabled = false;
             hideTyping();
+        }
+    }
+
+    async function removerTermosIA(termos) {
+        try {
+            const sessaoLocalStorage = localStorage.getItem('supabase_session');
+            if (!sessaoLocalStorage) {
+                addMessage("❌ Você precisa estar logado para remover termos.", 'ai');
+                return;
+            }
+            const sessao = JSON.parse(sessaoLocalStorage);
+            const tokenDeAcesso = `Bearer ${sessao.access_token}`;
+
+            let removidos = 0;
+            let naoEncontrados = [];
+            let padroesDoSistema = [];
+
+            for (const t of termos) {
+                const itemLimpo = t.trim();
+
+                let ehPadrao = false;
+                if (typeof dadosRevisao !== 'undefined' && Array.isArray(dadosRevisao)) {
+                    ehPadrao = dadosRevisao.some(d => d.item === itemLimpo);
+                }
+
+                const res = await fetch(`/api/jisho?acao=deletar&item=${encodeURIComponent(itemLimpo)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        "Authorization": tokenDeAcesso
+                    }
+                });
+
+                if (res.ok) {
+                    const resultado = await res.json();
+                    if (Array.isArray(resultado) && resultado.length > 0) {
+                        removidos++;
+                    } else {
+                        if (ehPadrao) {
+                            padroesDoSistema.push(itemLimpo);
+                        } else {
+                            naoEncontrados.push(itemLimpo);
+                        }
+                    }
+                } else {
+                    naoEncontrados.push(itemLimpo);
+                }
+            }
+
+            if (removidos > 0) {
+                addMessage(`✅ Sucesso! ${removidos} termo(s) removido(s) do seu banco de dados. Atualize a página se necessário.`, 'ai');
+                if (typeof window.carregarDados === 'function') {
+                    window.carregarDados();
+                }
+            }
+            if (padroesDoSistema.length > 0) {
+                addMessage(`⚠️ O(s) termo(s) [${padroesDoSistema.join(', ')}] faz(em) parte do vocabulário padrão do sistema e não pode(m) ser removido(s).`, 'ai');
+            }
+            if (naoEncontrados.length > 0 && padroesDoSistema.length === 0) {
+                addMessage(`🔍 Não encontrei o(s) termo(s) [${naoEncontrados.join(', ')}] no seu banco de dados personalizado para remover.`, 'ai');
+            }
+
+        } catch (error) {
+            console.error("Erro ao remover termos da IA", error);
+            addMessage("❌ Erro interno ao tentar remover no banco de dados.", 'ai');
         }
     }
 
