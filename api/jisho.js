@@ -3,6 +3,9 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     const { acao, termo } = req.query;
 
     // Captura o token de quem está logado
