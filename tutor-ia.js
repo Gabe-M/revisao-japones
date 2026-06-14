@@ -411,12 +411,39 @@
             const tokenDeAcesso = `Bearer ${sessao.access_token}`;
             const idDoUsuarioLogado = sessao.user.id;
 
+            // Obter termos existentes no banco de dados
+            const responseDb = await fetch('/api/jisho?acao=listar', {
+                headers: { "Authorization": tokenDeAcesso }
+            });
+            const dadosDb = responseDb.ok ? await responseDb.json() : [];
+            
+            const itensExistentes = new Set();
+            if (Array.isArray(dadosDb)) {
+                dadosDb.forEach(d => {
+                    if (d && d.item) itensExistentes.add(d.item.trim());
+                });
+            }
+            
+            // Obter termos existentes locais (dadosRevisao) se disponível
+            if (typeof dadosRevisao !== 'undefined' && Array.isArray(dadosRevisao)) {
+                dadosRevisao.forEach(d => {
+                    if (d && d.item) itensExistentes.add(d.item.trim());
+                });
+            }
+
             let salvos = 0;
+            let duplicados = [];
             for (const t of termos) {
+                const itemLimpo = t.item.trim();
+                if (itensExistentes.has(itemLimpo)) {
+                    duplicados.push(itemLimpo);
+                    continue;
+                }
+
                 const notas = t.conjunto ? `[Conjuntos: ${t.conjunto}]` : `[Conjuntos: Geral]`;
                 
                 const novoTermo = {
-                    item: t.item,
+                    item: itemLimpo,
                     leitura: t.leitura,
                     significado: t.significado,
                     categoria: t.categoria || 'Vocabulário',
@@ -435,16 +462,21 @@
                 
                 if (res.ok) {
                     salvos++;
+                    itensExistentes.add(itemLimpo);
                 }
             }
             
+            if (duplicados.length > 0) {
+                addMessage(`⚠️ O(s) seguinte(s) termo(s) já existe(m) no seu banco de dados e não foi(ram) adicionado(s): ${duplicados.join(', ')}`, 'ai');
+            }
+            
             if (salvos > 0) {
-                addMessage(`✅ Sucesso! ${salvos} termo(s) adicionado(s) ao seu banco de dados. Atualize a página se necessário.`, 'ai');
+                addMessage(`✅ Sucesso! ${salvos} termo(s) novo(s) adicionado(s) ao seu banco de dados. Atualize a página se necessário.`, 'ai');
                 // Se a função carregarDados existir no escopo global, tenta atualizar a view
                 if (typeof window.carregarDados === 'function') {
                     window.carregarDados();
                 }
-            } else {
+            } else if (duplicados.length === 0) {
                 addMessage("⚠️ Não foi possível salvar os termos.", 'ai');
             }
             
