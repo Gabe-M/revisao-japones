@@ -1085,8 +1085,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 ).join(' ');
 
                 return `
-                    <div class="${classes}" style="position: relative;">
-                        <button onclick="abrirModalConjuntosCard(${termoJson}, event)" style="position: absolute; top: 12px; right: 12px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: var(--shadow-subtle); transition: 0.2s;" title="Organizar Conjuntos" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗂️</button>
+                    <div class="${classes}" style="position: relative; cursor: pointer;" onclick="const details = this.querySelector('details'); if(details) details.open = !details.open;">
+                        <button onclick="event.stopPropagation(); abrirModalConjuntosCard(${termoJson}, event)" style="position: absolute; top: 12px; right: 12px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: var(--shadow-subtle); transition: 0.2s;" title="Organizar Conjuntos" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗂️</button>
                         
                         <div style="display:flex; justify-content:center; align-items:center; margin-bottom: 15px; gap: 6px; flex-wrap: wrap;">
                             <span class="card-categoria-label">${d.categoria}</span>
