@@ -373,7 +373,28 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
     
     <div class="pagination" id="pagination-controls"></div>
 
-    <script>
+    
+    <!-- Modal para Associar Card -->
+    <div id="modal-card-conjuntos" onclick="if(event.target === this) this.style.display='none'" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; backdrop-filter: blur(4px); justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;">
+        <div style="background: var(--bg-color); border-radius: 16px; border: 1px solid var(--border-color); width: 100%; max-width: 400px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid var(--border-color); background: var(--card-bg);">
+                <h3 style="margin: 0; color: var(--text-color);">🗂️ Organizar Conjuntos</h3>
+                <button onclick="document.getElementById('modal-card-conjuntos').style.display='none'" style="background: none; border: none; color: var(--text-color); font-size: 1.5em; cursor: pointer;">&times;</button>
+            </div>
+            <div style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+                <p id="modal-card-item-title" style="margin: 0; font-weight: bold; text-align: center; font-size: 1.2em; color: var(--primary-color);"></p>
+                <div id="modal-card-conjuntos-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">
+                    <!-- Checkboxes preenchidos via JS -->
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <input type="text" id="modal-card-novo-conjunto" placeholder="Novo conjunto..." style="flex-grow: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color); outline: none;">
+                    <button onclick="adicionarNovoConjuntoAoCard()" class="btn-action btn-primary" style="padding: 8px 12px;">Criar</button>
+                </div>
+                <button onclick="salvarConjuntosCard()" class="btn-action btn-success" style="width: 100%; justify-content: center; margin-top: 5px;">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+<script>
         // Cole este bloco no início da tag <script> das suas páginas para controlar o login:
         const sessaoLocalStorage = localStorage.getItem('supabase_session');
         if (!sessaoLocalStorage) {
@@ -558,7 +579,6 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         let currentPage = 1;
         const itemsPerPage = 12;
 
-        let modoAssociacaoAtivo = false;
         let tiposDisponiveis = ['Kanji', 'Partícula', 'Verbo', 'Demonstrativo', 'Vocabulário'];
         let conjuntosDisponiveis = [];
 
@@ -678,71 +698,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 }).join('');
         }
 
-        function toggleModoAssociacao() {
-            const chk = document.getElementById('modo-associacao-chk');
-            const select = document.getElementById('ia-conjunto-select');
-            
-            if (chk.checked && select.value === 'novo') {
-                alert("Por favor, crie um conjunto específico antes de ativar o Modo Associação.");
-                chk.checked = false;
-                return;
-            }
-            
-            const label = document.getElementById('modo-associacao-label');
-            modoAssociacaoAtivo = chk.checked;
-            
-            if (modoAssociacaoAtivo) {
-                label.textContent = "Modo Associação ATIVO 🟢";
-                label.style.color = "#27ae60";
-            } else {
-                label.textContent = "Modo Associação Desativado";
-                label.style.color = "gray";
-            }
-            aplicarFiltros();
-        }
-
-        function toggleNovoConjuntoInput() {
-            const select = document.getElementById('ia-conjunto-select');
-            const divNovo = document.getElementById('ia-novo-conjunto-div');
-            if (select.value === 'novo') {
-                divNovo.style.display = 'flex';
-                document.getElementById('ia-novo-conjunto-nome').focus();
-            } else {
-                divNovo.style.display = 'none';
-            }
-        }
-
-        function atualizarVisibilidadeBotaoDeletarConjunto() {
-            const select = document.getElementById('ia-conjunto-select');
-            const btnDeletar = document.getElementById('btn-deletar-conjunto');
-            if (btnDeletar && select) {
-                const val = select.value;
-                if (val && val !== 'Geral' && val !== 'novo') {
-                    btnDeletar.style.display = 'inline-block';
-                } else {
-                    btnDeletar.style.display = 'none';
-                }
-            }
-        }
-
-        function mudarConjuntoAssociacao() {
-            toggleNovoConjuntoInput();
-            const select = document.getElementById('ia-conjunto-select');
-            const chk = document.getElementById('modo-associacao-chk');
-            
-            if (select.value === 'novo') {
-                if (chk.checked) {
-                    chk.checked = false;
-                    modoAssociacaoAtivo = false;
-                    const label = document.getElementById('modo-associacao-label');
-                    label.textContent = "Modo Associação Desativado";
-                    label.style.color = "gray";
-                }
-            }
-            atualizarVisibilidadeBotaoDeletarConjunto();
-            aplicarFiltros();
-        }
-
+        
         function criarNovoConjunto() {
             const nomeInput = document.getElementById('ia-novo-conjunto-nome');
             const nome = nomeInput.value.trim();
@@ -772,122 +728,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             nomeInput.value = '';
         }
 
-        async function gerenciarCliqueCard(elementoCard, termoObj, event) {
-            if (event.shiftKey) {
-                event.preventDefault();
-                event.stopPropagation();
-                if (termoObj.id) {
-                    await excluirTermoDoCard(termoObj.id, termoObj.item);
-                } else {
-                    alert("Este termo padrão não pode ser excluído permanentemente.");
-                }
-                return;
-            }
-
-            if (modoAssociacaoAtivo) {
-                event.preventDefault();
-                event.stopPropagation();
-                
-                const conjuntoSelecionado = document.getElementById('ia-conjunto-select').value;
-                if (conjuntoSelecionado === 'novo') {
-                    alert("Crie ou selecione um conjunto primeiro.");
-                    return;
-                }
-
-                elementoCard.style.opacity = '0.6';
-                
-                try {
-                    let idDoTermo = termoObj.id;
-                    const conjuntosAtuais = extrairConjuntos(termoObj.notas || '', termoObj.item);
-                    let novosConjuntos = [...conjuntosAtuais];
-                    
-                    if (novosConjuntos.includes(conjuntoSelecionado)) {
-                        novosConjuntos = novosConjuntos.filter(c => c !== conjuntoSelecionado);
-                    } else {
-                        novosConjuntos.push(conjuntoSelecionado);
-                    }
-                    
-                    const notasLimpa = removerTagConjuntos(termoObj.notas || '');
-                    const novasNotas = atualizarNotasComConjuntos(notasLimpa, novosConjuntos);
-                    
-                    if (idDoTermo) {
-                        const response = await fetch(`/api/jisho?acao=atualizar&id=${idDoTermo}`, {
-                            method: 'PATCH',
-                            headers: {
-                                "Authorization": tokenDeAcesso,
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({ notas: novasNotas })
-                        });
-                        if (!response.ok) throw new Error();
-                    } else {
-                        const novoTermo = {
-                            item: termoObj.item,
-                            leitura: termoObj.leitura,
-                            significado: termoObj.significado,
-                            categoria: termoObj.categoria,
-                            notas: novasNotas,
-                            user_id: idDoUsuarioLogado
-                        };
-                        
-                        const response = await fetch('/api/jisho?acao=salvar', {
-                            method: 'POST',
-                            headers: {
-                                "Authorization": tokenDeAcesso,
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify(novoTermo)
-                        });
-                        if (!response.ok) throw new Error();
-                        const salvo = await response.json();
-                        idDoTermo = Array.isArray(salvo) ? salvo[0]?.id : salvo.id;
-                    }
-
-                    const index = dadosCombinados.findIndex(d => d.item === termoObj.item);
-                    if (index !== -1) {
-                        dadosCombinados[index].notas = novasNotas;
-                        if (idDoTermo) dadosCombinados[index].id = idDoTermo;
-                        termoObj.notas = novasNotas;
-                        termoObj.id = idDoTermo;
-                    }
-
-                    // Recalcular conjuntos disponíveis mantendo o selecionado
-                    const setsEncontrados = new Set(['Geral']);
-                    dadosCombinados.forEach(d => {
-                        const conjuntos = extrairConjuntos(d.notas, d.item);
-                        conjuntos.forEach(c => setsEncontrados.add(c));
-                    });
-                    setsEncontrados.add(conjuntoSelecionado);
-                    conjuntosDisponiveis = Array.from(setsEncontrados);
-                    atualizarSeletoresDeConjunto();
-
-                    elementoCard.style.opacity = '1';
-                    
-                    // Re-renderizar página atual para atualizar badges e estados
-                    renderizarPagina();
-                    
-                    // Animar o card updated
-                    const newCardElement = Array.from(document.querySelectorAll('.card')).find(c => 
-                        c.querySelector('.item-title')?.textContent === termoObj.item
-                    );
-                    if (newCardElement) {
-                        newCardElement.classList.add('associado-sucesso');
-                        setTimeout(() => {
-                            newCardElement.classList.remove('associado-sucesso');
-                        }, 600);
-                    }
-
-                } catch (e) {
-                    console.error("Falha ao associar termo", e);
-                    elementoCard.style.opacity = '1';
-                    alert("Erro ao salvar associação no banco de dados.");
-                }
-            } else {
-                const det = elementoCard.querySelector('details');
-                det.open = !det.open;
-            }
-        }
-
+        
         async function excluirTermoDoCard(id, item) {
             if (!confirm(`Tem certeza que deseja excluir o termo "${item}"?`)) {
                 return;
@@ -1045,7 +886,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             dadosFiltrados = dadosCombinados.filter(d => {
                 // 1. Filtro de Conjunto (apenas se o modo de associação estiver desativado)
                 let pertenceAoConjunto = true;
-                if (!modoAssociacaoAtivo && filtroConjunto !== 'novo') {
+                if (filtroConjunto !== \'novo\') {
                     const conjuntosDoTermo = extrairConjuntos(d.notas, d.item);
                     pertenceAoConjunto = conjuntosDoTermo.includes(filtroConjunto);
                 }
@@ -1096,6 +937,118 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             renderizarPagina();
         }
 
+        
+        let termoAtualParaModal = null;
+
+        function abrirModalConjuntosCard(termoObj, event) {
+            event.stopPropagation();
+            termoAtualParaModal = termoObj;
+            
+            document.getElementById('modal-card-item-title').textContent = termoObj.item;
+            document.getElementById('modal-card-novo-conjunto').value = '';
+            
+            const conjuntosDoTermo = extrairConjuntos(termoObj.notas || '', termoObj.item);
+            
+            const listContainer = document.getElementById('modal-card-conjuntos-list');
+            listContainer.innerHTML = '';
+            
+            const opcoes = [...conjuntosDisponiveis.filter(c => c !== 'novo' && c !== 'Todos')];
+            if (!opcoes.includes('Geral')) {
+                opcoes.unshift('Geral');
+            }
+            
+            opcoes.forEach(conj => {
+                const checked = conjuntosDoTermo.includes(conj) ? 'checked' : '';
+                const div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.gap = '10px';
+                div.style.padding = '8px';
+                div.style.borderRadius = '6px';
+                div.style.transition = '0.2s';
+                div.onmouseover = () => div.style.background = 'rgba(0,0,0,0.05)';
+                div.onmouseout = () => div.style.background = 'transparent';
+                
+                div.innerHTML = `
+                    <input type="checkbox" id="card-conj-${conj}" value="${conj}" ${checked} style="width: 18px; height: 18px; cursor: pointer;">
+                    <label for="card-conj-${conj}" style="cursor: pointer; flex-grow: 1; font-weight: 500; color: var(--text-color);">${conj}</label>
+                `;
+                listContainer.appendChild(div);
+            });
+            
+            document.getElementById('modal-card-conjuntos').style.display = 'flex';
+        }
+
+        function adicionarNovoConjuntoAoCard() {
+            const novoConjunto = document.getElementById('modal-card-novo-conjunto').value.trim();
+            if (!novoConjunto) return;
+            
+            if (!conjuntosDisponiveis.includes(novoConjunto)) {
+                conjuntosDisponiveis.push(novoConjunto);
+                atualizarSeletoresDeConjunto();
+            }
+            
+            const listContainer = document.getElementById('modal-card-conjuntos-list');
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.gap = '10px';
+            div.style.padding = '8px';
+            div.style.borderRadius = '6px';
+            div.innerHTML = `
+                <input type="checkbox" id="card-conj-${novoConjunto}" value="${novoConjunto}" checked style="width: 18px; height: 18px; cursor: pointer;">
+                <label for="card-conj-${novoConjunto}" style="cursor: pointer; flex-grow: 1; font-weight: 500; color: var(--text-color);">${novoConjunto}</label>
+            `;
+            listContainer.appendChild(div);
+            
+            document.getElementById('modal-card-novo-conjunto').value = '';
+        }
+
+        async function salvarConjuntosCard() {
+            if (!termoAtualParaModal) return;
+            
+            const listContainer = document.getElementById('modal-card-conjuntos-list');
+            const checkboxes = listContainer.querySelectorAll('input[type="checkbox"]');
+            
+            const novosConjuntos = [];
+            checkboxes.forEach(chk => {
+                if (chk.checked) novosConjuntos.push(chk.value);
+            });
+            
+            // Sempre garante o Geral se não houver conjuntos selecionados
+            if (novosConjuntos.length === 0) novosConjuntos.push('Geral');
+            
+            const notasLimpa = removerTagConjuntos(termoAtualParaModal.notas || '');
+            let novaNota = notasLimpa.trim();
+            
+            const tagsParaAdicionar = novosConjuntos.filter(c => c !== 'Geral');
+            if (tagsParaAdicionar.length > 0) {
+                if (novaNota.length > 0) novaNota += '\n\n';
+                novaNota += `[Conjunto: ${tagsParaAdicionar.join(', ')}]`;
+            }
+            
+            try {
+                if (termoAtualParaModal.id) {
+                    await window.supabaseClient.from('vocabulario').update({ notas: novaNota }).eq('id', termoAtualParaModal.id);
+                }
+                
+                termoAtualParaModal.notas = novaNota;
+                
+                const idx = dadosCombinados.findIndex(d => d.item === termoAtualParaModal.item);
+                if (idx !== -1) {
+                    dadosCombinados[idx].notas = novaNota;
+                }
+                
+                atualizarSeletoresDeConjunto();
+                aplicarFiltros();
+                
+                document.getElementById('modal-card-conjuntos').style.display = 'none';
+            } catch (err) {
+                console.error("Erro ao salvar conjuntos do card:", err);
+                alert("Ocorreu um erro ao salvar. Tente novamente.");
+            }
+        }
+
         function renderizarCards(dados) {
             const container = document.getElementById('card-container');
             if (dados.length === 0) {
@@ -1114,12 +1067,6 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 
                 // Classes de estilo
                 let classes = 'card';
-                if (modoAssociacaoAtivo) {
-                    classes += ' associando';
-                    if (estaNoConjuntoSelecionado) {
-                        classes += ' no-conjunto';
-                    }
-                }
 
                 // Limpa as notas para exibição
                 const notasLimpa = removerTagConjuntos(d.notas || '');
@@ -1130,12 +1077,14 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 ).join(' ');
 
                 return `
-                    <div class="${classes}" onclick="gerenciarCliqueCard(this, ${termoJson}, event)" style="cursor: pointer;">
-                        <div style="display:flex; justify-content:center; align-items:center; pointer-events: none; margin-bottom: 15px; gap: 6px; flex-wrap: wrap;">
+                    <div class="${classes}" style="position: relative;">
+                        <button onclick="abrirModalConjuntosCard(${termoJson}, event)" style="position: absolute; top: 12px; right: 12px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: var(--shadow-subtle); transition: 0.2s;" title="Organizar Conjuntos" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗂️</button>
+                        
+                        <div style="display:flex; justify-content:center; align-items:center; margin-bottom: 15px; gap: 6px; flex-wrap: wrap;">
                             <span class="card-categoria-label">${d.categoria}</span>
                             ${badgesHtml}
                         </div>
-                        <div style="pointer-events: none; flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
                             <div class="card-leitura">${d.leitura || ' '}</div>
                             <div class="item-title">${d.item}</div>
                         </div>
