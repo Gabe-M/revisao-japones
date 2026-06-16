@@ -32,24 +32,116 @@ export default async function handler(req, res) {
     // AÇÃO 2: Salvar palavra nova
     if (acao === 'salvar' && req.method === 'POST') {
         try {
-            // CORREÇÃO: Pega o corpo da requisição diretamente, pois a Vercel já o formatou
             const corpo = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+            const itensNovosInput = Array.isArray(corpo) ? corpo : [corpo];
+
+            if (itensNovosInput.length === 0) {
+                return res.status(200).json([]);
+            }
+
+            // 1. Buscar os termos equivalentes no banco para fundir conjuntos em caso de duplicidade
+            const nomesItens = itensNovosInput.map(i => i.item).filter(Boolean);
+            let cardsExistentesMap = new Map();
+
+            if (nomesItens.length > 0) {
+                const listaItens = nomesItens.map(i => `"${i.replace(/"/g, '\\"')}"`).join(',');
+                const responseListar = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario?item=in.(${encodeURIComponent(listaItens)})`, {
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": tokenUsuario
+                    }
+                });
+                if (responseListar.ok) {
+                    const dadosExistentes = await responseListar.json();
+                    if (Array.isArray(dadosExistentes)) {
+                        dadosExistentes.forEach(c => {
+                            cardsExistentesMap.set(c.item, c);
+                        });
+                    }
+                }
+            }
+
+            // Helpers internos para conjuntos
+            const extrairConjuntosInterno = (notas) => {
+                let conjuntos = [];
+                if (notas) {
+                    const match = notas.match(/\[Conjuntos:\s*([^\]]+)\]/);
+                    if (match) {
+                        conjuntos = match[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    }
+                }
+                if (!conjuntos.includes('Geral')) {
+                    conjuntos.unshift('Geral');
+                }
+                return conjuntos;
+            };
+
+            const formatarNotasComConjuntosInterno = (notasLimpa, conjuntos) => {
+                if (conjuntos.length === 0) return notasLimpa;
+                const tag = `[Conjuntos: ${conjuntos.join(', ')}]`;
+                return notasLimpa ? `${notasLimpa}\n${tag}` : tag;
+            };
+
+            const removerTagConjuntosInterno = (notas) => {
+                if (!notas) return '';
+                return notas.replace(/\s*\[Conjuntos:\s*([^\]]+)\]/, '').trim();
+            };
+
+            // 2. Monta o payload fundindo os conjuntos de itens duplicados
+            const payloadFinal = [];
+            for (const itemNovo of itensNovosInput) {
+                if (!itemNovo.item) continue;
+
+                if (cardsExistentesMap.has(itemNovo.item)) {
+                    const cardExistente = cardsExistentesMap.get(itemNovo.item);
+                    
+                    // Extrai conjuntos de ambos e junta-os
+                    const conjuntosExistentes = extrairConjuntosInterno(cardExistente.notas);
+                    const conjuntosNovos = extrairConjuntosInterno(itemNovo.notas);
+                    const conjuntosFundidos = Array.from(new Set([...conjuntosExistentes, ...conjuntosNovos]));
+
+                    // Remove as tags e reconstrói as notas fundidas
+                    const notasLimpaExistente = removerTagConjuntosInterno(cardExistente.notas);
+                    const notasLimpaNova = removerTagConjuntosInterno(itemNovo.notas);
+                    let notasFinaisLimpa = notasLimpaExistente;
+                    if (notasLimpaNova && notasLimpaNova !== notasLimpaExistente) {
+                        notasFinaisLimpa = notasLimpaExistente ? `${notasLimpaExistente}\n${notasLimpaNova}` : notasLimpaNova;
+                    }
+
+                    const novasNotas = formatarNotasComConjuntosInterno(notasFinaisLimpa, conjuntosFundidos);
+
+                    payloadFinal.push({
+                        id: cardExistente.id, // Usa o mesmo ID para disparar a atualização na restrição unique
+                        item: cardExistente.item,
+                        leitura: itemNovo.leitura || cardExistente.leitura,
+                        significado: itemNovo.significado || cardExistente.significado,
+                        categoria: itemNovo.categoria || cardExistente.categoria,
+                        notas: novasNotas,
+                        user_id: cardExistente.user_id
+                    });
+                } else {
+                    payloadFinal.push(itemNovo);
+                }
+            }
+
+            if (payloadFinal.length === 0) {
+                return res.status(200).json([]);
+            }
 
             const response = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario`, {
                 method: 'POST',
                 headers: {
                     "apikey": SUPABASE_KEY,
-                    "Authorization": tokenUsuario, // Usa a identidade real do usuário para o RLS
+                    "Authorization": tokenUsuario,
                     "Content-Type": "application/json",
                     "Prefer": "resolution=merge-duplicates,return=representation"
                 },
                 cache: 'no-store',
-                body: JSON.stringify(corpo)
+                body: JSON.stringify(Array.isArray(corpo) ? payloadFinal : payloadFinal[0])
             });
 
             const resultado = await response.json();
 
-            // Intercepta erros reais do Supabase
             if (!response.ok) {
                 return res.status(response.status).json({
                     error: 'O Supabase rejeitou a gravação',
