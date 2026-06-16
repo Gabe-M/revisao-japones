@@ -1361,6 +1361,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             leitura: item.leitura.trim(),
                             significado: item.significado.trim(),
                             categoria: item.categoria ? item.categoria.trim() : 'Vocabulário',
+                            jlpt: item.jlpt ? item.jlpt.trim() : null,
                             notas: novasNotas,
                             user_id: idDoUsuarioLogado
                         });
@@ -1770,6 +1771,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                         leitura: t.leitura,
                         significado: t.significado,
                         categoria: t.categoria,
+                        jlpt: t.jlpt ? t.jlpt.trim() : null,
                         notas: novasNotas,
                         user_id: idDoUsuarioLogado
                     };
