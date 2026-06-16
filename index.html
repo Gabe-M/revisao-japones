@@ -25,8 +25,8 @@
         
         /* HEADER & NAVIGATION */
         .header-container { display: flex; justify-content: space-between; max-width: 1200px; margin: 0 auto 30px; align-items: center; }
-        .header-container h1 { font-weight: 800; letter-spacing: -0.5px; margin: 0; font-size: 2em; background: linear-gradient(90deg, var(--primary-color), var(--highlight-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        [data-theme="dark"] .header-container h1 { background: linear-gradient(90deg, #ecf0f1, var(--highlight-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-container h1 { font-weight: 800; letter-spacing: -0.5px; margin: 0; font-size: 2em; background: linear-gradient(90deg, var(--primary-color), var(--highlight-color)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        [data-theme="dark"] .header-container h1 { background: linear-gradient(90deg, #ecf0f1, var(--highlight-color)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
         
         .nav-menu { display: flex; justify-content: center; gap: 8px; margin-bottom: 30px; flex-wrap: wrap; background: var(--card-bg); padding: 8px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-subtle); max-width: 900px; margin-left: auto; margin-right: auto; backdrop-filter: blur(10px); }
         .nav-menu a { padding: 10px 20px; text-decoration: none; color: var(--text-color); border-radius: 10px; font-weight: 600; letter-spacing: 0.5px; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; }
@@ -886,7 +886,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             dadosFiltrados = dadosCombinados.filter(d => {
                 // 1. Filtro de Conjunto (apenas se o modo de associação estiver desativado)
                 let pertenceAoConjunto = true;
-                if (filtroConjunto !== \'novo\') {
+                if (filtroConjunto !== 'novo') {
                     const conjuntosDoTermo = extrairConjuntos(d.notas, d.item);
                     pertenceAoConjunto = conjuntosDoTermo.includes(filtroConjunto);
                 }
