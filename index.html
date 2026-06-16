@@ -1797,54 +1797,47 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     };
                 });
 
-                // NOVO: Detectar JLPT com IA para os termos que vieram sem
+                // Classificar JLPT com IA para termos sem nível
                 const termosSemJLPT = termosFormatados.filter(t => !t.jlpt);
                 if (termosSemJLPT.length > 0) {
-                    feedback.textContent = `A IA está classificando o nível JLPT de ${termosSemJLPT.length} termos. Isso pode levar alguns segundos...`;
+                    feedback.textContent = `🤖 IA classificando nível JLPT de ${termosSemJLPT.length} termos...`;
                     
                     try {
                         const chaveIA = localStorage.getItem('gemini_api_key') || '';
-                        const chunkSize = 50; // Em lotes para evitar sobrecarga
+                        const chunkSize = 50;
                         for (let i = 0; i < termosSemJLPT.length; i += chunkSize) {
                             const lote = termosSemJLPT.slice(i, i + chunkSize);
                             const itensDoLote = lote.map(t => t.item);
                             
-                            const prompt = `Analise os seguintes termos em japonês e retorne APENAS um objeto JSON onde a chave é o termo exato fornecido e o valor é o nível JLPT ('N5', 'N4', 'N3', 'N2', 'N1'). Se não tiver certeza, deduza o mais provável. Responda ESTRITAMENTE com o JSON válido, sem formato markdown ou texto extra. Termos: ${JSON.stringify(itensDoLote)}`;
-                            
-                            const aiResponse = await fetch('/api/ai', {
+                            const jlptRes = await fetch('/api/jlpt', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
                                     'X-Gemini-Key': chaveIA
                                 },
-                                body: JSON.stringify({
-                                    messages: [{ role: 'user', parts: [{ text: prompt }] }],
-                                    mode: 'json'
-                                })
+                                body: JSON.stringify({ termos: itensDoLote })
                             });
                             
-                            if (aiResponse.ok) {
-                                const aiData = await aiResponse.json();
-                                if (aiData.reply) {
-                                    let aiText = aiData.reply.trim();
-                                    aiText = aiText.replace(/^```(?:json)?|```$/gm, '').trim();
-                                    
-                                    try {
-                                        const jlptMap = JSON.parse(aiText);
-                                        lote.forEach(t => {
-                                            if (jlptMap[t.item]) {
-                                                t.jlpt = jlptMap[t.item];
-                                            }
-                                        });
-                                    } catch (parseErr) {
-                                        console.error('Erro ao fazer parse do JSON da IA:', parseErr, aiText);
+                            if (jlptRes.ok) {
+                                const jlptMap = await jlptRes.json();
+                                console.log('[JLPT] Mapa retornado pela IA:', jlptMap);
+                                lote.forEach(t => {
+                                    const nivel = jlptMap[t.item];
+                                    if (nivel) {
+                                        t.jlpt = nivel;
+                                        console.log(`[JLPT] ${t.item} → ${nivel}`);
                                     }
-                                }
+                                });
+                            } else {
+                                console.error('[JLPT] Erro ao classificar:', await jlptRes.text());
                             }
                         }
                     } catch (e) {
-                        console.error('Erro ao classificar JLPT com a IA:', e);
+                        console.error('[JLPT] Erro ao classificar JLPT com a IA:', e);
                     }
+                    
+                    const comNivel = termosFormatados.filter(t => t.jlpt).length;
+                    feedback.textContent = `✅ JLPT classificado: ${comNivel} de ${termosFormatados.length} termos com nível. Enviando...`;
                 }
 
                 feedback.textContent = `Enviando ${termosFormatados.length} termos para o servidor...`;
