@@ -159,13 +159,18 @@
 
         async function carregarEstatisticas(userId) {
             const container = document.getElementById('stats-categories-container');
+            const containerJLPT = document.getElementById('stats-jlpt-container');
             try {
-                const { data, error } = await supabaseClient
-                    .from('vocabulario')
-                    .select('categoria, jlpt')
-                    .eq('user_id', userId);
+                const sessao = localStorage.getItem('supabase_session');
+                const parsedSession = JSON.parse(sessao);
+                const tokenDeAcesso = `Bearer ${parsedSession.access_token}`;
 
-                if (error) throw error;
+                const response = await fetch('/api/jisho?acao=listar', {
+                    headers: { "Authorization": tokenDeAcesso }
+                });
+
+                if (!response.ok) throw new Error("Erro ao buscar dados da API.");
+                const data = await response.json();
 
                 const total = data.length;
                 document.getElementById('stats-total').innerText = total;
@@ -247,7 +252,8 @@
                 
             } catch (err) {
                 console.error("Erro ao carregar estatísticas:", err);
-                container.innerHTML = `<p style="text-align: center; color: #e74c3c;">Erro ao carregar estatísticas de estudo.</p>`;
+                if (container) container.innerHTML = `<p style="text-align: center; color: #e74c3c;">Erro ao carregar estatísticas de estudo.</p>`;
+                if (containerJLPT) containerJLPT.innerHTML = `<p style="text-align: center; color: #e74c3c;">Erro ao carregar dados do JLPT.</p>`;
             }
         }
 
