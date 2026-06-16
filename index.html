@@ -1318,6 +1318,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 alert("Por favor, selecione pelo menos um conjunto.");
                 return;
             }
+            
+            const conjuntoSelecionado = conjuntosSelecionados.find(c => c !== 'Geral') || conjuntosSelecionados[0] || 'Geral';
 
             const feedback = document.getElementById('ia-import-feedback');
             const btn = document.getElementById('ia-btn-confirmar-import');
@@ -1755,6 +1757,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 alert("Por favor, selecione pelo menos um conjunto.");
                 return;
             }
+            
+            const conjuntoSelecionado = conjuntosSelecionados.find(c => c !== 'Geral') || conjuntosSelecionados[0] || 'Geral';
 
             const feedback = document.getElementById('ia-anki-feedback');
             const btn = document.getElementById('ia-btn-confirmar-anki');
