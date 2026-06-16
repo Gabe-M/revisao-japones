@@ -171,7 +171,12 @@ export default async function handler(req, res) {
             if (!response.ok) {
                 return res.status(response.status).json({
                     error: 'O Supabase rejeitou a gravação',
-                    detalhes: resultado
+                    detalhes: resultado,
+                    debug: {
+                        userId: userId,
+                        tokenUsuarioLength: tokenUsuario ? tokenUsuario.length : 0,
+                        payloadFinal: payloadFinal
+                    }
                 });
             }
 
