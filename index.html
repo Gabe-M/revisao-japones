@@ -1785,6 +1785,55 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     };
                 });
 
+                // NOVO: Detectar JLPT com IA para os termos que vieram sem
+                const termosSemJLPT = termosFormatados.filter(t => !t.jlpt);
+                if (termosSemJLPT.length > 0) {
+                    feedback.textContent = `A IA está classificando o nível JLPT de ${termosSemJLPT.length} termos. Isso pode levar alguns segundos...`;
+                    
+                    try {
+                        const chaveIA = localStorage.getItem('gemini_api_key') || '';
+                        const chunkSize = 50; // Em lotes para evitar sobrecarga
+                        for (let i = 0; i < termosSemJLPT.length; i += chunkSize) {
+                            const lote = termosSemJLPT.slice(i, i + chunkSize);
+                            const itensDoLote = lote.map(t => t.item);
+                            
+                            const prompt = `Analise os seguintes termos em japonês e retorne APENAS um objeto JSON onde a chave é o termo exato fornecido e o valor é o nível JLPT ('N5', 'N4', 'N3', 'N2', 'N1'). Se não tiver certeza, deduza o mais provável. Responda ESTRITAMENTE com o JSON válido, sem formato markdown ou texto extra. Termos: ${JSON.stringify(itensDoLote)}`;
+                            
+                            const aiResponse = await fetch('/api/ai', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-Gemini-Key': chaveIA
+                                },
+                                body: JSON.stringify({
+                                    messages: [{ role: 'user', parts: [{ text: prompt }] }]
+                                })
+                            });
+                            
+                            if (aiResponse.ok) {
+                                const aiData = await aiResponse.json();
+                                if (aiData.candidates && aiData.candidates[0] && aiData.candidates[0].content) {
+                                    let aiText = aiData.candidates[0].content.parts[0].text.trim();
+                                    aiText = aiText.replace(/^```(?:json)?|```$/gm, '').trim();
+                                    
+                                    try {
+                                        const jlptMap = JSON.parse(aiText);
+                                        lote.forEach(t => {
+                                            if (jlptMap[t.item]) {
+                                                t.jlpt = jlptMap[t.item];
+                                            }
+                                        });
+                                    } catch (parseErr) {
+                                        console.error('Erro ao fazer parse do JSON da IA:', parseErr, aiText);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Erro ao classificar JLPT com a IA:', e);
+                    }
+                }
+
                 feedback.textContent = `Enviando ${termosFormatados.length} termos para o servidor...`;
 
                 const response = await fetch('/api/jisho?acao=salvar', {
