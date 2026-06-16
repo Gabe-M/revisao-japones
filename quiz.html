@@ -119,6 +119,18 @@
             </div>
             
             <div class="form-group">
+                <label>Nível JLPT:</label>
+                <select id="select-jlpt">
+                    <option value="todos">Todos os Níveis</option>
+                    <option value="N5">N5 (Básico 1)</option>
+                    <option value="N4">N4 (Básico 2)</option>
+                    <option value="N3">N3 (Intermediário)</option>
+                    <option value="N2">N2 (Avançado)</option>
+                    <option value="N1">N1 (Fluente)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
                 <label>Quantidade de Perguntas:</label>
                 <select id="select-quantidade">
                     <option value="10">10 perguntas</option>
@@ -261,17 +273,24 @@
         // --- Setup do Quiz ---
         function iniciarQuiz() {
             const conjuntoNome = document.getElementById('select-conjunto').value;
+            const jlptNome = document.getElementById('select-jlpt').value;
             const qtd = document.getElementById('select-quantidade').value;
             
-            // Filtrar conjunto
-            if (conjuntoNome === 'todos') {
-                conjuntoSelecionado = [...baseDeDados];
-            } else {
-                conjuntoSelecionado = baseDeDados.filter(c => {
-                    if(!c.notas) return false;
-                    return c.notas.includes(`[Conjuntos:`) && c.notas.includes(conjuntoNome);
-                });
-            }
+            // Filtrar conjunto e JLPT
+            conjuntoSelecionado = baseDeDados.filter(c => {
+                let passaConjunto = true;
+                if (conjuntoNome !== 'todos') {
+                    if (!c.notas) passaConjunto = false;
+                    else passaConjunto = c.notas.includes(`[Conjuntos:`) && c.notas.includes(conjuntoNome);
+                }
+                
+                let passaJLPT = true;
+                if (jlptNome !== 'todos') {
+                    passaJLPT = c.jlpt === jlptNome;
+                }
+                
+                return passaConjunto && passaJLPT;
+            });
 
             if(conjuntoSelecionado.length < 4) {
                 alert("O conjunto selecionado precisa ter pelo menos 4 itens para gerar as opções!");

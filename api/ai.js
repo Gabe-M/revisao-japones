@@ -82,9 +82,13 @@ export default async function handler(req, res) {
                                             conjunto: { 
                                                 type: "STRING", 
                                                 description: "A pasta ou conjunto (categoria personalizada) onde o termo ficará. Se o usuário não especificar explicitamente na mensagem, preencha como 'Geral'." 
+                                            },
+                                            jlpt: {
+                                                type: "STRING",
+                                                description: "O nível JLPT mais apropriado para este termo (ex: 'N5', 'N4', 'N3', 'N2', 'N1'). Preencha sempre deduzindo pela complexidade da palavra."
                                             }
                                         },
-                                        required: ["item", "leitura", "significado", "categoria", "conjunto"]
+                                        required: ["item", "leitura", "significado", "categoria", "conjunto", "jlpt"]
                                     }
                                 }
                             },

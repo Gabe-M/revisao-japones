@@ -116,6 +116,7 @@ export default async function handler(req, res) {
                         leitura: itemNovo.leitura || cardExistente.leitura,
                         significado: itemNovo.significado || cardExistente.significado,
                         categoria: itemNovo.categoria || cardExistente.categoria,
+                        jlpt: itemNovo.jlpt || cardExistente.jlpt,
                         notas: novasNotas,
                         user_id: cardExistente.user_id
                     });

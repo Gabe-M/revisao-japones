@@ -107,6 +107,13 @@
         </div>
     </div>
 
+    <div class="card-perfil">
+        <h2>🏆 Caminho do JLPT</h2>
+        <div id="stats-jlpt-container" style="display: flex; flex-direction: column; gap: 15px; text-align: left; max-width: 450px; margin: 0 auto;">
+            <p style="text-align: center; opacity: 0.7;">Carregando níveis JLPT...</p>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = "https://sodqxkvkxifczfscbxwo.supabase.co"; 
         const SUPABASE_KEY = "sb_publishable_qanav-1ayeNA40f692w2Xg_qqGnFcuG";
@@ -155,7 +162,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('vocabulario')
-                    .select('categoria')
+                    .select('categoria, jlpt')
                     .eq('user_id', userId);
 
                 if (error) throw error;
@@ -197,6 +204,47 @@
                 });
 
                 container.innerHTML = html;
+
+                // Contagem por JLPT
+                const contagemJLPT = { 'N5': 0, 'N4': 0, 'N3': 0, 'N2': 0, 'N1': 0 };
+                data.forEach(item => {
+                    if (item.jlpt && contagemJLPT[item.jlpt] !== undefined) {
+                        contagemJLPT[item.jlpt]++;
+                    }
+                });
+
+                const coresJLPT = {
+                    'N5': '#27ae60',
+                    'N4': '#2980b9',
+                    'N3': '#f39c12',
+                    'N2': '#e67e22',
+                    'N1': '#c0392b'
+                };
+                
+                const containerJLPT = document.getElementById('stats-jlpt-container');
+                const maxJLPTCount = Math.max(1, ...Object.values(contagemJLPT)); // Para evitar divisão por zero
+                let htmlJLPT = '';
+
+                ['N5', 'N4', 'N3', 'N2', 'N1'].forEach(nivel => {
+                    const qtd = contagemJLPT[nivel];
+                    const porcentagem = ((qtd / maxJLPTCount) * 100).toFixed(0);
+                    const cor = coresJLPT[nivel];
+                    
+                    htmlJLPT += `
+                        <div>
+                            <div class="category-row">
+                                <span>${nivel}</span>
+                                <span style="color: ${cor};">${qtd} termos</span>
+                            </div>
+                            <div class="stats-bar-bg">
+                                <div class="stats-bar-fill" style="background-color: ${cor}; width: ${porcentagem}%;"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                containerJLPT.innerHTML = htmlJLPT;
+                
             } catch (err) {
                 console.error("Erro ao carregar estatísticas:", err);
                 container.innerHTML = `<p style="text-align: center; color: #e74c3c;">Erro ao carregar estatísticas de estudo.</p>`;

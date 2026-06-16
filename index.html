@@ -221,6 +221,7 @@
     "leitura": "leitura em romaji ou kana",
     "significado": "tradução em português",
     "categoria": "tipo gramatical (deve ser estritamente um destes: Kanji, Verbo, Partícula, Demonstrativo, Vocabulário)",
+    "jlpt": "deduza o nível do JLPT desta palavra (ex: 'N5', 'N4', 'N3', 'N2', 'N1')",
     "notas": "explicação ou notas extras (opcional)"
   }
 ]
@@ -311,6 +312,15 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo, significado ou leitura..." onkeyup="aplicarFiltros()">
     </div>
     
+    <div class="controls" id="botoes-filtro-jlpt" style="margin-bottom: 15px;">
+        <button onclick="mudarJLPT('Todos')" class="active">Níveis (Todos)</button>
+        <button onclick="mudarJLPT('N5')" style="border-bottom: 2px solid #27ae60;">N5</button>
+        <button onclick="mudarJLPT('N4')" style="border-bottom: 2px solid #2980b9;">N4</button>
+        <button onclick="mudarJLPT('N3')" style="border-bottom: 2px solid #f39c12;">N3</button>
+        <button onclick="mudarJLPT('N2')" style="border-bottom: 2px solid #e67e22;">N2</button>
+        <button onclick="mudarJLPT('N1')" style="border-bottom: 2px solid #c0392b;">N1</button>
+    </div>
+    
     <div class="controls" id="botoes-filtro">
         <button onclick="mudarCategoria('Todos')" class="active">Todos</button>
         <button onclick="mudarCategoria('Kanji')">Kanjis</button>
@@ -367,6 +377,17 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             </div>
             <div style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
                 <p id="modal-card-item-title" style="margin: 0; font-weight: bold; text-align: center; font-size: 1.2em; color: var(--primary-color);"></p>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="font-weight: bold; font-size: 0.9em; color: var(--text-color);">Nível JLPT:</label>
+                    <select id="modal-card-jlpt-select" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color); outline: none;">
+                        <option value="">Nenhum (ou não sei)</option>
+                        <option value="N5">N5 (Básico 1)</option>
+                        <option value="N4">N4 (Básico 2)</option>
+                        <option value="N3">N3 (Intermediário)</option>
+                        <option value="N2">N2 (Avançado)</option>
+                        <option value="N1">N1 (Fluente)</option>
+                    </select>
+                </div>
                 <div id="modal-card-conjuntos-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">
                     <!-- Checkboxes preenchidos via JS -->
                 </div>
@@ -558,6 +579,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
 
         // Variáveis de estado para a paginação e conjuntos
         let filtroAtual = 'Todos';
+        let filtroJLPT = 'Todos';
         let dadosFiltrados = [];
         let dadosCombinados = [];
         let currentPage = 1;
@@ -884,6 +906,14 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             aplicarFiltros();
         }
 
+        function mudarJLPT(nivel) {
+            filtroJLPT = nivel;
+            document.querySelectorAll('#botoes-filtro-jlpt button').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('onclick').includes(`'${nivel}'`));
+            });
+            aplicarFiltros();
+        }
+
         function aplicarFiltros() {
             const texto = document.getElementById('searchInput').value.toLowerCase();
             const filtroConjunto = document.getElementById('ia-conjunto-select').value;
@@ -908,12 +938,18 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     pertenceACategoria = (d.categoria === filtroAtual);
                 }
                 
-                // 3. Filtro de texto de busca
+                // 3. Filtro JLPT
+                let pertenceAoJLPT = true;
+                if (filtroJLPT !== 'Todos') {
+                    pertenceAoJLPT = (d.jlpt === filtroJLPT);
+                }
+                
+                // 4. Filtro de texto de busca
                 const textoMatch = d.item.toLowerCase().includes(texto) || 
                                    d.leitura.toLowerCase().includes(texto) || 
                                    d.significado.toLowerCase().includes(texto);
                                    
-                return pertenceAoConjunto && pertenceACategoria && textoMatch;
+                return pertenceAoConjunto && pertenceACategoria && pertenceAoJLPT && textoMatch;
             });
             currentPage = 1;
             renderizarPagina();
@@ -957,6 +993,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             
             document.getElementById('modal-card-item-title').textContent = termoObj.item;
             document.getElementById('modal-card-novo-conjunto').value = '';
+            document.getElementById('modal-card-jlpt-select').value = termoObj.jlpt || '';
             
             const conjuntosDoTermo = extrairConjuntos(termoObj.notas || '', termoObj.item);
             
@@ -1029,6 +1066,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             // Sempre garante o Geral se não houver conjuntos selecionados
             if (novosConjuntos.length === 0) novosConjuntos.push('Geral');
             
+            const novoJLPT = document.getElementById('modal-card-jlpt-select').value;
+            
             const notasLimpa = removerTagConjuntos(termoAtualParaModal.notas || '');
             let novaNota = notasLimpa.trim();
             
@@ -1040,14 +1079,16 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             
             try {
                 if (termoAtualParaModal.id) {
-                    await window.supabaseClient.from('vocabulario').update({ notas: novaNota }).eq('id', termoAtualParaModal.id);
+                    await window.supabaseClient.from('vocabulario').update({ notas: novaNota, jlpt: novoJLPT }).eq('id', termoAtualParaModal.id);
                 }
                 
                 termoAtualParaModal.notas = novaNota;
+                termoAtualParaModal.jlpt = novoJLPT;
                 
                 const idx = dadosCombinados.findIndex(d => d.item === termoAtualParaModal.item);
                 if (idx !== -1) {
                     dadosCombinados[idx].notas = novaNota;
+                    dadosCombinados[idx].jlpt = novoJLPT;
                 }
                 
                 atualizarSeletoresDeConjunto();
@@ -1083,12 +1124,24 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 const badgesHtml = conjuntosDoTermo.filter(conj => conj !== 'Geral').map(conj => 
                     `<span class="card-conjunto-badge">${conj}</span>`
                 ).join(' ');
+                
+                let jlptBadge = '';
+                if (d.jlpt) {
+                    let color = '#2c3e50';
+                    if (d.jlpt === 'N5') color = '#27ae60';
+                    else if (d.jlpt === 'N4') color = '#2980b9';
+                    else if (d.jlpt === 'N3') color = '#f39c12';
+                    else if (d.jlpt === 'N2') color = '#e67e22';
+                    else if (d.jlpt === 'N1') color = '#c0392b';
+                    jlptBadge = `<span class="card-conjunto-badge" style="background-color: ${color}; color: white; margin-right: 5px;">${d.jlpt}</span>`;
+                }
 
                 return `
                     <div class="${classes}" style="position: relative; cursor: pointer;" onclick="const details = this.querySelector('details'); if(details) details.open = !details.open;">
                         <button onclick="event.stopPropagation(); abrirModalConjuntosCard(${termoJson}, event)" style="position: absolute; top: 12px; right: 12px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: var(--shadow-subtle); transition: 0.2s;" title="Organizar Conjuntos" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗂️</button>
                         
                         <div style="display:flex; justify-content:center; align-items:center; margin-bottom: 15px; gap: 6px; flex-wrap: wrap;">
+                            ${jlptBadge}
                             <span class="card-categoria-label">${d.categoria}</span>
                             ${badgesHtml}
                         </div>
