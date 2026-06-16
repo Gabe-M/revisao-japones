@@ -219,10 +219,16 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             
             <div style="background: var(--bg-color); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; margin-top: 5px; width: 100%; box-sizing: border-box;">
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <span style="font-weight: bold; color: var(--text-color);">Salvar no Conjunto:</span>
-                    <select id="ia-import-conjunto-select" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer;">
-                        <!-- Preenchido dinamicamente via JS -->
-                    </select>
+                    <span style="font-weight: bold; color: var(--text-color);">Salvar no(s) Conjunto(s):</span>
+                    <div style="position: relative; display: inline-block;">
+                        <button id="ia-import-conjunto-btn" onclick="toggleMultiSelect(event, 'ia-import-conjunto-dropdown')" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer; text-align: left; min-width: 180px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <span>Geral</span>
+                            <span style="font-size: 0.8em; opacity: 0.7;">▼</span>
+                        </button>
+                        <div id="ia-import-conjunto-dropdown" class="multiselect-dropdown" style="display: none; position: absolute; top: 100%; left: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-hover); padding: 10px; min-width: 220px; z-index: 1000; max-height: 200px; overflow-y: auto; flex-direction: column; gap: 6px; box-sizing: border-box;">
+                            <!-- Checkboxes preenchidos via JS -->
+                        </div>
+                    </div>
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -253,10 +259,16 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             
             <div style="background: var(--bg-color); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; width: 100%; box-sizing: border-box;">
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <span style="font-weight: bold; color: var(--text-color);">Salvar no Conjunto:</span>
-                    <select id="ia-anki-conjunto-select" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer;">
-                        <!-- Preenchido dinamicamente via JS -->
-                    </select>
+                    <span style="font-weight: bold; color: var(--text-color);">Salvar no(s) Conjunto(s):</span>
+                    <div style="position: relative; display: inline-block;">
+                        <button id="ia-anki-conjunto-btn" onclick="toggleMultiSelect(event, 'ia-anki-conjunto-dropdown')" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer; text-align: left; min-width: 180px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <span>Geral</span>
+                            <span style="font-size: 0.8em; opacity: 0.7;">▼</span>
+                        </button>
+                        <div id="ia-anki-conjunto-dropdown" class="multiselect-dropdown" style="display: none; position: absolute; top: 100%; left: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-hover); padding: 10px; min-width: 220px; z-index: 1000; max-height: 200px; overflow-y: auto; flex-direction: column; gap: 6px; box-sizing: border-box;">
+                            <!-- Checkboxes preenchidos via JS -->
+                        </div>
+                    </div>
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -1100,35 +1112,104 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             }
         }
 
-        function atualizarSeletorImportacao() {
-            const select = document.getElementById('ia-import-conjunto-select');
-            let html = conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
-            html += `<option value="novo">Criar Novo Conjunto...</option>`;
-            select.innerHTML = html;
-            select.value = 'Geral';
+        function toggleMultiSelect(event, dropdownId) {
+            event.stopPropagation();
+            const dropdown = document.getElementById(dropdownId);
+            if (!dropdown) return;
+            
+            const isHidden = dropdown.style.display === 'none';
+            // Fecha todos os dropdowns primeiro
+            document.querySelectorAll('.multiselect-dropdown').forEach(dd => dd.style.display = 'none');
+            
+            if (isHidden) {
+                dropdown.style.display = 'flex';
+            }
         }
 
-        // Listener para criar novo conjunto a partir da tela de importação
-        window.addEventListener('DOMContentLoaded', () => {
-            const select = document.getElementById('ia-import-conjunto-select');
-            if (select) {
-                select.addEventListener('change', function() {
-                    if (this.value === 'novo') {
-                        const nome = prompt("Digite o nome do novo conjunto:").trim();
-                        if (!nome || nome === 'Texto' || nome.startsWith('Frase:') || nome === 'Todos') {
-                            alert("Nome inválido ou reservado.");
-                            this.value = 'Geral';
-                            return;
-                        }
-                        if (!conjuntosDisponiveis.includes(nome)) {
-                            conjuntosDisponiveis.push(nome);
-                            atualizarSeletoresDeConjunto();
-                            atualizarSeletorImportacao();
-                        }
-                        this.value = nome;
-                    }
-                });
+        function atualizarBotaoTexto(dropdownId, btnId) {
+            const dropdown = document.getElementById(dropdownId);
+            const btn = document.getElementById(btnId);
+            if (!dropdown || !btn) return;
+            
+            const selecionados = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+            const span = btn.querySelector('span:first-child');
+            if (span) {
+                if (selecionados.length === 0) {
+                    span.textContent = "Nenhum selecionado";
+                } else if (selecionados.length === 1) {
+                    span.textContent = selecionados[0];
+                } else {
+                    span.textContent = `${selecionados.length} conjuntos`;
+                }
             }
+        }
+
+        function criarNovoConjuntoImport(tipo) {
+            const nome = prompt("Digite o nome do novo conjunto:").trim();
+            if (!nome || nome === 'Texto' || nome.startsWith('Frase:') || nome === 'Todos') {
+                alert("Nome inválido ou reservado.");
+                return;
+            }
+            
+            if (!conjuntosDisponiveis.includes(nome)) {
+                conjuntosDisponiveis.push(nome);
+                atualizarSeletoresDeConjunto();
+                atualizarSeletorImportacao();
+                atualizarSeletorAnki();
+            }
+            
+            // Marca o novo conjunto criado como selecionado
+            const dropdownId = tipo === 'import' ? 'ia-import-conjunto-dropdown' : 'ia-anki-conjunto-dropdown';
+            const dropdown = document.getElementById(dropdownId);
+            if (dropdown) {
+                const cb = dropdown.querySelector(`input[value="${nome}"]`);
+                if (cb) {
+                    cb.checked = true;
+                    atualizarBotaoTexto(dropdownId, tipo === 'import' ? 'ia-import-conjunto-btn' : 'ia-anki-conjunto-btn');
+                }
+            }
+        }
+
+        function atualizarSeletorImportacao() {
+            const dropdown = document.getElementById('ia-import-conjunto-dropdown');
+            if (!dropdown) return;
+            
+            // Filtra para remover opções especiais
+            const conjuntos = conjuntosDisponiveis.filter(c => c !== 'novo' && c !== 'Todos');
+            
+            let html = conjuntos.map(conj => `
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; padding: 4px 6px; border-radius: 4px; color: var(--text-color);">
+                    <input type="checkbox" name="import-conjunto" value="${conj}" ${conj === 'Geral' ? 'checked' : ''} style="cursor: pointer;">
+                    <span>${conj}</span>
+                </label>
+            `).join('');
+            
+            html += `
+                <div style="border-top: 1px solid var(--border-color); margin-top: 5px; padding-top: 5px;">
+                    <button onclick="criarNovoConjuntoImport('import')" style="width: 100%; font-size: 0.85em; padding: 6px; background-color: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">+ Criar Conjunto</button>
+                </div>
+            `;
+            dropdown.innerHTML = html;
+            
+            atualizarBotaoTexto('ia-import-conjunto-dropdown', 'ia-import-conjunto-btn');
+            
+            // Adiciona listeners para atualizar o texto do botão
+            dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    atualizarBotaoTexto('ia-import-conjunto-dropdown', 'ia-import-conjunto-btn');
+                });
+            });
+        }
+
+        // Listener global para fechar dropdowns ao clicar fora
+        window.addEventListener('click', (event) => {
+            const dropdowns = document.querySelectorAll('.multiselect-dropdown');
+            dropdowns.forEach(dd => {
+                const container = dd.parentElement;
+                if (container && !container.contains(event.target)) {
+                    dd.style.display = 'none';
+                }
+            });
         });
 
         async function copiarTexto(elementoId, botao) {
@@ -1167,7 +1248,14 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
 
         async function processarImportacaoJSON() {
             const fileInput = document.getElementById('ia-import-file-input');
-            const conjuntoSelecionado = document.getElementById('ia-import-conjunto-select').value;
+            const checkboxes = document.querySelectorAll('#ia-import-conjunto-dropdown input[name="import-conjunto"]:checked');
+            const conjuntosSelecionados = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (conjuntosSelecionados.length === 0) {
+                alert("Por favor, selecione pelo menos um conjunto.");
+                return;
+            }
+
             const feedback = document.getElementById('ia-import-feedback');
             const btn = document.getElementById('ia-btn-confirmar-import');
             
@@ -1203,7 +1291,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                         }
                         
                         const notasLimpa = removerTagConjuntos(item.notes || item.notas || '');
-                        const novasNotas = atualizarNotasComConjuntos(notasLimpa, [conjuntoSelecionado]);
+                        const novasNotas = atualizarNotasComConjuntos(notasLimpa, conjuntosSelecionados);
                         
                         termosFormatados.push({
                             item: item.item.trim(),
@@ -1374,37 +1462,35 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         }
 
         function atualizarSeletorAnki() {
-            const select = document.getElementById('ia-anki-conjunto-select');
-            if (!select) return;
-            let html = conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
-            html += `<option value="novo">Criar Novo Conjunto...</option>`;
-            select.innerHTML = html;
-            select.value = 'Geral';
-        }
-
-        // Listener para criar novo conjunto a partir do seletor Anki
-        window.addEventListener('DOMContentLoaded', () => {
-            const select = document.getElementById('ia-anki-conjunto-select');
-            if (select) {
-                select.addEventListener('change', function() {
-                    if (this.value === 'novo') {
-                        const nome = prompt("Digite o nome do novo conjunto:");
-                        if (!nome || !nome.trim() || nome.trim() === 'Texto' || nome.trim().startsWith('Frase:') || nome.trim() === 'Todos') {
-                            alert("Nome inválido ou reservado.");
-                            this.value = 'Geral';
-                            return;
-                        }
-                        const nomeClean = nome.trim();
-                        if (!conjuntosDisponiveis.includes(nomeClean)) {
-                            conjuntosDisponiveis.push(nomeClean);
-                            atualizarSeletoresDeConjunto();
-                            atualizarSeletorAnki();
-                        }
-                        this.value = nomeClean;
-                    }
+            const dropdown = document.getElementById('ia-anki-conjunto-dropdown');
+            if (!dropdown) return;
+            
+            // Filtra para remover opções especiais
+            const conjuntos = conjuntosDisponiveis.filter(c => c !== 'novo' && c !== 'Todos');
+            
+            let html = conjuntos.map(conj => `
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; padding: 4px 6px; border-radius: 4px; color: var(--text-color);">
+                    <input type="checkbox" name="anki-conjunto" value="${conj}" ${conj === 'Geral' ? 'checked' : ''} style="cursor: pointer;">
+                    <span>${conj}</span>
+                </label>
+            `).join('');
+            
+            html += `
+                <div style="border-top: 1px solid var(--border-color); margin-top: 5px; padding-top: 5px;">
+                    <button onclick="criarNovoConjuntoImport('anki')" style="width: 100%; font-size: 0.85em; padding: 6px; background-color: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">+ Criar Conjunto</button>
+                </div>
+            `;
+            dropdown.innerHTML = html;
+            
+            atualizarBotaoTexto('ia-anki-conjunto-dropdown', 'ia-anki-conjunto-btn');
+            
+            // Adiciona listeners para atualizar o texto do botão
+            dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    atualizarBotaoTexto('ia-anki-conjunto-dropdown', 'ia-anki-conjunto-btn');
                 });
-            }
-        });
+            });
+        }
 
         function detectarCategoria(item) {
             if (!item) return 'Vocabulário';
@@ -1582,18 +1668,20 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         }
 
         async function processarImportacaoAnki() {
-            const conjuntoSelecionado = document.getElementById('ia-anki-conjunto-select').value;
+            const checkboxes = document.querySelectorAll('#ia-anki-conjunto-dropdown input[name="anki-conjunto"]:checked');
+            const conjuntosSelecionados = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (conjuntosSelecionados.length === 0) {
+                alert("Por favor, selecione pelo menos um conjunto.");
+                return;
+            }
+
             const feedback = document.getElementById('ia-anki-feedback');
             const btn = document.getElementById('ia-btn-confirmar-anki');
             const fileInput = document.getElementById('ia-anki-file-input');
 
             if (!ankiPreviewData || ankiPreviewData.length === 0) {
                 alert('Por favor, selecione um arquivo .txt do Anki primeiro. Certifique-se de que o preview mostra termos válidos.');
-                return;
-            }
-
-            if (conjuntoSelecionado === 'novo') {
-                alert('Por favor, selecione ou crie um conjunto antes de importar.');
                 return;
             }
 
@@ -1612,7 +1700,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     if (t.notasGramaticais) partesNotas.push(`Gramática: ${t.notasGramaticais}`);
                     
                     const notasLimpa = partesNotas.join('\n');
-                    const novasNotas = atualizarNotasComConjuntos(notasLimpa, [conjuntoSelecionado]);
+                    const novasNotas = atualizarNotasComConjuntos(notasLimpa, conjuntosSelecionados);
 
                     return {
                         item: t.item,
