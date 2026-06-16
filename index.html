@@ -41,10 +41,44 @@
         .search-bar:focus { border-color: var(--highlight-color); box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.15); transform: translateY(-2px); }
         
         .controls { display: flex; justify-content: center; gap: 8px; margin-bottom: 40px; flex-wrap: wrap; max-width: 1200px; margin-left: auto; margin-right: auto; background: var(--card-bg); padding: 8px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-subtle); width: fit-content; }
-        .controls button { padding: 10px 20px; border: none; background: transparent; color: var(--text-color); border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; transition: all 0.2s; }
-        .controls button:hover { background: rgba(0,0,0,0.05); }
+        .controls button { padding: 10px 20px; border: none; background: transparent; color: var(--text-color); border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); transform: scale(1); }
+        .controls button:hover { background: rgba(0,0,0,0.05); transform: scale(1.05); }
         [data-theme="dark"] .controls button:hover { background: rgba(255,255,255,0.05); }
-        .controls button.active { background: var(--primary-color); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .controls button.active { background: var(--primary-color); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transform: scale(1.05); }
+
+        /* Estilos específicos e animados para os botões do JLPT */
+        #botoes-filtro-jlpt button {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #botoes-filtro-jlpt button[onclick*="'N5'"].active {
+            background-color: #27ae60 !important;
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4) !important;
+            border-bottom-color: transparent !important;
+        }
+        #botoes-filtro-jlpt button[onclick*="'N4'"].active {
+            background-color: #2980b9 !important;
+            box-shadow: 0 4px 12px rgba(41, 128, 185, 0.4) !important;
+            border-bottom-color: transparent !important;
+        }
+        #botoes-filtro-jlpt button[onclick*="'N3'"].active {
+            background-color: #f39c12 !important;
+            box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4) !important;
+            border-bottom-color: transparent !important;
+        }
+        #botoes-filtro-jlpt button[onclick*="'N2'"].active {
+            background-color: #e67e22 !important;
+            box-shadow: 0 4px 12px rgba(230, 126, 34, 0.4) !important;
+            border-bottom-color: transparent !important;
+        }
+        #botoes-filtro-jlpt button[onclick*="'N1'"].active {
+            background-color: #c0392b !important;
+            box-shadow: 0 4px 12px rgba(192, 57, 43, 0.4) !important;
+            border-bottom-color: transparent !important;
+        }
+        #botoes-filtro-jlpt button[onclick*="'Todos'"].active {
+            background-color: var(--primary-color) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+        }
 
         /* ACTION PANELS */
         .panel-container { background: var(--card-bg); padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); max-width: 1200px; margin: 0 auto 20px; box-shadow: var(--shadow-subtle); transition: all 0.3s; }
