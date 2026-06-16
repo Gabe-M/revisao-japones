@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisão de Japonês - Perfil</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f0f2f5; --text-color: #2c3e50; --card-bg: rgba(255, 255, 255, 0.95);
+            --primary-color: #2c3e50; --secondary-color: #34495e;
+            --border-color: rgba(0, 0, 0, 0.06); --highlight-color: #e67e22;
+            --shadow-subtle: 0 4px 15px rgba(0,0,0,0.03);
+            --shadow-hover: 0 10px 25px rgba(0,0,0,0.08);
+            --card-radius: 16px;
+        }
+        [data-theme="dark"] {
+            --bg-color: #121212; --text-color: #f0f0f0; --card-bg: rgba(30, 30, 30, 0.85);
+            --primary-color: #2c3e50; --secondary-color: #4b6584;
+            --border-color: rgba(255, 255, 255, 0.08); --highlight-color: #d35400;
+            --shadow-subtle: 0 4px 15px rgba(0,0,0,0.3);
+            --shadow-hover: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: background 0.3s, color 0.3s; }
+        .nav-menu { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .nav-menu a { padding: 10px 20px; text-decoration: none; background: var(--primary-color); color: white; border-radius: 8px; font-weight: 600; letter-spacing: 0.5px; transition: 0.2s; }
+        .nav-menu a:hover { transform: translateY(-2px); opacity: 0.9; }
+        .nav-menu a.ativo { background: var(--highlight-color); }
+        .header-container { display: flex; justify-content: space-between; max-width: 1200px; margin: 0 auto 20px; align-items: center; }
+        .header-container h1 { font-weight: 700; letter-spacing: -0.5px; margin: 0; }
+        button { padding: 10px 16px; border: none; background: var(--primary-color); color: white; border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; transition: 0.2s; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .card-perfil { background: var(--card-bg); padding: 40px; border-radius: var(--card-radius); border: 1px solid var(--border-color); max-width: 600px; margin: 0 auto; text-align: center; box-shadow: var(--shadow-subtle); backdrop-filter: blur(10px); }
+        .info-label { font-size: 0.9em; color: gray; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
+        .info-value { font-size: 1.2em; font-weight: bold; color: var(--primary-color); margin-bottom: 30px; }
+        [data-theme="dark"] .info-value { color: var(--text-color); }
+        .btn-logout { background-color: var(--secondary-color); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em; transition: 0.2s; margin-bottom: 15px; width: 100%; max-width: 300px; }
+        .btn-delete { background-color: #e74c3c; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em; transition: 0.2s; width: 100%; max-width: 300px; }
+        .btn-logout:hover, .btn-delete:hover { opacity: 0.9; transform: translateY(-2px); }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="header-container">
+        <h1>Sua Conta</h1>
+        <button onclick="toggleTheme()" id="themeBtn" style="padding:5px 10px; cursor:pointer;">🌙 Tema</button>
+    </div>
+
+    <div class="nav-menu">
+        <a href="index.html">📚 Vocabulário & Kanji</a>
+        <a href="frases.html">💬 Frases Práticas</a>
+        <a href="minigame.html">🎮 Minigame</a>
+        <a href="textos.html">📄 Textos</a>
+        <a href="srs.html">🧠 SRS</a>
+        <a href="perfil.html" class="ativo">👤 Perfil</a>
+    </div>
+
+    <div class="card-perfil">
+        <h2>Área do Usuário</h2>
+        <div class="info-label">E-mail Cadastrado:</div>
+        <div class="info-value" id="user-email">Carregando...</div>
+        
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+            <button class="btn-logout" onclick="fazerLogout()">Sair (Logout)</button>
+            <button class="btn-delete" onclick="deletarConta()">Deletar Conta Definitivamente</button>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://sodqxkvkxifczfscbxwo.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_qanav-1ayeNA40f692w2Xg_qqGnFcuG";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Tema
+        function toggleTheme() {
+            const body = document.body;
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+        
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+        }
+
+        async function carregarPerfil() {
+            const sessao = localStorage.getItem('supabase_session');
+            if (!sessao) {
+                window.location.href = "login.html";
+                return;
+            }
+            const parsedSession = JSON.parse(sessao);
+            document.getElementById('user-email').innerText = parsedSession.user.email;
+        }
+
+        async function fazerLogout() {
+            await supabaseClient.auth.signOut();
+            localStorage.removeItem('supabase_session');
+            window.location.href = "login.html";
+        }
+
+        async function deletarConta() {
+            const confirmacao = confirm("ATENÇÃO: Tem certeza de que deseja EXCLUIR SUA CONTA DEFINITIVAMENTE?\nIsso apagará todos os seus dados e não poderá ser desfeito.");
+            
+            if (confirmacao) {
+                const { data, error } = await supabaseClient.rpc('delete_user_account');
+                
+                if (error) {
+                    alert("Erro ao excluir conta: " + error.message);
+                } else {
+                    alert("Conta excluída com sucesso.");
+                    await supabaseClient.auth.signOut();
+                    localStorage.removeItem('supabase_session');
+                    window.location.href = "login.html";
+                }
+            }
+        }
+
+        carregarPerfil();
+    </script>
+</body>
+</html>
