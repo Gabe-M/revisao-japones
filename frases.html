@@ -90,6 +90,60 @@
             color: white;
             border-color: var(--highlight-color);
         }
+
+        /* Modal de Prática */
+        .pratica-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999; animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .pratica-modal {
+            background: var(--card-bg); border-radius: 16px; padding: 30px;
+            max-width: 600px; width: 92%; max-height: 90vh; overflow-y: auto;
+            border: 1px solid var(--border-color); box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            animation: slideUp 0.4s ease;
+        }
+        .pratica-direcao-btn {
+            padding: 10px 18px; border-radius: 8px; border: 2px solid var(--border-color);
+            background: var(--bg-color); color: var(--text-color); font-weight: bold;
+            cursor: pointer; transition: 0.2s; font-size: 0.95em;
+        }
+        .pratica-direcao-btn.ativo {
+            border-color: var(--highlight-color); background: var(--highlight-color); color: white;
+        }
+        .pratica-direcao-btn:hover { transform: translateY(-2px); }
+        .pratica-input {
+            width: 100%; padding: 14px; border: 2px solid var(--border-color);
+            border-radius: 10px; font-size: 1.1em; background: var(--bg-color);
+            color: var(--text-color); outline: none; box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+        .pratica-input:focus { border-color: var(--highlight-color); }
+        .pratica-feedback {
+            padding: 15px; border-radius: 10px; margin-top: 15px;
+            animation: popIn 0.3s ease; font-weight: 600;
+        }
+        .pratica-feedback.correto { background: rgba(39,174,96,0.15); border: 1px solid rgba(39,174,96,0.4); color: #27ae60; }
+        .pratica-feedback.incorreto { background: rgba(231,76,60,0.15); border: 1px solid rgba(231,76,60,0.4); color: #e74c3c; }
+        .pratica-score {
+            display: flex; gap: 20px; justify-content: center; padding: 10px;
+            background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 20px;
+        }
+        [data-theme="dark"] .pratica-score { background: rgba(255,255,255,0.05); }
+
+        /* Notas Gramaticais Detalhadas */
+        .nota-gramatical-section {
+            background: rgba(0,0,0,0.03); border-radius: 8px; padding: 12px;
+            margin-top: 8px; font-size: 0.9em; line-height: 1.6;
+        }
+        [data-theme="dark"] .nota-gramatical-section { background: rgba(255,255,255,0.05); }
+        .nota-label { font-weight: bold; color: var(--highlight-color); margin-right: 6px; }
+        .nota-particula { color: #3498db; font-weight: bold; }
+        .nota-verbo { color: #e74c3c; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -115,6 +169,7 @@
     <div class="tools-panel" style="gap: 15px; flex-wrap: wrap;">
         <button class="tool-btn" id="btnLacunas" onclick="toggleLacunas()">Ativar Teste de Partículas</button>
         <button class="tool-btn danger" onclick="toggleRomaji()">Ocultar/Mostrar Romaji</button>
+        <button class="tool-btn" onclick="abrirModoPratica()" style="background-color: #8e44ad;">🎯 Modo Prática</button>
         <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
             <label style="font-weight: bold; font-size: 0.9em; color: var(--text-color);">Conjunto:</label>
             <select id="filtro-conjunto" onchange="mudarConjunto()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none;">
@@ -148,6 +203,21 @@
                     <input type="text" id="ia-novo-conjunto" placeholder="Ex: Viagem" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); outline: none;">
                 </div>
             </div>
+
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-weight: bold; font-size: 0.9em; display: block; margin-bottom: 5px;">📊 Dificuldade:</label>
+                    <select id="ia-dificuldade" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); outline: none; cursor: pointer;">
+                        <option value="iniciante">🟢 Iniciante (N5-N4)</option>
+                        <option value="intermediario">🟡 Intermediário (N3)</option>
+                        <option value="avancado">🔴 Avançado (N2-N1)</option>
+                    </select>
+                </div>
+                <div style="flex: 2; min-width: 250px;">
+                    <label style="font-weight: bold; font-size: 0.9em; display: block; margin-bottom: 5px;">📝 Gramática Específica (opcional):</label>
+                    <input type="text" id="ia-gramatica" placeholder="Ex: forma て, condicional, ましょう, passiva..." style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 5px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); outline: none;">
+                </div>
+            </div>
             
             <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 15px;">
                 <label style="font-weight: bold; font-size: 0.95em; color: var(--text-color);">📁 Usar termos dos conjuntos selecionados (Múltipla Escolha):</label>
@@ -167,6 +237,42 @@
                 <div id="preview-lista" style="display: flex; flex-direction: column; gap: 10px;"></div>
                 <button class="tool-btn" id="btn-salvar-geradas" onclick="salvarFrasesGeradas()" style="background-color: #27ae60; margin-top: 10px; width: 100%;">📥 Salvar no meu Banco</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal de Prática Interativa -->
+    <div id="pratica-overlay" class="pratica-overlay" style="display: none;">
+        <div class="pratica-modal">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">🎯 Modo Prática</h2>
+                <button onclick="encerrarPratica()" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: var(--text-color); opacity: 0.6;" title="Fechar">✕</button>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+                <button class="pratica-direcao-btn ativo" id="btn-dir-jp-pt" onclick="mudarDirecaoPratica('jp-pt')">🇯🇵 → 🇧🇷 Traduzir</button>
+                <button class="pratica-direcao-btn" id="btn-dir-pt-jp" onclick="mudarDirecaoPratica('pt-jp')">🇧🇷 → 🇯🇵 Escrever</button>
+            </div>
+
+            <div class="pratica-score">
+                <span>✅ Acertos: <strong id="pratica-acertos">0</strong></span>
+                <span>❌ Erros: <strong id="pratica-erros">0</strong></span>
+                <span>📊 Total: <strong id="pratica-total">0</strong></span>
+            </div>
+
+            <div id="pratica-desafio" style="text-align: center; margin-bottom: 20px;">
+                <p style="font-size: 0.9em; opacity: 0.7; margin: 0 0 8px 0;" id="pratica-instrucao">Traduza a frase abaixo:</p>
+                <p style="font-size: 1.8em; font-weight: bold; margin: 0; line-height: 1.4;" id="pratica-frase-display"></p>
+                <p style="font-size: 0.9em; color: gray; font-family: monospace; margin: 5px 0 0 0;" id="pratica-leitura-display"></p>
+            </div>
+
+            <input type="text" class="pratica-input" id="pratica-resposta" placeholder="Digite sua resposta..." autocomplete="off">
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="tool-btn" id="btn-verificar-pratica" onclick="verificarRespostaPratica()" style="flex: 1; background-color: #27ae60;">✅ Verificar</button>
+                <button class="tool-btn" id="btn-proxima-pratica" onclick="proximaFrasePratica()" style="flex: 1; display: none;">➡️ Próxima Frase</button>
+            </div>
+
+            <div id="pratica-feedback-area"></div>
         </div>
     </div>
 
@@ -437,11 +543,26 @@
                     headers['X-Gemini-Key'] = apiKey;
                 }
 
+                const dificuldade = document.getElementById('ia-dificuldade').value;
+                const gramatica = document.getElementById('ia-gramatica').value.trim();
+
+                const descDificuldade = {
+                    'iniciante': 'nível JLPT N5-N4 (frases curtas, gramática elementar como は/が/を/に, verbos na forma ます, vocabulário básico do cotidiano)',
+                    'intermediario': 'nível JLPT N3 (frases de complexidade média, com conectivos como から/けど/ので, formas て, condicionais simples たら/ば)',
+                    'avancado': 'nível JLPT N2-N1 (frases complexas, keigo, passiva, causativa, expressões idiomáticas, gramática avançada como ようにする, にもかかわらず)'
+                };
+
                 let prompt = '';
                 if (tema) {
                     prompt = `Gere exatamente 3 frases úteis e práticas em japonês sobre o tema: "${tema}".`;
                 } else {
                     prompt = `Gere exatamente 3 frases úteis e práticas em japonês utilizando e focando nos termos de vocabulário fornecidos pelo usuário.`;
+                }
+
+                prompt += `\nAs frases devem ser adequadas para um estudante de ${descDificuldade[dificuldade]}.`;
+
+                if (gramatica) {
+                    prompt += `\nREQUISITO DE GRAMÁTICA: As frases DEVEM obrigatoriamente utilizar e demonstrar o ponto gramatical: "${gramatica}". Construa todas as 3 frases de modo que essa estrutura gramatical fique evidente.`;
                 }
 
                 prompt += `
@@ -450,7 +571,11 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
 - "item": a frase escrita em japonês (com kanji/kana).
 - "leitura": a leitura/transliteração em Romaji.
 - "significado": a tradução exata em português.
-- "notas": uma breve nota gramatical contendo a análise da frase e a identificação dos blocos/palavras utilizados nela no formato exato: "Blocos usados: [bloco1] + [bloco2] + ...". Exemplo: "Blocos usados: 私 + は + 学生 + です."`;
+- "notas": uma análise gramatical DETALHADA da frase com EXATAMENTE estas 3 seções separadas por " | ":
+  1) "Blocos: [bloco1] + [bloco2] + ..." (os blocos/palavras da frase)
+  2) "Partículas: は(tema), を(objeto), が(sujeito)..." (cada partícula com sua função entre parênteses)
+  3) "Forma verbal: [forma usada] - [explicação breve]" (ex: "ています - forma progressiva/contínua")
+  Exemplo completo: "Blocos: 私 + は + 日本語 + を + 勉強 + しています | Partículas: は(tema/tópico), を(objeto direto) | Forma verbal: しています - forma progressiva (て+いる) indica ação contínua"`;
 
                 if (termosSelecionados.length > 0) {
                     const termosListaStr = termosSelecionados.map(t => `"${t.item}" (${t.significado})`).join(', ');
@@ -605,7 +730,11 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
         }
 
         function processarTextoComBlocos(textoOriginal, notas) {
-            let match = notas.match(/Blocos usados:\s*(.+?)\./);
+            // Suporta formato novo "Blocos: ..." e antigo "Blocos usados: ..."
+            let match = notas.match(/Blocos(?:\susados)?:\s*(.+?)(?:\.|\s*\|)/);
+            if (!match) {
+                match = notas.match(/Blocos(?:\susados)?:\s*(.+)$/);
+            }
             if (!match) return textoOriginal;
             
             let blocos = match[1].split(/\s*\+\s*/);
@@ -613,6 +742,8 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
             let restante = textoOriginal;
 
             for (let bloco of blocos) {
+                bloco = bloco.trim();
+                if (!bloco) continue;
                 let index = restante.indexOf(bloco);
                 if (index !== -1) {
                     resultado += restante.substring(0, index);
@@ -627,6 +758,37 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
             }
             resultado += restante;
             return resultado;
+        }
+
+        function formatarNotasDetalhadas(notas) {
+            if (!notas) return '';
+            
+            // Tenta separar pelas seções delimitadas por "|"
+            const secoes = notas.split(/\s*\|\s*/);
+            
+            if (secoes.length >= 2) {
+                let html = '<div class="nota-gramatical-section">';
+                secoes.forEach(secao => {
+                    secao = secao.trim();
+                    if (secao.startsWith('Blocos')) {
+                        const conteudo = secao.replace(/^Blocos(?:\susados)?:\s*/, '');
+                        html += `<div><span class="nota-label">🧩 Blocos:</span>${conteudo}</div>`;
+                    } else if (secao.startsWith('Partículas') || secao.startsWith('Particulas')) {
+                        const conteudo = secao.replace(/^Partículas?:\s*/, '');
+                        html += `<div style="margin-top: 6px;"><span class="nota-label">🔵 Partículas:</span><span class="nota-particula">${conteudo}</span></div>`;
+                    } else if (secao.startsWith('Forma verbal') || secao.startsWith('Forma')) {
+                        const conteudo = secao.replace(/^Forma\s*verbal?:\s*/, '');
+                        html += `<div style="margin-top: 6px;"><span class="nota-label">🔴 Forma verbal:</span><span class="nota-verbo">${conteudo}</span></div>`;
+                    } else {
+                        html += `<div style="margin-top: 6px;">${secao}</div>`;
+                    }
+                });
+                html += '</div>';
+                return html;
+            }
+            
+            // Fallback: formato antigo sem separadores, exibe como texto simples
+            return `<div class="nota-gramatical-section">${notas}</div>`;
         }
 
         function renderizarPagina() {
@@ -647,7 +809,7 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
                     <details onclick="event.stopPropagation();">
                         <summary>Significado e Análise</summary>
                         <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
-                        <p style="font-size:0.9em;">${d.notas}</p>
+                        ${formatarNotasDetalhadas(d.notas)}
                         ${d.id ? `<button style="margin-top: 8px; width: 100%; font-size: 0.9em; background-color: #c0392b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="event.stopPropagation(); excluirFraseDoCard('${d.id}')">🗑️ Excluir Frase</button>` : ''}
                     </details>
                 </div>
@@ -704,6 +866,227 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
             renderizarPagina();
             window.scrollTo({ top: 0, behavior: 'smooth' }); 
         }
+
+        // ============================================
+        // MODO PRÁTICA INTERATIVO
+        // ============================================
+        let praticaDirecao = 'jp-pt'; // 'jp-pt' ou 'pt-jp'
+        let praticaAcertos = 0;
+        let praticaErros = 0;
+        let praticaTotal = 0;
+        let praticaFraseAtual = null;
+        let praticaFrasesUsadas = [];
+
+        function abrirModoPratica() {
+            if (frasesFiltradas.length === 0) {
+                alert("Não há frases disponíveis para praticar. Gere ou adicione frases primeiro.");
+                return;
+            }
+            
+            praticaAcertos = 0;
+            praticaErros = 0;
+            praticaTotal = 0;
+            praticaFrasesUsadas = [];
+            
+            atualizarScorePratica();
+            
+            document.getElementById('pratica-overlay').style.display = 'flex';
+            document.getElementById('pratica-feedback-area').innerHTML = '';
+            document.getElementById('btn-verificar-pratica').style.display = 'block';
+            document.getElementById('btn-proxima-pratica').style.display = 'none';
+            
+            sortearFrasePratica();
+        }
+
+        function mudarDirecaoPratica(direcao) {
+            praticaDirecao = direcao;
+            document.getElementById('btn-dir-jp-pt').classList.toggle('ativo', direcao === 'jp-pt');
+            document.getElementById('btn-dir-pt-jp').classList.toggle('ativo', direcao === 'pt-jp');
+            
+            // Rerenderiza o desafio atual com a nova direção
+            if (praticaFraseAtual) {
+                exibirDesafioPratica();
+            }
+        }
+
+        function sortearFrasePratica() {
+            // Se já usou todas, reseta
+            if (praticaFrasesUsadas.length >= frasesFiltradas.length) {
+                praticaFrasesUsadas = [];
+            }
+            
+            const disponiveis = frasesFiltradas.filter((_, i) => !praticaFrasesUsadas.includes(i));
+            const indexAleatorio = Math.floor(Math.random() * disponiveis.length);
+            const fraseEscolhida = disponiveis[indexAleatorio];
+            const indexReal = frasesFiltradas.indexOf(fraseEscolhida);
+            praticaFrasesUsadas.push(indexReal);
+            
+            praticaFraseAtual = fraseEscolhida;
+            exibirDesafioPratica();
+            
+            document.getElementById('pratica-resposta').value = '';
+            document.getElementById('pratica-resposta').disabled = false;
+            document.getElementById('pratica-feedback-area').innerHTML = '';
+            document.getElementById('btn-verificar-pratica').style.display = 'block';
+            document.getElementById('btn-proxima-pratica').style.display = 'none';
+            
+            setTimeout(() => document.getElementById('pratica-resposta').focus(), 100);
+        }
+
+        function exibirDesafioPratica() {
+            const instrucao = document.getElementById('pratica-instrucao');
+            const fraseDisplay = document.getElementById('pratica-frase-display');
+            const leituraDisplay = document.getElementById('pratica-leitura-display');
+            const inputField = document.getElementById('pratica-resposta');
+            
+            if (praticaDirecao === 'jp-pt') {
+                instrucao.textContent = 'Traduza a frase abaixo para português:';
+                fraseDisplay.textContent = praticaFraseAtual.item;
+                leituraDisplay.textContent = praticaFraseAtual.leitura;
+                leituraDisplay.style.display = 'block';
+                inputField.placeholder = 'Digite a tradução em português...';
+            } else {
+                instrucao.textContent = 'Escreva a frase abaixo em japonês:';
+                fraseDisplay.textContent = praticaFraseAtual.significado;
+                leituraDisplay.style.display = 'none';
+                inputField.placeholder = 'Digite em japonês (Hiragana/Katakana/Kanji)...';
+            }
+        }
+
+        async function verificarRespostaPratica() {
+            const resposta = document.getElementById('pratica-resposta').value.trim();
+            if (!resposta) {
+                alert("Digite sua resposta primeiro!");
+                return;
+            }
+
+            const btnVerificar = document.getElementById('btn-verificar-pratica');
+            btnVerificar.innerHTML = '⏳ Verificando...';
+            btnVerificar.disabled = true;
+            document.getElementById('pratica-resposta').disabled = true;
+
+            try {
+                const apiKey = localStorage.getItem('gemini_api_key');
+                const headers = { 'Content-Type': 'application/json' };
+                if (apiKey) headers['X-Gemini-Key'] = apiKey;
+
+                let respostaEsperada, fraseOriginal;
+                if (praticaDirecao === 'jp-pt') {
+                    fraseOriginal = praticaFraseAtual.item;
+                    respostaEsperada = praticaFraseAtual.significado;
+                } else {
+                    fraseOriginal = praticaFraseAtual.significado;
+                    respostaEsperada = praticaFraseAtual.item;
+                }
+
+                const promptVerificacao = `Você é um avaliador de respostas de japonês. Verifique se a resposta do aluno está correta.
+
+Frase original: "${fraseOriginal}"
+Resposta esperada: "${respostaEsperada}"
+Resposta do aluno: "${resposta}"
+
+Regras de avaliação:
+- Aceite sinônimos e variações naturais (ex: "Eu estudo" = "Estudo" = "Eu estou estudando")
+- Aceite variações de escrita em japonês (hiragana no lugar de kanji é aceitável)
+- Aceite pequenas diferenças de pontuação
+- NÃO aceite respostas com significado diferente
+
+Retorne APENAS um JSON (sem markdown, sem \`\`\`) com exatamente estas chaves:
+{"correto": true/false, "explicacao": "breve explicação de por que está certo ou errado e a correção se necessário"}`;
+
+                const response = await fetch('/api/ai', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        messages: [{ role: 'user', parts: [{ text: promptVerificacao }] }]
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Erro do servidor');
+
+                let jsonText = data.reply.trim();
+                if (jsonText.startsWith('```json')) jsonText = jsonText.substring(7);
+                if (jsonText.startsWith('```')) jsonText = jsonText.substring(3);
+                if (jsonText.endsWith('```')) jsonText = jsonText.substring(0, jsonText.length - 3);
+                jsonText = jsonText.trim();
+
+                const resultado = JSON.parse(jsonText);
+                
+                praticaTotal++;
+                const feedbackArea = document.getElementById('pratica-feedback-area');
+                
+                if (resultado.correto) {
+                    praticaAcertos++;
+                    feedbackArea.innerHTML = `
+                        <div class="pratica-feedback correto">
+                            <p style="margin: 0 0 8px 0; font-size: 1.1em;">✅ Correto!</p>
+                            <p style="margin: 0; font-weight: normal; font-size: 0.95em;">${resultado.explicacao}</p>
+                        </div>
+                    `;
+                } else {
+                    praticaErros++;
+                    feedbackArea.innerHTML = `
+                        <div class="pratica-feedback incorreto">
+                            <p style="margin: 0 0 8px 0; font-size: 1.1em;">❌ Incorreto</p>
+                            <p style="margin: 0 0 8px 0; font-weight: normal; font-size: 0.95em;">${resultado.explicacao}</p>
+                            <p style="margin: 0; font-weight: normal; font-size: 0.9em; opacity: 0.9;">
+                                <strong>Resposta esperada:</strong> ${praticaDirecao === 'jp-pt' ? praticaFraseAtual.significado : praticaFraseAtual.item}
+                            </p>
+                        </div>
+                    `;
+                }
+                
+                atualizarScorePratica();
+
+            } catch (e) {
+                console.error("Erro ao verificar resposta:", e);
+                document.getElementById('pratica-feedback-area').innerHTML = `
+                    <div class="pratica-feedback incorreto">
+                        <p style="margin: 0;">⚠️ Erro ao verificar: ${e.message}. Tente novamente.</p>
+                    </div>
+                `;
+            } finally {
+                btnVerificar.innerHTML = '✅ Verificar';
+                btnVerificar.disabled = false;
+                btnVerificar.style.display = 'none';
+                document.getElementById('btn-proxima-pratica').style.display = 'block';
+            }
+        }
+
+        function proximaFrasePratica() {
+            sortearFrasePratica();
+        }
+
+        function encerrarPratica() {
+            document.getElementById('pratica-overlay').style.display = 'none';
+            
+            if (praticaTotal > 0) {
+                const percentual = ((praticaAcertos / praticaTotal) * 100).toFixed(0);
+                alert(`🎯 Sessão encerrada!\n\n✅ Acertos: ${praticaAcertos}\n❌ Erros: ${praticaErros}\n📊 Taxa: ${percentual}%`);
+            }
+        }
+
+        function atualizarScorePratica() {
+            document.getElementById('pratica-acertos').textContent = praticaAcertos;
+            document.getElementById('pratica-erros').textContent = praticaErros;
+            document.getElementById('pratica-total').textContent = praticaTotal;
+        }
+
+        // Enter para verificar/próxima no modo prática
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && document.getElementById('pratica-overlay').style.display === 'flex') {
+                e.preventDefault();
+                const btnVerificar = document.getElementById('btn-verificar-pratica');
+                const btnProxima = document.getElementById('btn-proxima-pratica');
+                
+                if (btnVerificar.style.display !== 'none' && !btnVerificar.disabled) {
+                    verificarRespostaPratica();
+                } else if (btnProxima.style.display !== 'none') {
+                    proximaFrasePratica();
+                }
+            }
+        });
 
         // Inicialização
         window.addEventListener('DOMContentLoaded', carregarFrasesDinamicas);
