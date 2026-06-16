@@ -1818,7 +1818,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                                     'X-Gemini-Key': chaveIA
                                 },
                                 body: JSON.stringify({
-                                    messages: [{ role: 'user', parts: [{ text: prompt }] }]
+                                    messages: [{ role: 'user', parts: [{ text: prompt }] }],
+                                    mode: 'json'
                                 })
                             });
                             

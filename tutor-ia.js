@@ -525,6 +525,7 @@
                     leitura: t.leitura,
                     significado: t.significado,
                     categoria: t.categoria || 'Vocabulário',
+                    jlpt: t.jlpt ? t.jlpt.trim() : null,
                     notas: notas,
                     user_id: idDoUsuarioLogado
                 };

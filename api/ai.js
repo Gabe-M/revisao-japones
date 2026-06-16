@@ -38,14 +38,26 @@ export default async function handler(req, res) {
         }
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-        const payload = {
+        
+        let payload = {
             contents: messages,
-            systemInstruction: {
+            generationConfig: {
+                temperature: 0.7
+            }
+        };
+
+        if (body.mode === 'json') {
+            payload.systemInstruction = {
+                parts: [{ text: "Você é um assistente especialista em japonês. Você deve obrigatoriamente retornar um JSON puro, sem formatação markdown (```json). Responda estritamente no formato JSON solicitado." }]
+            };
+            payload.generationConfig.responseMimeType = "application/json";
+        } else {
+            payload.systemInstruction = {
                 parts: [{ text: "Você é o Sensei IA, um tutor de japonês para brasileiros. Responda de forma extremamente OBJETIVA, DIRETA e CURTA. Evite saudações longas, rodeios ou explicações prolixas. Se o usuário perguntar sobre uma palavra ou frase, dê a tradução, a leitura e explique a gramática essencial em no máximo 3 ou 4 tópicos curtos. Use Markdown para destacar partículas e termos importantes. " +
                                 "REGRA CRÍTICA DE SALVAR: Se o usuário pedir para adicionar, salvar, guardar ou registrar um ou mais termos/palavras no vocabulário/banco de dados (ex: 'adicione X', 'salve Y'), você DEVE obrigatoriamente chamar a função 'adicionarTermos'. Se o usuário não fornecer tradução, leitura ou categoria gramatical, você DEVE deduzir ou pesquisar em seu conhecimento de japonês para preenchê-los e chamar a função imediatamente. " +
                                 "REGRA CRÍTICA DE REMOVER: Se o usuário pedir para remover, deletar, excluir ou apagar um ou mais termos (ex: 'delete X', 'remova Y'), você DEVE obrigatoriamente chamar a função 'removerTermos'. Converta o termo que o usuário deseja remover para a grafia correta em japonês (Kanji/Kana) para passar para a função." }]
-            },
-            tools: [{
+            };
+            payload.tools = [{
                 functionDeclarations: [
                     {
                         name: "adicionarTermos",
@@ -114,11 +126,8 @@ export default async function handler(req, res) {
                         }
                     }
                 ]
-            }],
-            generationConfig: {
-                temperature: 0.7
-            }
-        };
+            }];
+        }
 
         const response = await fetch(url, {
             method: 'POST',
