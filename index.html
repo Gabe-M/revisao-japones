@@ -22,18 +22,41 @@
             --shadow-hover: 0 10px 25px rgba(0,0,0,0.5);
         }
         body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: background 0.3s, color 0.3s; }
-        .nav-menu { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
-        .nav-menu a { padding: 10px 20px; text-decoration: none; background: var(--primary-color); color: white; border-radius: 8px; font-weight: 600; letter-spacing: 0.5px; transition: 0.2s; }
-        .nav-menu a:hover { transform: translateY(-2px); opacity: 0.9; }
-        .nav-menu a.ativo { background: var(--highlight-color); }
-        .header-container { display: flex; justify-content: space-between; max-width: 1200px; margin: 0 auto 20px; align-items: center; }
-        .header-container h1 { font-weight: 700; letter-spacing: -0.5px; margin: 0; }
-        .search-bar { width: 100%; max-width: 500px; padding: 14px 20px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-bg); color: var(--text-color); margin: 0 auto 20px; display: block; outline: none; font-size: 1.05em; transition: 0.2s; box-shadow: var(--shadow-subtle); backdrop-filter: blur(10px); }
-        .search-bar:focus { border-color: var(--highlight-color); box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.2); }
-        .controls { display: flex; justify-content: center; gap: 12px; margin-bottom: 30px; flex-wrap: wrap; max-width: 1200px; margin: 0 auto 30px; }
-        button { padding: 10px 16px; border: none; background: var(--primary-color); color: white; border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; transition: 0.2s; }
-        button:hover { opacity: 0.9; transform: translateY(-1px); }
-        button.active { background: var(--highlight-color); }
+        
+        /* HEADER & NAVIGATION */
+        .header-container { display: flex; justify-content: space-between; max-width: 1200px; margin: 0 auto 30px; align-items: center; }
+        .header-container h1 { font-weight: 800; letter-spacing: -0.5px; margin: 0; font-size: 2em; background: linear-gradient(90deg, var(--primary-color), var(--highlight-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        [data-theme="dark"] .header-container h1 { background: linear-gradient(90deg, #ecf0f1, var(--highlight-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .nav-menu { display: flex; justify-content: center; gap: 8px; margin-bottom: 30px; flex-wrap: wrap; background: var(--card-bg); padding: 8px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-subtle); max-width: 900px; margin-left: auto; margin-right: auto; backdrop-filter: blur(10px); }
+        .nav-menu a { padding: 10px 20px; text-decoration: none; color: var(--text-color); border-radius: 10px; font-weight: 600; letter-spacing: 0.5px; transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; }
+        .nav-menu a:hover { background: rgba(0,0,0,0.05); transform: translateY(-2px); }
+        [data-theme="dark"] .nav-menu a:hover { background: rgba(255,255,255,0.05); }
+        .nav-menu a.ativo { background: var(--highlight-color); color: white; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3); }
+
+        /* SEARCH & FILTER CONTROLS */
+        .search-container { position: relative; max-width: 600px; margin: 0 auto 20px; width: 100%; }
+        .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: gray; font-size: 1.2em; pointer-events: none; }
+        .search-bar { width: 100%; padding: 16px 20px 16px 45px; border: 2px solid var(--border-color); border-radius: 16px; background: var(--card-bg); color: var(--text-color); display: block; outline: none; font-size: 1.1em; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: var(--shadow-subtle); box-sizing: border-box; }
+        .search-bar:focus { border-color: var(--highlight-color); box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.15); transform: translateY(-2px); }
+        
+        .controls { display: flex; justify-content: center; gap: 8px; margin-bottom: 40px; flex-wrap: wrap; max-width: 1200px; margin-left: auto; margin-right: auto; background: var(--card-bg); padding: 8px; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-subtle); width: fit-content; }
+        .controls button { padding: 10px 20px; border: none; background: transparent; color: var(--text-color); border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-weight: 600; transition: all 0.2s; }
+        .controls button:hover { background: rgba(0,0,0,0.05); }
+        [data-theme="dark"] .controls button:hover { background: rgba(255,255,255,0.05); }
+        .controls button.active { background: var(--primary-color); color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+
+        /* ACTION PANELS */
+        .panel-container { background: var(--card-bg); padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); max-width: 1200px; margin: 0 auto 20px; box-shadow: var(--shadow-subtle); transition: all 0.3s; }
+        .panel-container:hover { box-shadow: var(--shadow-hover); border-color: rgba(44, 62, 80, 0.2); }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: 700; font-size: 1.1em; color: var(--text-color); user-select: none; }
+        
+        .btn-action { background: var(--secondary-color); color: white; padding: 10px 16px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-action:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .btn-danger { background: #e74c3c; }
+        .btn-success { background: #27ae60; }
+        .btn-primary { background: var(--primary-color); }
+
         .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; }
         
         /* CARD PREMIUM */
@@ -128,7 +151,7 @@
 
     <div class="header-container">
         <h1>Módulo 1: Vocabulário Base</h1>
-        <button onclick="toggleTheme()" id="themeBtn" style="padding:5px 10px; cursor:pointer;">🌙 Tema</button>
+        <button onclick="toggleTheme()" id="themeBtn" class="btn-action" style="background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color);">🌙 Tema</button>
     </div>
 
     <div class="nav-menu">
@@ -142,51 +165,51 @@
     </div>
 
     <!-- Painel de Organização de Conjuntos -->
-    <div class="controls" style="background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); max-width: 1200px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+    <div class="panel-container" style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <span style="font-weight: bold; font-size: 1.1em; color: var(--text-color);">🗂️ Organizar em Conjuntos:</span>
             
-            <select id="ia-conjunto-select" onchange="mudarConjuntoAssociacao()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none;">
+            <select id="ia-conjunto-select" onchange="mudarConjuntoAssociacao()" style="padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none; transition: 0.2s;">
                 <!-- Preenchido via JS -->
             </select>
             
-            <button id="btn-deletar-conjunto" onclick="confirmarDeletarConjunto()" style="display: none; background-color: #e74c3c; padding: 8px 12px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s;">Deletar Conjunto</button>
+            <button id="btn-deletar-conjunto" onclick="confirmarDeletarConjunto()" class="btn-action btn-danger" style="display: none;">Deletar Conjunto</button>
             
             <div id="ia-novo-conjunto-div" style="display: none; align-items: center; gap: 8px;">
-                <input type="text" id="ia-novo-conjunto-nome" placeholder="Novo conjunto..." style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); outline: none;">
-                <button onclick="criarNovoConjunto()" style="background-color: var(--primary-color); padding: 8px 12px;">Criar</button>
+                <input type="text" id="ia-novo-conjunto-nome" placeholder="Novo conjunto..." style="padding: 10px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color); outline: none;">
+                <button onclick="criarNovoConjunto()" class="btn-action btn-primary">Criar</button>
             </div>
         </div>
         
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-color); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border-color);">
+            <span id="modo-associacao-label" style="font-weight: 600; color: gray; font-size: 0.9em;">Modo Associação Desativado</span>
             <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 22px;">
                 <input type="checkbox" id="modo-associacao-chk" onchange="toggleModoAssociacao()" style="opacity: 0; width: 0; height: 0;">
                 <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 22px;"></span>
             </label>
-            <span id="modo-associacao-label" style="font-weight: bold; color: gray;">Modo Associação Desativado</span>
         </div>
     </div>
 
     <!-- Painel de Importação de Vocabulário via JSON -->
-    <div class="controls" style="background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); max-width: 1200px; margin: 0 auto 20px; flex-direction: column; align-items: stretch; display: flex; gap: 10px; box-sizing: border-box;">
-        <div onclick="togglePainelImportacao()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 1.1em; color: var(--text-color); user-select: none;">
+    <div class="panel-container" style="flex-direction: column; align-items: stretch; display: flex; gap: 10px; box-sizing: border-box;">
+        <div class="panel-header" onclick="togglePainelImportacao()">
             <span>📤 Importar Vocabulário via JSON</span>
-            <span id="ia-import-icon">▼</span>
+            <span id="ia-import-icon" style="background: var(--bg-color); padding: 4px 8px; border-radius: 6px;">▼</span>
         </div>
         
-        <div id="ia-painel-importacao-content" style="display: none; flex-direction: column; gap: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; margin-top: 5px;">
+        <div id="ia-painel-importacao-content" style="display: none; flex-direction: column; gap: 15px; border-top: 2px dashed var(--border-color); padding-top: 20px; margin-top: 10px;">
             <p style="margin: 0; font-size: 0.95em; opacity: 0.9; line-height: 1.5; text-align: left; width: 100%;">
                 Você pode importar múltiplos termos em lote enviando um arquivo <code>.json</code>.
                 Use a sua <strong>IA pessoal</strong> (ex: ChatGPT, Claude) para formatar seus dados utilizando o prompt abaixo:
             </p>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; width: 100%;">
-                <div style="display: flex; flex-direction: column;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; width: 100%;">
+                <div style="display: flex; flex-direction: column; background: var(--bg-color); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; width: 100%;">
                         <span style="font-weight: bold; font-size: 0.9em; text-align: left;">1. Formato JSON Esperado:</span>
-                        <button onclick="copiarTexto('json-exemplo-pre', this)" style="padding: 4px 8px; font-size: 0.8em; background-color: var(--secondary-color);">Copiar Exemplo</button>
+                        <button onclick="copiarTexto('json-exemplo-pre', this)" class="btn-action" style="padding: 4px 10px; font-size: 0.8em;">Copiar Exemplo</button>
                     </div>
-                    <pre id="json-exemplo-pre" style="margin: 0; background: var(--bg-color); color: var(--text-color); padding: 10px; border-radius: 5px; font-size: 0.85em; overflow-x: auto; border: 1px solid var(--border-color); max-height: 150px; text-align: left; box-sizing: border-box;">[
+                    <pre id="json-exemplo-pre" style="margin: 0; background: var(--card-bg); color: var(--text-color); padding: 15px; border-radius: 8px; font-size: 0.85em; overflow-x: auto; border: 1px solid var(--border-color); max-height: 150px; text-align: left; box-sizing: border-box;">[
   {
     "item": "日本語",
     "leitura": "Nihongo",
@@ -197,12 +220,12 @@
 ]</pre>
                 </div>
                 
-                <div style="display: flex; flex-direction: column;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; width: 100%;">
+                <div style="display: flex; flex-direction: column; background: var(--bg-color); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; width: 100%;">
                         <span style="font-weight: bold; font-size: 0.9em; text-align: left;">2. Prompt para sua IA Pessoal:</span>
-                        <button onclick="copiarTexto('ia-prompt-text', this)" style="padding: 4px 8px; font-size: 0.8em; background-color: var(--secondary-color);">Copiar Prompt</button>
+                        <button onclick="copiarTexto('ia-prompt-text', this)" class="btn-action" style="padding: 4px 10px; font-size: 0.8em;">Copiar Prompt</button>
                     </div>
-                    <textarea id="ia-prompt-text" readonly style="margin: 0; width: 100%; height: 150px; background: var(--bg-color); color: var(--text-color); padding: 10px; border-radius: 5px; font-size: 0.85em; resize: none; border: 1px solid var(--border-color); box-sizing: border-box; outline: none; font-family: inherit; text-align: left;">Por favor, atue como um formatador de dados. Vou te passar minhas anotações de estudo de japonês. Extraia as palavras, leituras, significados e categorias gramaticais, e formate-as estritamente como um array JSON com a seguinte estrutura:
+                    <textarea id="ia-prompt-text" readonly style="margin: 0; width: 100%; height: 150px; background: var(--card-bg); color: var(--text-color); padding: 15px; border-radius: 8px; font-size: 0.85em; resize: none; border: 1px solid var(--border-color); box-sizing: border-box; outline: none; font-family: inherit; text-align: left;">Por favor, atue como um formatador de dados. Vou te passar minhas anotações de estudo de japonês. Extraia as palavras, leituras, significados e categorias gramaticais, e formate-as estritamente como um array JSON com a seguinte estrutura:
 
 [
   {
@@ -218,15 +241,15 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 </div>
             </div>
             
-            <div style="background: var(--bg-color); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; margin-top: 5px; width: 100%; box-sizing: border-box;">
+            <div style="background: var(--bg-color); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; margin-top: 5px; width: 100%; box-sizing: border-box;">
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <span style="font-weight: bold; color: var(--text-color);">Salvar no(s) Conjunto(s):</span>
                     <div style="position: relative; display: inline-block;">
-                        <button id="ia-import-conjunto-btn" onclick="toggleMultiSelect(event, 'ia-import-conjunto-dropdown')" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer; text-align: left; min-width: 180px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                        <button id="ia-import-conjunto-btn" onclick="toggleMultiSelect(event, 'ia-import-conjunto-dropdown')" style="padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer; text-align: left; min-width: 180px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                             <span>Geral</span>
                             <span style="font-size: 0.8em; opacity: 0.7;">▼</span>
                         </button>
-                        <div id="ia-import-conjunto-dropdown" class="multiselect-dropdown" style="display: none; position: absolute; top: 100%; left: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-hover); padding: 10px; min-width: 220px; z-index: 1000; max-height: 200px; overflow-y: auto; flex-direction: column; gap: 6px; box-sizing: border-box;">
+                        <div id="ia-import-conjunto-dropdown" class="multiselect-dropdown" style="display: none; position: absolute; top: 100%; left: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow-hover); padding: 12px; min-width: 220px; z-index: 1000; max-height: 200px; overflow-y: auto; flex-direction: column; gap: 8px; box-sizing: border-box;">
                             <!-- Checkboxes preenchidos via JS -->
                         </div>
                     </div>
@@ -234,39 +257,39 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <input type="file" id="ia-import-file-input" accept=".json" onchange="atualizarNomeArquivoImport(this)" style="display: none;">
-                    <button onclick="document.getElementById('ia-import-file-input').click()" style="background-color: var(--secondary-color); padding: 8px 12px;">📁 Escolher Arquivo</button>
-                    <span id="ia-import-file-name" style="font-size: 0.9em; color: gray; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Nenhum arquivo</span>
+                    <button onclick="document.getElementById('ia-import-file-input').click()" class="btn-action">📁 Escolher Arquivo</button>
+                    <span id="ia-import-file-name" style="font-size: 0.9em; color: gray; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;">Nenhum arquivo</span>
                     
-                    <button onclick="processarImportacaoJSON()" id="ia-btn-confirmar-import" style="background-color: #27ae60; padding: 8px 15px; font-weight: bold;">📤 Importar</button>
+                    <button onclick="processarImportacaoJSON()" id="ia-btn-confirmar-import" class="btn-action btn-success">📤 Importar JSON</button>
                 </div>
             </div>
-            <div id="ia-import-feedback" style="display: none; font-weight: bold; text-align: center; font-size: 0.95em; padding: 5px; width: 100%; box-sizing: border-box;"></div>
+            <div id="ia-import-feedback" style="display: none; font-weight: bold; text-align: center; font-size: 0.95em; padding: 10px; background: rgba(39, 174, 96, 0.1); color: #27ae60; border-radius: 8px; width: 100%; box-sizing: border-box;"></div>
         </div>
     </div>
 
     <!-- Painel de Importação de Baralho Anki (TXT) -->
-    <div class="controls" style="background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); max-width: 1200px; margin: 0 auto 20px; flex-direction: column; align-items: stretch; display: flex; gap: 10px; box-sizing: border-box;">
-        <div onclick="togglePainelAnki()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 1.1em; color: var(--text-color); user-select: none;">
+    <div class="panel-container" style="flex-direction: column; align-items: stretch; display: flex; gap: 10px; box-sizing: border-box;">
+        <div class="panel-header" onclick="togglePainelAnki()">
             <span>📥 Importar Baralho Anki (TXT)</span>
-            <span id="ia-anki-icon">▼</span>
+            <span id="ia-anki-icon" style="background: var(--bg-color); padding: 4px 8px; border-radius: 6px;">▼</span>
         </div>
         
-        <div id="ia-painel-anki-content" style="display: none; flex-direction: column; gap: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; margin-top: 5px;">
+        <div id="ia-painel-anki-content" style="display: none; flex-direction: column; gap: 15px; border-top: 2px dashed var(--border-color); padding-top: 20px; margin-top: 10px;">
             <p style="margin: 0; font-size: 0.95em; opacity: 0.9; line-height: 1.5; text-align: left; width: 100%;">
                 Importe termos a partir de um arquivo <code>.txt</code> exportado do Anki.
                 O arquivo deve usar <strong>tabulação</strong> como separador e seguir o formato padrão de 13 colunas.
                 A <strong>categoria</strong> de cada termo será detectada automaticamente.
             </p>
             
-            <div style="background: var(--bg-color); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; width: 100%; box-sizing: border-box;">
+            <div style="background: var(--bg-color); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; width: 100%; box-sizing: border-box;">
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <span style="font-weight: bold; color: var(--text-color);">Salvar no(s) Conjunto(s):</span>
                     <div style="position: relative; display: inline-block;">
-                        <button id="ia-anki-conjunto-btn" onclick="toggleMultiSelect(event, 'ia-anki-conjunto-dropdown')" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer; text-align: left; min-width: 180px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                        <button id="ia-anki-conjunto-btn" onclick="toggleMultiSelect(event, 'ia-anki-conjunto-dropdown')" style="padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer; text-align: left; min-width: 180px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                             <span>Geral</span>
                             <span style="font-size: 0.8em; opacity: 0.7;">▼</span>
                         </button>
-                        <div id="ia-anki-conjunto-dropdown" class="multiselect-dropdown" style="display: none; position: absolute; top: 100%; left: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-hover); padding: 10px; min-width: 220px; z-index: 1000; max-height: 200px; overflow-y: auto; flex-direction: column; gap: 6px; box-sizing: border-box;">
+                        <div id="ia-anki-conjunto-dropdown" class="multiselect-dropdown" style="display: none; position: absolute; top: 100%; left: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow-hover); padding: 12px; min-width: 220px; z-index: 1000; max-height: 200px; overflow-y: auto; flex-direction: column; gap: 8px; box-sizing: border-box;">
                             <!-- Checkboxes preenchidos via JS -->
                         </div>
                     </div>
@@ -274,24 +297,26 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <input type="file" id="ia-anki-file-input" accept=".txt" onchange="previewAnki(this)" style="display: none;">
-                    <button onclick="document.getElementById('ia-anki-file-input').click()" style="background-color: var(--secondary-color); padding: 8px 12px;">📁 Escolher Arquivo .txt</button>
-                    <span id="ia-anki-file-name" style="font-size: 0.9em; color: gray; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Nenhum arquivo</span>
+                    <button onclick="document.getElementById('ia-anki-file-input').click()" class="btn-action">📁 Escolher Arquivo .txt</button>
+                    <span id="ia-anki-file-name" style="font-size: 0.9em; color: gray; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;">Nenhum arquivo</span>
                     
-                    <button onclick="processarImportacaoAnki()" id="ia-btn-confirmar-anki" style="background-color: #27ae60; padding: 8px 15px; font-weight: bold;">📥 Importar</button>
+                    <button onclick="processarImportacaoAnki()" id="ia-btn-confirmar-anki" class="btn-action btn-success">📥 Importar Anki</button>
                 </div>
             </div>
             
-            <div id="ia-anki-preview" style="display: none; background: var(--bg-color); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
-                <div style="font-weight: bold; margin-bottom: 8px; color: var(--text-color);">📋 Preview dos termos detectados:</div>
+            <div id="ia-anki-preview" style="display: none; background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);">
+                <div style="font-weight: bold; margin-bottom: 12px; color: var(--text-color); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">📋 Preview dos termos detectados:</div>
                 <div id="ia-anki-preview-content" style="max-height: 200px; overflow-y: auto; font-size: 0.9em;"></div>
             </div>
             
-            <div id="ia-anki-feedback" style="display: none; font-weight: bold; text-align: center; font-size: 0.95em; padding: 5px; width: 100%; box-sizing: border-box;"></div>
+            <div id="ia-anki-feedback" style="display: none; font-weight: bold; text-align: center; font-size: 0.95em; padding: 10px; background: rgba(39, 174, 96, 0.1); color: #27ae60; border-radius: 8px; width: 100%; box-sizing: border-box;"></div>
         </div>
     </div>
 
-    <div style="display: flex; gap: 15px; max-width: 500px; margin: 0 auto 20px; align-items: center; justify-content: center; width: 100%;">
-        <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo..." onkeyup="aplicarFiltros()" style="margin: 0; flex: 1; width: auto; max-width: none;">
+    <!-- Search & Filters -->
+    <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo, significado ou leitura..." onkeyup="aplicarFiltros()">
     </div>
     
     <div class="controls" id="botoes-filtro">
