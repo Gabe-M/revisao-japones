@@ -63,6 +63,51 @@
             font-size: 0.95em;
             font-weight: 600;
         }
+
+        /* Estilos do Alternador de Abas */
+        .tab-control-container {
+            display: flex;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 30px;
+            padding: 4px;
+            margin-bottom: 30px;
+            justify-content: space-between;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        [data-theme="dark"] .tab-control-container {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px 20px;
+            border-radius: 26px;
+            background: transparent;
+            color: var(--text-color);
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: none;
+            transform: none;
+        }
+        .tab-btn:hover {
+            opacity: 0.9;
+            transform: none;
+            background: rgba(0,0,0,0.02);
+        }
+        [data-theme="dark"] .tab-btn:hover {
+            background: rgba(255,255,255,0.02);
+        }
+        .tab-btn.active {
+            background: var(--highlight-color);
+            color: white;
+        }
+        .tab-btn.active:hover {
+            background: var(--highlight-color);
+            opacity: 1;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -94,33 +139,43 @@
     </div>
 
     <div class="card-perfil">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0;">📊 Estatísticas de Estudo</h2>
-            <select id="filtro-stats-jlpt" onchange="mudarFiltroEstatisticas()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer;">
-                <option value="Todos">Todos os Níveis</option>
-                <option value="N5">Nível N5</option>
-                <option value="N4">Nível N4</option>
-                <option value="N3">Nível N3</option>
-                <option value="N2">Nível N2</option>
-                <option value="N1">Nível N1</option>
-            </select>
+        <!-- Alternador de Abas (Tabs) -->
+        <div class="tab-control-container">
+            <button class="tab-btn active" id="tab-btn-stats" onclick="showTab('stats')">📊 Estatísticas</button>
+            <button class="tab-btn" id="tab-btn-jlpt" onclick="showTab('jlpt')">🏆 Caminho JLPT</button>
         </div>
-        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 25px;">
-            <div style="background: rgba(39, 174, 96, 0.1); padding: 15px 30px; border-radius: 12px; border: 1px solid rgba(39, 174, 96, 0.2); min-width: 150px;">
-                <div class="info-label" style="margin: 0; color: #27ae60;">Total de Palavras</div>
-                <div id="stats-total" style="font-size: 2.5em; font-weight: 800; color: #27ae60; margin-top: 5px;">0</div>
+
+        <!-- Conteúdo da Aba 1: Estatísticas -->
+        <div id="tab-content-stats" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="margin: 0; font-size: 1.3em;">📊 Estatísticas de Estudo</h3>
+                <select id="filtro-stats-jlpt" onchange="mudarFiltroEstatisticas()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer;">
+                    <option value="Todos">Todos os Níveis</option>
+                    <option value="N5">Nível N5</option>
+                    <option value="N4">Nível N4</option>
+                    <option value="N3">Nível N3</option>
+                    <option value="N2">Nível N2</option>
+                    <option value="N1">Nível N1</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 25px;">
+                <div style="background: rgba(39, 174, 96, 0.1); padding: 15px 30px; border-radius: 12px; border: 1px solid rgba(39, 174, 96, 0.2); min-width: 150px;">
+                    <div class="info-label" style="margin: 0; color: #27ae60; text-align: center;">Total de Palavras</div>
+                    <div id="stats-total" style="font-size: 2.5em; font-weight: 800; color: #27ae60; margin-top: 5px; text-align: center;">0</div>
+                </div>
+            </div>
+            
+            <div id="stats-categories-container" style="display: flex; flex-direction: column; gap: 15px; text-align: left; max-width: 450px; margin: 0 auto;">
+                <p style="text-align: center; opacity: 0.7;">Carregando estatísticas...</p>
             </div>
         </div>
-        
-        <div id="stats-categories-container" style="display: flex; flex-direction: column; gap: 15px; text-align: left; max-width: 450px; margin: 0 auto;">
-            <p style="text-align: center; opacity: 0.7;">Carregando estatísticas...</p>
-        </div>
-    </div>
 
-    <div class="card-perfil">
-        <h2>🏆 Caminho do JLPT</h2>
-        <div id="stats-jlpt-container" style="display: flex; flex-direction: column; gap: 15px; text-align: left; max-width: 450px; margin: 0 auto;">
-            <p style="text-align: center; opacity: 0.7;">Carregando níveis JLPT...</p>
+        <!-- Conteúdo da Aba 2: Caminho JLPT -->
+        <div id="tab-content-jlpt" class="tab-content" style="display: none;">
+            <h3 style="margin: 0 0 20px 0; font-size: 1.3em; text-align: center;">🏆 Progresso do Caminho JLPT</h3>
+            <div id="stats-jlpt-container" style="display: flex; flex-direction: column; gap: 15px; text-align: left; max-width: 450px; margin: 0 auto;">
+                <p style="text-align: center; opacity: 0.7;">Carregando níveis JLPT...</p>
+            </div>
         </div>
     </div>
 
@@ -313,6 +368,25 @@
                     localStorage.removeItem('supabase_session');
                     window.location.href = "login.html";
                 }
+            }
+        }
+
+        function showTab(tabName) {
+            // Remove active classes
+            document.getElementById('tab-btn-stats').classList.remove('active');
+            document.getElementById('tab-btn-jlpt').classList.remove('active');
+            
+            // Hide content
+            document.getElementById('tab-content-stats').style.display = 'none';
+            document.getElementById('tab-content-jlpt').style.display = 'none';
+            
+            // Activate selected tab
+            if (tabName === 'stats') {
+                document.getElementById('tab-btn-stats').classList.add('active');
+                document.getElementById('tab-content-stats').style.display = 'block';
+            } else if (tabName === 'jlpt') {
+                document.getElementById('tab-btn-jlpt').classList.add('active');
+                document.getElementById('tab-content-jlpt').style.display = 'block';
             }
         }
 
