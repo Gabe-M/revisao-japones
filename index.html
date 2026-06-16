@@ -164,6 +164,22 @@
         <a href="perfil.html">👤 Perfil</a>
     </div>
 
+    <!-- Botão para abrir configurações -->
+    <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+        <button onclick="document.getElementById('config-modal').style.display='flex'" class="btn-action" style="background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); padding: 12px 24px; font-size: 1.1em; border-radius: 12px; box-shadow: var(--shadow-subtle);">
+            ⚙️ Configurações e Importação
+        </button>
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div id="config-modal" onclick="if(event.target === this) this.style.display='none'" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; backdrop-filter: blur(4px); justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;">
+        <div style="background: var(--bg-color); border-radius: 16px; border: 1px solid var(--border-color); width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid var(--border-color); background: var(--card-bg);">
+                <h2 style="margin: 0; font-size: 1.5em; color: var(--text-color);">⚙️ Configurações e Importação</h2>
+                <button onclick="document.getElementById('config-modal').style.display='none'" style="background: none; border: none; color: var(--text-color); font-size: 2em; cursor: pointer; line-height: 1;">&times;</button>
+            </div>
+            
+            <div style="padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
     <!-- Painel de Organização de Conjuntos -->
     <div class="panel-container" style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
@@ -310,6 +326,10 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             </div>
             
             <div id="ia-anki-feedback" style="display: none; font-weight: bold; text-align: center; font-size: 0.95em; padding: 10px; background: rgba(39, 174, 96, 0.1); color: #27ae60; border-radius: 8px; width: 100%; box-sizing: border-box;"></div>
+        </div>
+    </div>
+
+            </div>
         </div>
     </div>
 
