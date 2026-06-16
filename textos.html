@@ -372,6 +372,129 @@
             return notas.replace(/\s*\[Conjuntos:\s*([^\]]+)\]/, '').trim();
         }
 
+        function formatarNotasHTML(notas) {
+            if (!notas) return '<p style="color: gray; font-style: italic; margin: 5px 0;">Nenhuma nota registrada.</p>';
+            
+            const linhas = notas.split('\n');
+            let html = '';
+            
+            let exemplo = '';
+            let furigana = '';
+            let traducao = '';
+            let outrasNotas = [];
+            
+            linhas.forEach(linha => {
+                const trimmed = linha.trim();
+                if (!trimmed) return;
+                
+                let label = '';
+                let conteudo = '';
+                const idxDoisPontos = trimmed.indexOf(':');
+                if (idxDoisPontos !== -1) {
+                    label = trimmed.substring(0, idxDoisPontos).trim();
+                    conteudo = trimmed.substring(idxDoisPontos + 1).trim();
+                } else {
+                    conteudo = trimmed;
+                }
+
+                const temJapones = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(conteudo || trimmed);
+                const temFurigana = temJapones && /\[[^\]]+\]/.test(conteudo || trimmed);
+
+                if (temFurigana) {
+                    furigana = conteudo || trimmed;
+                } else if (temJapones && (label === 'Exemplo' || label === 'Frase' || !label)) {
+                    exemplo = conteudo || trimmed;
+                } else if (label === 'Tradução') {
+                    const contemJap = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(conteudo);
+                    if (contemJap) {
+                        exemplo = conteudo;
+                    } else {
+                        traducao = conteudo;
+                    }
+                } else if (label === 'Gramática' || label === 'Notas') {
+                    const contemFur = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(conteudo) && /\[[^\]]+\]/.test(conteudo);
+                    if (contemFur) {
+                        furigana = conteudo;
+                    } else {
+                        outrasNotas.push(conteudo);
+                    }
+                } else {
+                    if (!temJapones && !traducao) {
+                        traducao = trimmed;
+                    } else {
+                        outrasNotas.push(trimmed);
+                    }
+                }
+            });
+
+            const converterParaRuby = (texto) => {
+                if (!texto) return '';
+                const semRotulo = texto.replace(/^(Furigana|Pronúncia|Gramática|Exemplo|Frase|Tradução|Notas):\s*/i, '');
+                return semRotulo.replace(/([\u4E00-\u9FFF]+)\[([^\]]+)\]/g, '<ruby>$1<rt style="font-size: 0.55em; color: var(--highlight-color); font-weight: normal;">$2</rt></ruby>');
+            };
+
+            const limparTextoJapones = (texto) => {
+                if (!texto) return '';
+                return texto.replace(/^(Exemplo|Frase|Tradução|Notas):\s*/i, '');
+            };
+
+            if (exemplo || furigana) {
+                html += `
+                    <div class="nota-exemplo-bloco" style="margin-top: 10px; background: rgba(120, 120, 120, 0.05); border-left: 3px solid var(--highlight-color); padding: 10px 14px; border-radius: 6px; box-sizing: border-box;">
+                        <div style="font-size: 0.75em; text-transform: uppercase; color: gray; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.5px;">Frase de Exemplo</div>
+                `;
+                
+                if (furigana) {
+                    html += `
+                        <div style="font-family: 'Noto Sans JP', sans-serif; font-size: 1.25em; font-weight: 700; line-height: 1.6; color: var(--text-color); margin-bottom: 4px; letter-spacing: 0.5px;">
+                            ${converterParaRuby(furigana)}
+                        </div>
+                    `;
+                } else if (exemplo) {
+                    html += `
+                        <div style="font-family: 'Noto Sans JP', sans-serif; font-size: 1.2em; font-weight: 700; line-height: 1.5; color: var(--text-color); margin-bottom: 4px;">
+                            ${limparTextoJapones(exemplo)}
+                        </div>
+                    `;
+                }
+
+                if (traducao) {
+                    html += `
+                        <div style="font-size: 0.9em; font-style: italic; color: var(--text-color); margin-top: 8px; border-top: 1px dashed rgba(120,120,120,0.15); padding-top: 6px; opacity: 0.9;">
+                            ${traducao}
+                        </div>
+                    `;
+                }
+                html += `</div>`;
+            } else {
+                if (traducao) {
+                    html += `
+                        <div style="margin-top: 8px; font-size: 0.95em; line-height: 1.4;">
+                            <strong style="color: var(--highlight-color);">Tradução:</strong> ${traducao}
+                        </div>
+                    `;
+                }
+            }
+
+            if (outrasNotas.length > 0) {
+                const notasTratadas = outrasNotas.map(n => {
+                    const limpa = n.replace(/^(Notas|Gramática):\s*/i, '');
+                    return converterParaRuby(limpa);
+                }).filter(n => n.length > 0);
+
+                if (notasTratadas.length > 0) {
+                    html += `
+                        <div class="nota-adicional-bloco" style="margin-top: 10px; font-size: 0.88em; line-height: 1.4; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                            <div style="font-size: 0.75em; text-transform: uppercase; color: gray; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.5px;">Notas de Gramática</div>
+                            <div style="color: var(--text-color); opacity: 0.85; white-space: pre-wrap;">${notasTratadas.join('\n')}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            return html;
+        }
+
         function atualizarNotasComConjuntos(notasLimpa, conjuntos) {
             if (conjuntos.length === 0) {
                 return notasLimpa;
@@ -539,7 +662,7 @@
                 <p class="dic-termo">${termo.item}</p>
                 <p class="dic-leitura">${termo.leitura}</p>
                 <p class="dic-significado">${termo.significado}</p>
-                <div class="dic-notas"><strong>Notas:</strong><br>${notasLimpa || 'Nenhuma nota registrada.'}</div>
+                <div class="dic-notes" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 10px;">${formatarNotasHTML(notasLimpa)}</div>
                 <button class="btn-processar" style="background-color: var(--primary-color); margin-top: 15px;" onclick="window.TutorIA && window.TutorIA.perguntar('Explique de forma bem resumida e direta o termo: ${termo.item} (${termo.leitura || ''})')">🤖 Perguntar ao Sensei IA</button>
                 <button class="btn-ver-card" style="width: 100%; margin-top: 10px;" onclick="irParaCard('${termo.item.replace(/'/g, "\\'")}')">📖 Ver Card do Termo</button>
             `;

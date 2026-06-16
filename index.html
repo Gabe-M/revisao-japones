@@ -343,6 +343,137 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             return notas.replace(/\s*\[Conjuntos:\s*([^\]]+)\]/, '').trim();
         }
 
+        function formatarNotasHTML(notas) {
+            if (!notas) return '<p style="color: gray; font-style: italic; margin: 5px 0;">Nenhuma nota registrada.</p>';
+            
+            const linhas = notas.split('\n');
+            let html = '';
+            
+            let exemplo = '';
+            let furigana = '';
+            let traducao = '';
+            let outrasNotas = [];
+            
+            linhas.forEach(linha => {
+                const trimmed = linha.trim();
+                if (!trimmed) return;
+                
+                let label = '';
+                let conteudo = '';
+                const idxDoisPontos = trimmed.indexOf(':');
+                if (idxDoisPontos !== -1) {
+                    label = trimmed.substring(0, idxDoisPontos).trim();
+                    conteudo = trimmed.substring(idxDoisPontos + 1).trim();
+                } else {
+                    conteudo = trimmed;
+                }
+
+                // Detectar se o conteúdo ou a linha inteira tem japonês
+                const temJapones = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(conteudo || trimmed);
+                const temFurigana = temJapones && /\[[^\]]+\]/.test(conteudo || trimmed);
+
+                if (temFurigana) {
+                    furigana = conteudo || trimmed;
+                } else if (temJapones && (label === 'Exemplo' || label === 'Frase' || !label)) {
+                    exemplo = conteudo || trimmed;
+                } else if (label === 'Tradução') {
+                    // Se o label for "Tradução" mas o conteúdo for puramente japonês (erro de importação)
+                    const contemJap = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(conteudo);
+                    if (contemJap) {
+                        exemplo = conteudo;
+                    } else {
+                        traducao = conteudo;
+                    }
+                } else if (label === 'Gramática' || label === 'Notas') {
+                    // Se for rotulado como Gramática mas contiver furigana
+                    const contemFur = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(conteudo) && /\[[^\]]+\]/.test(conteudo);
+                    if (contemFur) {
+                        furigana = conteudo;
+                    } else {
+                        outrasNotas.push(conteudo);
+                    }
+                } else {
+                    // Sem label ou label desconhecido
+                    if (!temJapones && !traducao) {
+                        traducao = trimmed;
+                    } else {
+                        outrasNotas.push(trimmed);
+                    }
+                }
+            });
+
+            // Função auxiliar para converter Kanji[furigana] em <ruby>
+            const converterParaRuby = (texto) => {
+                if (!texto) return '';
+                // Primeiro, remove qualquer rótulo do início se houver (ex: "Furigana: ")
+                const semRotulo = texto.replace(/^(Furigana|Pronúncia|Gramática|Exemplo|Frase|Tradução|Notas):\s*/i, '');
+                return semRotulo.replace(/([\u4E00-\u9FFF]+)\[([^\]]+)\]/g, '<ruby>$1<rt style="font-size: 0.55em; color: var(--highlight-color); font-weight: normal;">$2</rt></ruby>');
+            };
+
+            const limparTextoJapones = (texto) => {
+                if (!texto) return '';
+                return texto.replace(/^(Exemplo|Frase|Tradução|Notas):\s*/i, '');
+            };
+
+            // Se detectou um exemplo em japonês, renderiza o bloco premium
+            if (exemplo || furigana) {
+                html += `
+                    <div class="nota-exemplo-bloco" style="margin-top: 10px; background: rgba(120, 120, 120, 0.05); border-left: 3px solid var(--highlight-color); padding: 10px 14px; border-radius: 6px; box-sizing: border-box;">
+                        <div style="font-size: 0.75em; text-transform: uppercase; color: gray; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.5px;">Frase de Exemplo</div>
+                `;
+                
+                if (furigana) {
+                    html += `
+                        <div style="font-family: 'Noto Sans JP', sans-serif; font-size: 1.25em; font-weight: 700; line-height: 1.6; color: var(--text-color); margin-bottom: 4px; letter-spacing: 0.5px;">
+                            ${converterParaRuby(furigana)}
+                        </div>
+                    `;
+                } else if (exemplo) {
+                    html += `
+                        <div style="font-family: 'Noto Sans JP', sans-serif; font-size: 1.2em; font-weight: 700; line-height: 1.5; color: var(--text-color); margin-bottom: 4px;">
+                            ${limparTextoJapones(exemplo)}
+                        </div>
+                    `;
+                }
+
+                if (traducao) {
+                    html += `
+                        <div style="font-size: 0.9em; font-style: italic; color: var(--text-color); margin-top: 8px; border-top: 1px dashed rgba(120,120,120,0.15); padding-top: 6px; opacity: 0.9;">
+                            ${traducao}
+                        </div>
+                    `;
+                }
+                html += `</div>`;
+            } else {
+                // Caso não tenha exemplo nem furigana, mas tenha tradução
+                if (traducao) {
+                    html += `
+                        <div style="margin-top: 8px; font-size: 0.95em; line-height: 1.4;">
+                            <strong style="color: var(--highlight-color);">Tradução:</strong> ${traducao}
+                        </div>
+                    `;
+                }
+            }
+
+            if (outrasNotas.length > 0) {
+                const notasTratadas = outrasNotas.map(n => {
+                    const limpa = n.replace(/^(Notas|Gramática):\s*/i, '');
+                    return converterParaRuby(limpa);
+                }).filter(n => n.length > 0);
+
+                if (notasTratadas.length > 0) {
+                    html += `
+                        <div class="nota-adicional-bloco" style="margin-top: 10px; font-size: 0.88em; line-height: 1.4; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                            <div style="font-size: 0.75em; text-transform: uppercase; color: gray; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.5px;">Notas de Gramática</div>
+                            <div style="color: var(--text-color); opacity: 0.85; white-space: pre-wrap;">${notasTratadas.join('\n')}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            return html;
+        }
+
         function atualizarNotasComConjuntos(notasLimpa, conjuntos) {
             if (conjuntos.length === 0) {
                 return notasLimpa;
@@ -818,7 +949,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                         <details onclick="event.stopPropagation();">
                             <summary>Tradução e Notas</summary>
                             <p style="color:var(--highlight-color); font-weight:bold; margin-top:5px;">${d.significado}</p>
-                            <p style="font-size:0.9em; opacity:0.8;">${notasLimpa}</p>
+                            <div style="font-size:0.9em; margin-bottom: 12px; text-align: left;">${formatarNotasHTML(notasLimpa)}</div>
                             <button style="margin-top: 10px; width: 100%; font-size: 0.9em; background-color: var(--secondary-color);" onclick="event.stopPropagation(); window.TutorIA && window.TutorIA.perguntar('Explique de forma bem resumida e direta a palavra: ${d.item} (${d.leitura})')">🤖 Perguntar ao Sensei IA</button>
                             ${d.id ? `<button style="margin-top: 8px; width: 100%; font-size: 0.9em; background-color: #c0392b; color: white;" onclick="event.stopPropagation(); excluirTermoDoCard('${d.id}', '${d.item.replace(/'/g, "\\'")}')">🗑️ Excluir Termo</button>` : ''}
                         </details>
@@ -1228,9 +1359,36 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
 
                         if (!item || !significado) continue;
 
-                        const fraseExemplo = (colunas[7] || '').trim();
-                        const traducaoFrase = (colunas[8] || '').trim();
-                        const notasGramaticais = (colunas[10] || '').trim();
+                        // Auto-detector inteligente para colunas extras de exemplo/tradução/furigana
+                        let fraseExemplo = '';
+                        let furiganaFrase = '';
+                        let traducaoFrase = '';
+                        let notasGramaticais = '';
+
+                        // Analisa as colunas a partir do índice 6
+                        for (let idx = 6; idx < colunas.length; idx++) {
+                            const val = (colunas[idx] || '').trim();
+                            if (!val) continue;
+
+                            const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(val);
+                            const hasFurigana = hasJapanese && /\[[^\]]+\]/.test(val);
+
+                            if (hasFurigana) {
+                                furiganaFrase = val;
+                            } else if (hasJapanese) {
+                                fraseExemplo = val;
+                            } else {
+                                // Ignorar áudios e arquivos de mídia padronizados
+                                if (!val.includes('[sound:') && !val.includes('.mp3')) {
+                                    if (!traducaoFrase) {
+                                        traducaoFrase = val;
+                                    } else {
+                                        notasGramaticais = val;
+                                    }
+                                }
+                            }
+                        }
+
                         const categoriaDetectada = detectarCategoria(item);
 
                         termosValidos.push({
@@ -1239,6 +1397,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             significado,
                             categoria: categoriaDetectada,
                             fraseExemplo,
+                            furiganaFrase,
                             traducaoFrase,
                             notasGramaticais
                         });
@@ -1320,6 +1479,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     // Montar campo notas com informações extras
                     let partesNotas = [];
                     if (t.fraseExemplo) partesNotas.push(`Frase: ${t.fraseExemplo}`);
+                    if (t.furiganaFrase) partesNotas.push(`Furigana: ${t.furiganaFrase}`);
                     if (t.traducaoFrase) partesNotas.push(`Tradução: ${t.traducaoFrase}`);
                     if (t.notasGramaticais) partesNotas.push(`Gramática: ${t.notasGramaticais}`);
                     
