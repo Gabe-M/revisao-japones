@@ -272,10 +272,10 @@
         divWarning.style.marginTop = '10px';
         divWarning.innerHTML = `
             <strong>⚠️ Atenção: Chave de API ausente!</strong><br><br>
-            Para conversar com o Sensei e traduzir os termos, você precisa configurar sua própria chave gratuita:<br><br>
-            1. Acesse o <strong><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--tutor-user-msg); font-weight:bold; text-decoration:underline;">Google AI Studio</a></strong>.<br>
-            2. Crie uma chave de API gratuita.<br>
-            3. Clique no ícone de engrenagem <strong>⚙️</strong> no topo do chat, cole a chave e clique em salvar.
+            Para conversar com o Sensei e traduzir os termos, você precisa configurar sua própria chave de API:<br><br>
+            1. Acesse a <strong><a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--tutor-user-msg); font-weight:bold; text-decoration:underline;">OpenAI Platform</a></strong>.<br>
+            2. Crie uma chave de API secreta (começando com sk-).<br>
+            3. Clique no botão de engrenagem <strong>⚙️</strong> no topo do chat, cole a chave e salve.
         `;
         messagesBox.appendChild(divWarning);
     }
@@ -365,6 +365,7 @@
                 'Content-Type': 'application/json'
             };
             if (state.apiKey) {
+                headers['X-OpenAI-Key'] = state.apiKey;
                 headers['X-Gemini-Key'] = state.apiKey;
             }
 

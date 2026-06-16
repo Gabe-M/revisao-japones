@@ -5,7 +5,7 @@
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Gemini-Key');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Gemini-Key, X-OpenAI-Key');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -15,15 +15,15 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Método não permitido' });
     }
 
-    const clientKey = req.headers['x-gemini-key'];
-    let apiKey = (clientKey && clientKey.trim() && clientKey !== 'undefined') ? clientKey.trim() : process.env.GEMINI_API_KEY;
+    const clientKey = req.headers['x-openai-key'] || req.headers['x-gemini-key'];
+    let apiKey = (clientKey && clientKey.trim() && clientKey !== 'undefined') ? clientKey.trim() : (process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);
 
     if (apiKey) {
         apiKey = apiKey.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
     }
 
     if (!apiKey || apiKey === 'undefined' || apiKey === '') {
-        return res.status(401).json({ error: 'Chave de API não configurada.' });
+        return res.status(401).json({ error: 'Chave de API da OpenAI não configurada.' });
     }
 
     try {
@@ -47,28 +47,39 @@ Regras de classificação:
 - N1: vocabulário muito avançado ou literário
 
 Termos para classificar: ${JSON.stringify(termos)}`;
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
-        const response = await fetch(url, {
+        const payload = {
+            model: 'gpt-4o-mini',
+            messages: [
+                { role: 'system', content: 'Você é um classificador especializado em JLPT. Sempre responda em formato JSON válido.' },
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.1,
+            response_format: { type: "json_object" }
+        };
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                generationConfig: {
-                    temperature: 0.1,
-                    responseMimeType: 'application/json'
-                }
-            })
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(payload)
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            console.error('Erro Gemini JLPT:', data);
-            return res.status(500).json({ error: 'Falha na API Gemini', detalhes: data });
+            console.error('Erro OpenAI JLPT:', data);
+            const openAIErrorMsg = data?.error?.message || (typeof data === 'string' ? data : JSON.stringify(data));
+            return res.status(500).json({ 
+                error: 'Falha na API OpenAI ao classificar termos JLPT', 
+                message: `Falha ao conectar com a OpenAI. Detalhes: "${openAIErrorMsg}"`,
+                detalhes: data 
+            });
         }
 
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const text = data.choices?.[0]?.message?.content || '{}';
 
         let jlptMap = {};
         try {

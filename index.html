@@ -1821,8 +1821,6 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             if (jlptRes.ok) {
                                 const jlptMap = await jlptRes.json();
                                 console.log('[JLPT] Mapa retornado pela IA:', jlptMap);
-                                // DEBUG ALERT
-                                alert('[DEBUG JLPT - SUCESSO] ' + JSON.stringify(jlptMap).substring(0, 100));
                                 
                                 lote.forEach(t => {
                                     const nivel = jlptMap[t.item];
@@ -1834,12 +1832,10 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             } else {
                                 const errText = await jlptRes.text();
                                 console.error('[JLPT] Erro ao classificar:', errText);
-                                alert('[DEBUG JLPT - ERRO API] ' + errText);
                             }
                         }
                     } catch (e) {
                         console.error('[JLPT] Erro ao classificar JLPT com a IA:', e);
-                        alert('[DEBUG JLPT - EXCEÇÃO] ' + e.message);
                     }
                     
                     const comNivel = termosFormatados.filter(t => t.jlpt).length;
