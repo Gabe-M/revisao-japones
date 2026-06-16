@@ -1,6 +1,27 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
+function obterUserIdDoToken(authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+    const token = authHeader.substring(7);
+    try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+            const base64Url = parts[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'));
+            if (payload && payload.sub && payload.role === 'authenticated') {
+                return payload.sub;
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao decodificar JWT:", e);
+    }
+    return null;
+}
+
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -10,6 +31,7 @@ export default async function handler(req, res) {
 
     // Captura o token de quem está logado
     const tokenUsuario = req.headers['authorization'] || `Bearer ${SUPABASE_KEY}`;
+    const userId = obterUserIdDoToken(tokenUsuario);
 
     // AÇÃO 1: Buscar vocabulário
     if (acao === 'listar') {
@@ -118,9 +140,12 @@ export default async function handler(req, res) {
                         categoria: itemNovo.categoria || cardExistente.categoria,
                         jlpt: itemNovo.jlpt || cardExistente.jlpt,
                         notas: novasNotas,
-                        user_id: cardExistente.user_id
+                        user_id: userId || cardExistente.user_id
                     });
                 } else {
+                    if (userId) {
+                        itemNovo.user_id = userId;
+                    }
                     payloadFinal.push(itemNovo);
                 }
             }
@@ -306,7 +331,7 @@ export default async function handler(req, res) {
                             significado: card.significado,
                             categoria: card.categoria,
                             notas: novasNotas,
-                            user_id: card.user_id
+                            user_id: userId || card.user_id
                         });
                     }
                 }

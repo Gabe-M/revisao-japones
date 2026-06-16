@@ -1,12 +1,34 @@
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
+function obterUserIdDoToken(authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+    const token = authHeader.substring(7);
+    try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+            const base64Url = parts[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'));
+            if (payload && payload.sub && payload.role === 'authenticated') {
+                return payload.sub;
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao decodificar JWT:", e);
+    }
+    return null;
+}
+
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     const { acao } = req.query;
 
     // Captura o token de quem está logado
     const tokenUsuario = req.headers['authorization'] || `Bearer ${SUPABASE_KEY}`;
+    const userId = obterUserIdDoToken(tokenUsuario);
 
     // AÇÃO 1: Listar progresso do SRS
     if (acao === 'listar') {
@@ -36,6 +58,15 @@ export default async function handler(req, res) {
     if (acao === 'salvar' && req.method === 'POST') {
         try {
             const corpo = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+            if (userId) {
+                if (Array.isArray(corpo)) {
+                    corpo.forEach(item => {
+                        if (item) item.user_id = userId;
+                    });
+                } else if (corpo && typeof corpo === 'object') {
+                    corpo.user_id = userId;
+                }
+            }
 
             const response = await fetch(`${SUPABASE_URL}/rest/v1/srs_progresso`, {
                 method: 'POST',
@@ -145,7 +176,7 @@ export default async function handler(req, res) {
 
 
             const payload = {
-                user_id: user_id,
+                user_id: userId || user_id,
                 item: item,
                 ease: 2.5,
                 interval: novoIntervalo,
