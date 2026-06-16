@@ -234,6 +234,46 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         </div>
     </div>
 
+    <!-- Painel de Importação de Baralho Anki (TXT) -->
+    <div class="controls" style="background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); max-width: 1200px; margin: 0 auto 20px; flex-direction: column; align-items: stretch; display: flex; gap: 10px; box-sizing: border-box;">
+        <div onclick="togglePainelAnki()" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; font-size: 1.1em; color: var(--text-color); user-select: none;">
+            <span>📥 Importar Baralho Anki (TXT)</span>
+            <span id="ia-anki-icon">▼</span>
+        </div>
+        
+        <div id="ia-painel-anki-content" style="display: none; flex-direction: column; gap: 15px; border-top: 1px solid var(--border-color); padding-top: 15px; margin-top: 5px;">
+            <p style="margin: 0; font-size: 0.95em; opacity: 0.9; line-height: 1.5; text-align: left; width: 100%;">
+                Importe termos a partir de um arquivo <code>.txt</code> exportado do Anki.
+                O arquivo deve usar <strong>tabulação</strong> como separador e seguir o formato padrão de 13 colunas.
+                A <strong>categoria</strong> de cada termo será detectada automaticamente.
+            </p>
+            
+            <div style="background: var(--bg-color); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; width: 100%; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span style="font-weight: bold; color: var(--text-color);">Salvar no Conjunto:</span>
+                    <select id="ia-anki-conjunto-select" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer;">
+                        <!-- Preenchido dinamicamente via JS -->
+                    </select>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <input type="file" id="ia-anki-file-input" accept=".txt" onchange="previewAnki(this)" style="display: none;">
+                    <button onclick="document.getElementById('ia-anki-file-input').click()" style="background-color: var(--secondary-color); padding: 8px 12px;">📁 Escolher Arquivo .txt</button>
+                    <span id="ia-anki-file-name" style="font-size: 0.9em; color: gray; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Nenhum arquivo</span>
+                    
+                    <button onclick="processarImportacaoAnki()" id="ia-btn-confirmar-anki" style="background-color: #27ae60; padding: 8px 15px; font-weight: bold;">📥 Importar</button>
+                </div>
+            </div>
+            
+            <div id="ia-anki-preview" style="display: none; background: var(--bg-color); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
+                <div style="font-weight: bold; margin-bottom: 8px; color: var(--text-color);">📋 Preview dos termos detectados:</div>
+                <div id="ia-anki-preview-content" style="max-height: 200px; overflow-y: auto; font-size: 0.9em;"></div>
+            </div>
+            
+            <div id="ia-anki-feedback" style="display: none; font-weight: bold; text-align: center; font-size: 0.95em; padding: 5px; width: 100%; box-sizing: border-box;"></div>
+        </div>
+    </div>
+
     <div style="display: flex; gap: 15px; max-width: 500px; margin: 0 auto 20px; align-items: center; justify-content: center; width: 100%;">
         <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo..." onkeyup="aplicarFiltros()" style="margin: 0; flex: 1; width: auto; max-width: none;">
     </div>
@@ -1055,7 +1095,322 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             } else {
                 aplicarFiltros();
             }
+
+            // Inicializa o seletor de conjunto do painel Anki
+            atualizarSeletorAnki();
         });
+        // ========== IMPORTAÇÃO ANKI TXT ==========
+
+        function togglePainelAnki() {
+            const content = document.getElementById('ia-painel-anki-content');
+            const icon = document.getElementById('ia-anki-icon');
+            if (content.style.display === 'none') {
+                content.style.display = 'flex';
+                icon.textContent = '▲';
+                atualizarSeletorAnki();
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▼';
+            }
+        }
+
+        function atualizarSeletorAnki() {
+            const select = document.getElementById('ia-anki-conjunto-select');
+            if (!select) return;
+            let html = conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
+            html += `<option value="novo">Criar Novo Conjunto...</option>`;
+            select.innerHTML = html;
+            select.value = 'Geral';
+        }
+
+        // Listener para criar novo conjunto a partir do seletor Anki
+        window.addEventListener('DOMContentLoaded', () => {
+            const select = document.getElementById('ia-anki-conjunto-select');
+            if (select) {
+                select.addEventListener('change', function() {
+                    if (this.value === 'novo') {
+                        const nome = prompt("Digite o nome do novo conjunto:");
+                        if (!nome || !nome.trim() || nome.trim() === 'Texto' || nome.trim().startsWith('Frase:') || nome.trim() === 'Todos') {
+                            alert("Nome inválido ou reservado.");
+                            this.value = 'Geral';
+                            return;
+                        }
+                        const nomeClean = nome.trim();
+                        if (!conjuntosDisponiveis.includes(nomeClean)) {
+                            conjuntosDisponiveis.push(nomeClean);
+                            atualizarSeletoresDeConjunto();
+                            atualizarSeletorAnki();
+                        }
+                        this.value = nomeClean;
+                    }
+                });
+            }
+        });
+
+        function detectarCategoria(item) {
+            if (!item) return 'Vocabulário';
+            const termo = item.trim();
+
+            // 1. Kanji: único caractere CJK
+            if (termo.length === 1 && /[\u4E00-\u9FFF]/.test(termo)) {
+                return 'Kanji';
+            }
+
+            // 2. Partícula: lista fixa
+            const particulas = ['は','が','を','の','に','か','で','と','も','へ','から','まで','より','ので','のに','けど','けれど','し','や','とか','ながら','ば','たら','なら','って','ね','よ','わ','さ','ぞ','ぜ','かな','だけ','しか','ほど','くらい','ぐらい','など','ばかり','こそ','でも','だって','ったら'];
+            if (particulas.includes(termo)) {
+                return 'Partícula';
+            }
+
+            // 3. Demonstrativo: lista fixa
+            const demonstrativos = ['この','その','あの','どの','これ','それ','あれ','どれ','ここ','そこ','あそこ','どこ','こちら','そちら','あちら','どちら','こっち','そっち','あっち','どっち','こんな','そんな','あんな','どんな','こう','そう','ああ','どう','あなた'];
+            if (demonstrativos.includes(termo)) {
+                return 'Demonstrativo';
+            }
+
+            // 4. Verbo: terminações verbais típicas
+            const terminacoesVerbo = ['る','う','く','ぐ','す','つ','ぬ','ぶ','む','ます','ません','ました','ませんでした','ない','なかった','たい','たかった','て','た','ている','ていた','てる','てた','られる','させる','れる','せる'];
+            for (const t of terminacoesVerbo) {
+                if (termo.endsWith(t) && termo.length > t.length) {
+                    // Verifica se tem pelo menos um caractere antes da terminação
+                    // E que não é apenas kana simples (evita falsos positivos como ある)
+                    const base = termo.slice(0, -t.length);
+                    if (base.length >= 1) {
+                        return 'Verbo';
+                    }
+                }
+            }
+
+            // 5. Fallback: Vocabulário
+            return 'Vocabulário';
+        }
+
+        let ankiPreviewData = []; // Cache dos termos parseados para o preview
+
+        function previewAnki(input) {
+            const nameLabel = document.getElementById('ia-anki-file-name');
+            const previewDiv = document.getElementById('ia-anki-preview');
+            const previewContent = document.getElementById('ia-anki-preview-content');
+            const feedback = document.getElementById('ia-anki-feedback');
+            
+            feedback.style.display = 'none';
+            ankiPreviewData = [];
+
+            if (!input.files || !input.files[0]) {
+                nameLabel.textContent = 'Nenhum arquivo';
+                nameLabel.style.color = 'gray';
+                previewDiv.style.display = 'none';
+                return;
+            }
+
+            const file = input.files[0];
+            nameLabel.textContent = file.name;
+            nameLabel.style.color = 'var(--text-color)';
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const linhas = e.target.result.split('\n');
+                    const termosValidos = [];
+
+                    for (const linha of linhas) {
+                        const trimmed = linha.trim();
+                        // Ignorar linhas de metadados (#) e linhas vazias
+                        if (!trimmed || trimmed.startsWith('#')) continue;
+
+                        const colunas = trimmed.split('\t');
+                        // Precisa ter pelo menos 6 colunas (até o significado)
+                        if (colunas.length < 6) continue;
+
+                        const item = (colunas[3] || '').trim();
+                        const leitura = (colunas[4] || '').trim();
+                        const significado = (colunas[5] || '').trim();
+
+                        if (!item || !significado) continue;
+
+                        const fraseExemplo = (colunas[7] || '').trim();
+                        const traducaoFrase = (colunas[8] || '').trim();
+                        const notasGramaticais = (colunas[10] || '').trim();
+                        const categoriaDetectada = detectarCategoria(item);
+
+                        termosValidos.push({
+                            item,
+                            leitura: leitura || '',
+                            significado,
+                            categoria: categoriaDetectada,
+                            fraseExemplo,
+                            traducaoFrase,
+                            notasGramaticais
+                        });
+                    }
+
+                    ankiPreviewData = termosValidos;
+
+                    if (termosValidos.length === 0) {
+                        previewContent.innerHTML = '<span style="color: #e74c3c;">Nenhum termo válido encontrado no arquivo. Verifique o formato.</span>';
+                        previewDiv.style.display = 'block';
+                        return;
+                    }
+
+                    // Agrupar por categoria para o preview
+                    const porCategoria = {};
+                    termosValidos.forEach(t => {
+                        if (!porCategoria[t.categoria]) porCategoria[t.categoria] = 0;
+                        porCategoria[t.categoria]++;
+                    });
+
+                    const resumoCategorias = Object.entries(porCategoria)
+                        .map(([cat, count]) => `<span style="background: rgba(230,126,34,0.12); color: var(--highlight-color); padding: 2px 8px; border-radius: 8px; font-weight: 600; font-size: 0.85em;">${cat}: ${count}</span>`)
+                        .join(' ');
+
+                    // Mostrar os primeiros 10 termos como preview
+                    const previewTermos = termosValidos.slice(0, 10).map(t =>
+                        `<div style="display: flex; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--border-color); align-items: center;">
+                            <span style="font-family: 'Noto Sans JP', sans-serif; font-weight: 700; min-width: 80px;">${t.item}</span>
+                            <span style="color: gray; min-width: 80px;">${t.leitura}</span>
+                            <span style="flex: 1;">${t.significado}</span>
+                            <span style="background: rgba(52,73,94,0.1); color: var(--secondary-color); padding: 2px 6px; border-radius: 6px; font-size: 0.8em; font-weight: 600;">${t.categoria}</span>
+                        </div>`
+                    ).join('');
+
+                    const maisTexto = termosValidos.length > 10 ? `<div style="text-align: center; padding: 8px; color: gray; font-style: italic;">... e mais ${termosValidos.length - 10} termos</div>` : '';
+
+                    previewContent.innerHTML = `
+                        <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <strong style="color: #27ae60;">✓ ${termosValidos.length} termos detectados</strong>
+                            ${resumoCategorias}
+                        </div>
+                        ${previewTermos}
+                        ${maisTexto}
+                    `;
+                    previewDiv.style.display = 'block';
+
+                } catch (err) {
+                    console.error('Erro ao fazer preview do Anki TXT:', err);
+                    previewContent.innerHTML = `<span style="color: #e74c3c;">Erro ao ler o arquivo: ${err.message}</span>`;
+                    previewDiv.style.display = 'block';
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        async function processarImportacaoAnki() {
+            const conjuntoSelecionado = document.getElementById('ia-anki-conjunto-select').value;
+            const feedback = document.getElementById('ia-anki-feedback');
+            const btn = document.getElementById('ia-btn-confirmar-anki');
+            const fileInput = document.getElementById('ia-anki-file-input');
+
+            if (!ankiPreviewData || ankiPreviewData.length === 0) {
+                alert('Por favor, selecione um arquivo .txt do Anki primeiro. Certifique-se de que o preview mostra termos válidos.');
+                return;
+            }
+
+            if (conjuntoSelecionado === 'novo') {
+                alert('Por favor, selecione ou crie um conjunto antes de importar.');
+                return;
+            }
+
+            feedback.style.display = 'block';
+            feedback.style.color = 'var(--text-color)';
+            feedback.textContent = `Preparando ${ankiPreviewData.length} termos para envio...`;
+            btn.disabled = true;
+
+            try {
+                const termosFormatados = ankiPreviewData.map(t => {
+                    // Montar campo notas com informações extras
+                    let partesNotas = [];
+                    if (t.fraseExemplo) partesNotas.push(`Frase: ${t.fraseExemplo}`);
+                    if (t.traducaoFrase) partesNotas.push(`Tradução: ${t.traducaoFrase}`);
+                    if (t.notasGramaticais) partesNotas.push(`Gramática: ${t.notasGramaticais}`);
+                    
+                    const notasLimpa = partesNotas.join('\n');
+                    const novasNotas = atualizarNotasComConjuntos(notasLimpa, [conjuntoSelecionado]);
+
+                    return {
+                        item: t.item,
+                        leitura: t.leitura,
+                        significado: t.significado,
+                        categoria: t.categoria,
+                        notas: novasNotas,
+                        user_id: idDoUsuarioLogado
+                    };
+                });
+
+                feedback.textContent = `Enviando ${termosFormatados.length} termos para o servidor...`;
+
+                const response = await fetch('/api/jisho?acao=salvar', {
+                    method: 'POST',
+                    headers: {
+                        "Authorization": tokenDeAcesso,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(termosFormatados)
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || 'Erro do servidor ao salvar os dados.');
+                }
+
+                const salvos = await response.json();
+                const salvosArray = Array.isArray(salvos) ? salvos : [salvos];
+
+                salvosArray.forEach(salvo => {
+                    if (!salvo || !salvo.item) return;
+                    const index = dadosCombinados.findIndex(d => d.item === salvo.item);
+                    if (index !== -1) {
+                        dadosCombinados[index] = salvo;
+                    } else {
+                        dadosCombinados.push(salvo);
+                    }
+                });
+
+                // Recalcular conjuntos disponíveis
+                const conjuntosSet = new Set(['Geral']);
+                dadosCombinados.forEach(d => {
+                    const conjuntos = extrairConjuntos(d.notas, d.item);
+                    conjuntos.forEach(c => conjuntosSet.add(c));
+                });
+                conjuntosDisponiveis = Array.from(conjuntosSet);
+
+                atualizarSeletoresDeConjunto();
+                atualizarSeletorAnki();
+
+                // Selecionar o conjunto importado
+                document.getElementById('ia-conjunto-select').value = conjuntoSelecionado;
+
+                // Desligar Modo Associação
+                const chk = document.getElementById('modo-associacao-chk');
+                chk.checked = false;
+                modoAssociacaoAtivo = false;
+                document.getElementById('modo-associacao-label').textContent = 'Modo Associação Desativado';
+                document.getElementById('modo-associacao-label').style.color = 'gray';
+
+                aplicarFiltros();
+
+                feedback.style.color = '#27ae60';
+                feedback.textContent = `Sucesso! ${termosFormatados.length} termos importados e associados ao conjunto "${conjuntoSelecionado}".`;
+
+                // Limpar estado
+                ankiPreviewData = [];
+                fileInput.value = '';
+                document.getElementById('ia-anki-file-name').textContent = 'Nenhum arquivo';
+                document.getElementById('ia-anki-file-name').style.color = 'gray';
+                document.getElementById('ia-anki-preview').style.display = 'none';
+
+                setTimeout(() => {
+                    feedback.style.display = 'none';
+                }, 5000);
+
+            } catch (err) {
+                console.error('Erro na importação Anki:', err);
+                feedback.style.color = '#e74c3c';
+                feedback.textContent = `Erro: ${err.message}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
     </script>
     <script src="tutor-ia.js"></script>
 </body>
