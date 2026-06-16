@@ -56,12 +56,66 @@
             border-radius: 8px;
             width: 0%; /* Animado via JS */
             transition: width 1s cubic-bezier(0.1, 0.8, 0.3, 1);
+            animation: growBar 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+            transform-origin: left;
+        }
+        @keyframes growBar {
+            from { transform: scaleX(0); }
+            to { transform: scaleX(1); }
         }
         .category-row {
             display: flex;
             justify-content: space-between;
             font-size: 0.95em;
             font-weight: 600;
+        }
+
+        /* Seletor de Níveis Animado */
+        .level-selector-container {
+            display: flex;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 12px;
+            padding: 4px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        [data-theme="dark"] .level-selector-container {
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .level-select-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            padding: 6px 12px;
+            font-size: 0.85em;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: scale(1);
+        }
+        .level-select-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+            transform: scale(1.05);
+            color: var(--highlight-color);
+        }
+        [data-theme="dark"] .level-select-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .level-select-btn.active {
+            background: var(--highlight-color);
+            color: white;
+            box-shadow: 0 4px 10px rgba(230, 126, 34, 0.25);
+            transform: scale(1.05);
+        }
+        .level-select-btn.active:hover {
+            color: white;
+        }
+        [data-theme="dark"] .level-select-btn.active {
+            box-shadow: 0 4px 10px rgba(211, 84, 0, 0.35);
         }
 
         /* Estilos do Alternador de Abas */
@@ -149,17 +203,18 @@
 
         <!-- Conteúdo da Aba 2: Estatísticas -->
         <div id="tab-content-stats" class="tab-content" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                <h3 style="margin: 0; font-size: 1.3em;">📊 Estatísticas de Estudo</h3>
-                <select id="filtro-stats-jlpt" onchange="mudarFiltroEstatisticas()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer;">
-                    <option value="Todos">Todos os Níveis</option>
-                    <option value="N5">Nível N5</option>
-                    <option value="N4">Nível N4</option>
-                    <option value="N3">Nível N3</option>
-                    <option value="N2">Nível N2</option>
-                    <option value="N1">Nível N1</option>
-                </select>
+            <h3 style="margin: 0 0 10px 0; font-size: 1.3em; text-align: center;">📊 Estatísticas de Estudo</h3>
+            
+            <!-- Seletor de Níveis Animado -->
+            <div class="level-selector-container">
+                <button class="level-select-btn active" data-level="Todos" onclick="selectStatsLevel('Todos')">Todos</button>
+                <button class="level-select-btn" data-level="N5" onclick="selectStatsLevel('N5')">N5</button>
+                <button class="level-select-btn" data-level="N4" onclick="selectStatsLevel('N4')">N4</button>
+                <button class="level-select-btn" data-level="N3" onclick="selectStatsLevel('N3')">N3</button>
+                <button class="level-select-btn" data-level="N2" onclick="selectStatsLevel('N2')">N2</button>
+                <button class="level-select-btn" data-level="N1" onclick="selectStatsLevel('N1')">N1</button>
             </div>
+
             <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 25px;">
                 <div style="background: rgba(39, 174, 96, 0.1); padding: 15px 30px; border-radius: 12px; border: 1px solid rgba(39, 174, 96, 0.2); min-width: 150px;">
                     <div class="info-label" style="margin: 0; color: #27ae60; text-align: center;">Total de Palavras</div>
@@ -251,8 +306,16 @@
             }
         }
 
-        function mudarFiltroEstatisticas() {
-            const nivel = document.getElementById('filtro-stats-jlpt').value;
+        function selectStatsLevel(nivel) {
+            // Remove classe ativa de todos os botões e adiciona no selecionado
+            const buttons = document.querySelectorAll('.level-select-btn');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('data-level') === nivel) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
             renderizarStatsCategorias(nivel);
         }
 
