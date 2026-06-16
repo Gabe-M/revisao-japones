@@ -1788,7 +1788,11 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
 
                 if (!response.ok) {
                     const errData = await response.json();
-                    throw new Error(errData.error || 'Erro do servidor ao salvar os dados.');
+                    let msg = errData.error || 'Erro do servidor ao salvar os dados.';
+                    if (errData.detalhes) {
+                        msg += ' Detalhes: ' + (typeof errData.detalhes === 'object' ? JSON.stringify(errData.detalhes) : errData.detalhes);
+                    }
+                    throw new Error(msg);
                 }
 
                 const salvos = await response.json();
