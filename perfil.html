@@ -128,25 +128,27 @@
     </div>
 
     <div class="card-perfil">
-        <h2>Área do Usuário</h2>
-        <div class="info-label">E-mail Cadastrado:</div>
-        <div class="info-value" id="user-email">Carregando...</div>
-        
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
-            <button class="btn-logout" onclick="fazerLogout()">Sair (Logout)</button>
-            <button class="btn-delete" onclick="deletarConta()">Deletar Conta Definitivamente</button>
-        </div>
-    </div>
-
-    <div class="card-perfil">
         <!-- Alternador de Abas (Tabs) -->
         <div class="tab-control-container">
-            <button class="tab-btn active" id="tab-btn-stats" onclick="showTab('stats')">📊 Estatísticas</button>
+            <button class="tab-btn active" id="tab-btn-account" onclick="showTab('account')">👤 Conta</button>
+            <button class="tab-btn" id="tab-btn-stats" onclick="showTab('stats')">📊 Estatísticas</button>
             <button class="tab-btn" id="tab-btn-jlpt" onclick="showTab('jlpt')">🏆 Caminho JLPT</button>
         </div>
 
-        <!-- Conteúdo da Aba 1: Estatísticas -->
-        <div id="tab-content-stats" class="tab-content">
+        <!-- Conteúdo da Aba 1: Área do Usuário / Conta -->
+        <div id="tab-content-account" class="tab-content">
+            <h3 style="margin: 0 0 20px 0; font-size: 1.3em; text-align: center;">👤 Área do Usuário</h3>
+            <div class="info-label" style="text-align: center;">E-mail Cadastrado:</div>
+            <div class="info-value" id="user-email" style="text-align: center; margin-bottom: 25px;">Carregando...</div>
+            
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                <button class="btn-logout" onclick="fazerLogout()">Sair (Logout)</button>
+                <button class="btn-delete" onclick="deletarConta()">Deletar Conta Definitivamente</button>
+            </div>
+        </div>
+
+        <!-- Conteúdo da Aba 2: Estatísticas -->
+        <div id="tab-content-stats" class="tab-content" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                 <h3 style="margin: 0; font-size: 1.3em;">📊 Estatísticas de Estudo</h3>
                 <select id="filtro-stats-jlpt" onchange="mudarFiltroEstatisticas()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer;">
@@ -170,7 +172,7 @@
             </div>
         </div>
 
-        <!-- Conteúdo da Aba 2: Caminho JLPT -->
+        <!-- Conteúdo da Aba 3: Caminho JLPT -->
         <div id="tab-content-jlpt" class="tab-content" style="display: none;">
             <h3 style="margin: 0 0 20px 0; font-size: 1.3em; text-align: center;">🏆 Progresso do Caminho JLPT</h3>
             <div id="stats-jlpt-container" style="display: flex; flex-direction: column; gap: 15px; text-align: left; max-width: 450px; margin: 0 auto;">
@@ -373,15 +375,20 @@
 
         function showTab(tabName) {
             // Remove active classes
+            document.getElementById('tab-btn-account').classList.remove('active');
             document.getElementById('tab-btn-stats').classList.remove('active');
             document.getElementById('tab-btn-jlpt').classList.remove('active');
             
             // Hide content
+            document.getElementById('tab-content-account').style.display = 'none';
             document.getElementById('tab-content-stats').style.display = 'none';
             document.getElementById('tab-content-jlpt').style.display = 'none';
             
             // Activate selected tab
-            if (tabName === 'stats') {
+            if (tabName === 'account') {
+                document.getElementById('tab-btn-account').classList.add('active');
+                document.getElementById('tab-content-account').style.display = 'block';
+            } else if (tabName === 'stats') {
                 document.getElementById('tab-btn-stats').classList.add('active');
                 document.getElementById('tab-content-stats').style.display = 'block';
             } else if (tabName === 'jlpt') {
