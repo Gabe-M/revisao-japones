@@ -135,6 +135,153 @@ export default async function handler(req, res) {
         }
     }
 
+    // AÇÃO 6: Deletar conjunto inteiro
+    if (acao === 'deletar_conjunto' && req.method === 'POST') {
+        try {
+            const corpo = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+            const { conjunto, modoExclusao } = corpo;
+
+            if (!conjunto) {
+                return res.status(400).json({ error: 'Conjunto ausente para exclusão' });
+            }
+
+            // 1. Buscar todos os vocabulários do usuário para processar em memória
+            const responseListar = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario?select=*`, {
+                headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": tokenUsuario
+                }
+            });
+            const todosCards = await responseListar.json();
+
+            if (!responseListar.ok) {
+                return res.status(responseListar.status).json({
+                    error: 'Erro ao listar termos para exclusão de conjunto',
+                    detalhes: todosCards
+                });
+            }
+
+            const idsParaDeletar = [];
+            const itensParaDeletar = [];
+            const cardsParaAtualizar = [];
+
+            // Helper para extrair conjuntos
+            const extrairConjuntosInterno = (notas) => {
+                let conjuntos = [];
+                if (notas) {
+                    const match = notas.match(/\[Conjuntos:\s*([^\]]+)\]/);
+                    if (match) {
+                        conjuntos = match[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    }
+                }
+                return conjuntos;
+            };
+
+            const removerTagConjuntosInterno = (notas, conjRemover) => {
+                if (!notas) return '';
+                const conjuntos = extrairConjuntosInterno(notas);
+                const novosConjuntos = conjuntos.filter(c => c !== conjRemover);
+                
+                // Remove a linha do conjunto completamente
+                const notasSemTag = notas.replace(/\s*\[Conjuntos:\s*([^\]]+)\]/, '').trim();
+                
+                if (novosConjuntos.length === 0) {
+                    return notasSemTag;
+                }
+                
+                const tag = `[Conjuntos: ${novosConjuntos.join(', ')}]`;
+                return notasSemTag ? `${notasSemTag}\n${tag}` : tag;
+            };
+
+            for (const card of todosCards) {
+                const conjuntos = extrairConjuntosInterno(card.notas);
+                if (conjuntos.includes(conjunto)) {
+                    const outrosConjuntos = conjuntos.filter(c => c !== conjunto && c !== 'Geral');
+                    
+                    if (modoExclusao === 'todos_associados' || outrosConjuntos.length === 0) {
+                        idsParaDeletar.push(card.id);
+                        if (card.item) {
+                            itensParaDeletar.push(card.item);
+                        }
+                    } else {
+                        // Apenas remove o conjunto das notas do card
+                        const novasNotas = removerTagConjuntosInterno(card.notas, conjunto);
+                        cardsParaAtualizar.push({
+                            id: card.id,
+                            item: card.item,
+                            leitura: card.leitura,
+                            significado: card.significado,
+                            categoria: card.categoria,
+                            notas: novasNotas,
+                            user_id: card.user_id
+                        });
+                    }
+                }
+            }
+
+            // Executa as deleções
+            if (idsParaDeletar.length > 0) {
+                const responseDelete = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario?id=in.(${idsParaDeletar.join(',')})`, {
+                    method: 'DELETE',
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": tokenUsuario,
+                        "Prefer": "return=representation"
+                    }
+                });
+                
+                if (!responseDelete.ok) {
+                    const errDelete = await responseDelete.json();
+                    return res.status(responseDelete.status).json({
+                        error: 'Erro ao deletar cards do conjunto',
+                        detalhes: errDelete
+                    });
+                }
+
+                // Deleta também o progresso do SRS correspondente a esses itens deletados
+                if (itensParaDeletar.length > 0) {
+                    const listaItens = itensParaDeletar.map(i => `"${i.replace(/"/g, '\\"')}"`).join(',');
+                    await fetch(`${SUPABASE_URL}/rest/v1/srs_progresso?item=in.(${encodeURIComponent(listaItens)})`, {
+                        method: 'DELETE',
+                        headers: {
+                            "apikey": SUPABASE_KEY,
+                            "Authorization": tokenUsuario
+                        }
+                    });
+                }
+            }
+
+            // Executa as atualizações (remover a tag do conjunto)
+            if (cardsParaAtualizar.length > 0) {
+                const responseUpdate = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario`, {
+                    method: 'POST', // UPSERT
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": tokenUsuario,
+                        "Content-Type": "application/json",
+                        "Prefer": "resolution=merge-duplicates,return=representation"
+                    },
+                    body: JSON.stringify(cardsParaAtualizar)
+                });
+
+                if (!responseUpdate.ok) {
+                    const errUpdate = await responseUpdate.json();
+                    return res.status(responseUpdate.status).json({
+                        error: 'Erro ao atualizar tags dos cards',
+                        detalhes: errUpdate
+                    });
+                }
+            }
+
+            return res.status(200).json({
+                deletados: idsParaDeletar.length,
+                atualizados: cardsParaAtualizar.length
+            });
+        } catch (error) {
+            return res.status(500).json({ error: 'Falha no servidor ao processar exclusão do conjunto', mensagem: error.message });
+        }
+    }
+
     // AÇÃO 3: Traduzir no Jisho
     if (!termo) return res.status(400).json({ error: 'Termo ausente' });
 

@@ -149,6 +149,8 @@
                 <!-- Preenchido via JS -->
             </select>
             
+            <button id="btn-deletar-conjunto" onclick="confirmarDeletarConjunto()" style="display: none; background-color: #e74c3c; padding: 8px 12px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s;">Deletar Conjunto</button>
+            
             <div id="ia-novo-conjunto-div" style="display: none; align-items: center; gap: 8px;">
                 <input type="text" id="ia-novo-conjunto-nome" placeholder="Novo conjunto..." style="padding: 8px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); outline: none;">
                 <button onclick="criarNovoConjunto()" style="background-color: var(--primary-color); padding: 8px 12px;">Criar</button>
@@ -593,6 +595,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
 
             // Garante que o campo de input de novo conjunto apareça se a opção for "novo"
             toggleNovoConjuntoInput();
+            atualizarVisibilidadeBotaoDeletarConjunto();
         }
 
         function atualizarBotoesFiltro() {
@@ -643,6 +646,19 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             }
         }
 
+        function atualizarVisibilidadeBotaoDeletarConjunto() {
+            const select = document.getElementById('ia-conjunto-select');
+            const btnDeletar = document.getElementById('btn-deletar-conjunto');
+            if (btnDeletar && select) {
+                const val = select.value;
+                if (val && val !== 'Geral' && val !== 'novo') {
+                    btnDeletar.style.display = 'inline-block';
+                } else {
+                    btnDeletar.style.display = 'none';
+                }
+            }
+        }
+
         function mudarConjuntoAssociacao() {
             toggleNovoConjuntoInput();
             const select = document.getElementById('ia-conjunto-select');
@@ -657,6 +673,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     label.style.color = "gray";
                 }
             }
+            atualizarVisibilidadeBotaoDeletarConjunto();
             aplicarFiltros();
         }
 
@@ -829,6 +846,116 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 console.error("Erro ao excluir termo:", error);
                 alert("Erro interno ao tentar excluir.");
             }
+        }
+
+        async function confirmarDeletarConjunto() {
+            const select = document.getElementById('ia-conjunto-select');
+            const conjunto = select.value;
+            if (!conjunto || conjunto === 'Geral' || conjunto === 'novo') return;
+
+            // Criar modal customizado dinamicamente
+            const modalDiv = document.createElement('div');
+            modalDiv.id = 'modal-deletar-conjunto';
+            modalDiv.style.position = 'fixed';
+            modalDiv.style.top = '0';
+            modalDiv.style.left = '0';
+            modalDiv.style.width = '100%';
+            modalDiv.style.height = '100%';
+            modalDiv.style.backgroundColor = 'rgba(0,0,0,0.6)';
+            modalDiv.style.display = 'flex';
+            modalDiv.style.justifyContent = 'center';
+            modalDiv.style.alignItems = 'center';
+            modalDiv.style.zIndex = '9999';
+            modalDiv.style.backdropFilter = 'blur(4px)';
+
+            modalDiv.innerHTML = `
+                <div style="background: var(--card-bg, white); color: var(--text-color, #333); padding: 30px; border-radius: var(--card-radius, 16px); max-width: 500px; width: 90%; box-shadow: var(--shadow-hover, 0 10px 25px rgba(0,0,0,0.2)); border: 1px solid var(--border-color, #ccc); font-family: 'Inter', sans-serif;">
+                    <h3 style="margin-top: 0; font-size: 1.4em; color: #e74c3c; display: flex; align-items: center; gap: 8px;">⚠️ Excluir Conjunto: "${conjunto}"</h3>
+                    <p style="font-size: 0.95em; line-height: 1.5; margin-bottom: 20px;">
+                        Escolha como deseja prosseguir com a exclusão deste conjunto de vocabulários:
+                    </p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
+                        <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                            <input type="radio" name="opcao-deletar" value="apenas_unico" checked style="margin-top: 4px; cursor: pointer;">
+                            <div>
+                                <strong style="font-size: 0.95em; display: block; color: var(--text-color);">Remover apenas termos exclusivos</strong>
+                                <span style="font-size: 0.85em; color: gray; display: block; margin-top: 2px;">
+                                    Deleta definitivamente do banco os cards que pertencem <strong>somente</strong> a este conjunto. Cards associados a outros conjuntos serão preservados, apenas perdendo a etiqueta de "${conjunto}".
+                                </span>
+                            </div>
+                        </label>
+                        
+                        <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02);">
+                            <input type="radio" name="opcao-deletar" value="todos_associados" style="margin-top: 4px; cursor: pointer;">
+                            <div>
+                                <strong style="font-size: 0.95em; display: block; color: #e74c3c;">Deletar todos os termos associados</strong>
+                                <span style="font-size: 0.85em; color: #c0392b; display: block; margin-top: 2px;">
+                                    Deleta permanentemente <strong>todos os cards</strong> associados a este conjunto, incluindo o progresso deles, mesmo se também estiverem vinculados a outros conjuntos.
+                                </span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                        <button id="btn-cancelar-del-conj" style="background-color: var(--secondary-color, #7f8c8d); padding: 10px 20px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s;">Cancelar</button>
+                        <button id="btn-confirmar-del-conj" style="background-color: #e74c3c; padding: 10px 20px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s;">Excluir</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modalDiv);
+
+            // Ações do Modal
+            const btnCancelar = modalDiv.querySelector('#btn-cancelar-del-conj');
+            const btnConfirmar = modalDiv.querySelector('#btn-confirmar-del-conj');
+
+            btnCancelar.onclick = () => {
+                document.body.removeChild(modalDiv);
+            };
+
+            btnConfirmar.onclick = async () => {
+                const modoExclusao = modalDiv.querySelector('input[name="opcao-deletar"]:checked').value;
+                btnConfirmar.disabled = true;
+                btnConfirmar.innerText = 'Excluindo...';
+                btnCancelar.disabled = true;
+
+                try {
+                    const response = await fetch('/api/jisho?acao=deletar_conjunto', {
+                        method: 'POST',
+                        headers: {
+                            "Authorization": tokenDeAcesso,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ conjunto, modoExclusao })
+                    });
+
+                    if (response.ok) {
+                        const res = await response.json();
+                        alert(`Conjunto deletado com sucesso!\n- Cards excluídos: ${res.deletados}\n- Cards atualizados (etiqueta removida): ${res.atualizados}`);
+                        document.body.removeChild(modalDiv);
+                        
+                        // Reseta a seleção e recarrega dados
+                        const selectEl = document.getElementById('ia-conjunto-select');
+                        selectEl.value = 'Geral';
+                        mudarConjuntoAssociacao();
+                        await carregarDados();
+                        aplicarFiltros();
+                    } else {
+                        const err = await response.json();
+                        alert("Erro ao excluir conjunto: " + (err.error || 'Erro desconhecido'));
+                        btnConfirmar.disabled = false;
+                        btnConfirmar.innerText = 'Excluir';
+                        btnCancelar.disabled = false;
+                    }
+                } catch (error) {
+                    console.error("Erro ao excluir conjunto:", error);
+                    alert("Erro interno ao tentar excluir conjunto.");
+                    btnConfirmar.disabled = false;
+                    btnConfirmar.innerText = 'Excluir';
+                    btnCancelar.disabled = false;
+                }
+            };
         }
 
         function mudarCategoria(cat) {
