@@ -337,7 +337,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             
             <div style="font-weight: bold; font-size: 1.1em; color: var(--text-color); display: flex; align-items: center; gap: 8px; justify-content: center; user-select: none;">
                 <span>📁</span>
-                <select id="ia-conjunto-select" onchange="mudarConjuntoAssociacao()" style="appearance: none; -webkit-appearance: none; background: transparent; border: 2px solid transparent; color: var(--text-color); font-weight: bold; font-size: 1em; cursor: pointer; outline: none; text-align: center; text-align-last: center; padding: 4px 8px; border-radius: 6px; transition: 0.2s;">
+                <select id="ia-conjunto-select" onchange="mudarConjuntoAssociacao()" style="background: var(--bg-color); border: 2px solid var(--border-color); color: var(--text-color); font-weight: bold; font-size: 1em; cursor: pointer; outline: none; text-align: center; text-align-last: center; padding: 6px 12px; border-radius: 8px; transition: 0.2s; min-width: 150px;">
                     <!-- Preenchido via JS -->
                 </select>
                 <span id="ia-nome-pasta-ativa" style="display: none;"></span>
@@ -728,7 +728,120 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             nomeInput.value = '';
         }
 
+        let modoAssociacaoAtivo = false;
         
+        function toggleModoAssociacao() {
+            const chk = document.getElementById('modo-associacao-chk');
+            const label = document.getElementById('modo-associacao-label');
+            modoAssociacaoAtivo = chk.checked;
+            
+            if (modoAssociacaoAtivo) {
+                label.textContent = "Modo Associação Ativo";
+                label.style.color = "#27ae60";
+                
+                const select = document.getElementById('ia-conjunto-select');
+                if (select.value === 'novo') {
+                    alert("Por favor, crie um conjunto primeiro ou selecione um existente para associar cards.");
+                    chk.checked = false;
+                    modoAssociacaoAtivo = false;
+                    label.textContent = "Modo Associação Desativado";
+                    label.style.color = "gray";
+                    return;
+                }
+            } else {
+                label.textContent = "Modo Associação Desativado";
+                label.style.color = "gray";
+            }
+            
+            renderizarPagina();
+        }
+
+        function mudarConjuntoAssociacao() {
+            const select = document.getElementById('ia-conjunto-select');
+            const conjuntoSelecionado = select.value;
+            
+            toggleNovoConjuntoInput();
+            atualizarVisibilidadeBotaoDeletarConjunto();
+            aplicarFiltros();
+            
+            if (modoAssociacaoAtivo) {
+                renderizarPagina();
+            }
+        }
+
+        function toggleNovoConjuntoInput() {
+            const select = document.getElementById('ia-conjunto-select');
+            const divNovo = document.getElementById('ia-novo-conjunto-div');
+            if (select && select.value === 'novo') {
+                divNovo.style.display = 'flex';
+            } else if (divNovo) {
+                divNovo.style.display = 'none';
+            }
+        }
+
+        function atualizarVisibilidadeBotaoDeletarConjunto() {
+            const select = document.getElementById('ia-conjunto-select');
+            const btn = document.getElementById('btn-deletar-conjunto');
+            if (!select || !btn) return;
+            
+            if (select.value !== 'Geral' && select.value !== 'novo') {
+                btn.style.display = 'inline-block';
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        async function gerenciarCliqueCard(elementoCard, termoObj, event) {
+            if (event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.tagName === 'SUMMARY' || event.target.tagName === 'DETAILS' || event.target.closest('details')) {
+                return;
+            }
+            
+            if (!modoAssociacaoAtivo) return;
+
+            const select = document.getElementById('ia-conjunto-select');
+            const conjuntoSelecionado = select.value;
+            
+            if (!conjuntoSelecionado || conjuntoSelecionado === 'novo' || conjuntoSelecionado === 'Geral') {
+                alert("Selecione um conjunto válido para associar.");
+                return;
+            }
+            
+            const notasLimpa = removerTagConjuntos(termoObj.notas || '');
+            let conjuntosDoTermo = extrairConjuntos(termoObj.notas || '', termoObj.item);
+            
+            const pertence = conjuntosDoTermo.includes(conjuntoSelecionado);
+            let novaNota = notasLimpa.trim();
+            
+            if (pertence) {
+                conjuntosDoTermo = conjuntosDoTermo.filter(c => c !== conjuntoSelecionado);
+            } else {
+                conjuntosDoTermo.push(conjuntoSelecionado);
+            }
+            
+            const tagsParaAdicionar = conjuntosDoTermo.filter(c => c !== 'Geral');
+            if (tagsParaAdicionar.length > 0) {
+                if (novaNota.length > 0) novaNota += '\n\n';
+                novaNota += `[Conjunto: ${tagsParaAdicionar.join(', ')}]`;
+            }
+            
+            try {
+                if (termoObj.id) {
+                    await window.supabaseClient.from('vocabulario').update({ notas: novaNota }).eq('id', termoObj.id);
+                }
+                
+                termoObj.notas = novaNota;
+                
+                const idx = dadosCombinados.findIndex(d => d.item === termoObj.item);
+                if (idx !== -1) {
+                    dadosCombinados[idx].notas = novaNota;
+                }
+                
+                renderizarPagina();
+            } catch (err) {
+                console.error("Erro ao associar card:", err);
+            }
+        }
+
         async function excluirTermoDoCard(id, item) {
             if (!confirm(`Tem certeza que deseja excluir o termo "${item}"?`)) {
                 return;
@@ -1067,6 +1180,12 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 
                 // Classes de estilo
                 let classes = 'card';
+                if (typeof modoAssociacaoAtivo !== 'undefined' && modoAssociacaoAtivo) {
+                    classes += ' associando';
+                    if (estaNoConjuntoSelecionado) {
+                        classes += ' no-conjunto';
+                    }
+                }
 
                 // Limpa as notas para exibição
                 const notasLimpa = removerTagConjuntos(d.notas || '');
@@ -1077,7 +1196,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 ).join(' ');
 
                 return `
-                    <div class="${classes}" style="position: relative;">
+                    <div class="${classes}" style="position: relative; cursor: pointer;" onclick="gerenciarCliqueCard(this, ${termoJson}, event)">
                         <button onclick="abrirModalConjuntosCard(${termoJson}, event)" style="position: absolute; top: 12px; right: 12px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: var(--shadow-subtle); transition: 0.2s;" title="Organizar Conjuntos" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗂️</button>
                         
                         <div style="display:flex; justify-content:center; align-items:center; margin-bottom: 15px; gap: 6px; flex-wrap: wrap;">
