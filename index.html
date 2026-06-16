@@ -1825,8 +1825,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             
                             if (aiResponse.ok) {
                                 const aiData = await aiResponse.json();
-                                if (aiData.candidates && aiData.candidates[0] && aiData.candidates[0].content) {
-                                    let aiText = aiData.candidates[0].content.parts[0].text.trim();
+                                if (aiData.reply) {
+                                    let aiText = aiData.reply.trim();
                                     aiText = aiText.replace(/^```(?:json)?|```$/gm, '').trim();
                                     
                                     try {
