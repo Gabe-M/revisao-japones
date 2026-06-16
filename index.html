@@ -143,7 +143,14 @@
             50% { transform: scale(1.04); box-shadow: 0 0 0 8px rgba(39, 174, 96, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(39, 174, 96, 0); }
         }
-    </style>
+    
+        #ia-conjunto-select:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        [data-theme="dark"] #ia-conjunto-select:hover {
+            background: rgba(255,255,255,0.05);
+        }
+</style>
 </head>
 <body>
 
@@ -180,32 +187,6 @@
             </div>
             
             <div style="padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
-    <!-- Painel de Organização de Conjuntos -->
-    <div class="panel-container" style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
-        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <span style="font-weight: bold; font-size: 1.1em; color: var(--text-color);">🗂️ Organizar em Conjuntos:</span>
-            
-            <select id="ia-conjunto-select" onchange="mudarConjuntoAssociacao()" style="padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none; transition: 0.2s;">
-                <!-- Preenchido via JS -->
-            </select>
-            
-            <button id="btn-deletar-conjunto" onclick="confirmarDeletarConjunto()" class="btn-action btn-danger" style="display: none;">Deletar Conjunto</button>
-            
-            <div id="ia-novo-conjunto-div" style="display: none; align-items: center; gap: 8px;">
-                <input type="text" id="ia-novo-conjunto-nome" placeholder="Novo conjunto..." style="padding: 10px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color); outline: none;">
-                <button onclick="criarNovoConjunto()" class="btn-action btn-primary">Criar</button>
-            </div>
-        </div>
-        
-        <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-color); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border-color);">
-            <span id="modo-associacao-label" style="font-weight: 600; color: gray; font-size: 0.9em;">Modo Associação Desativado</span>
-            <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 22px;">
-                <input type="checkbox" id="modo-associacao-chk" onchange="toggleModoAssociacao()" style="opacity: 0; width: 0; height: 0;">
-                <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 22px;"></span>
-            </label>
-        </div>
-    </div>
-
     <!-- Painel de Importação de Vocabulário via JSON -->
     <div class="panel-container" style="flex-direction: column; align-items: stretch; display: flex; gap: 10px; box-sizing: border-box;">
         <div class="panel-header" onclick="togglePainelImportacao()">
@@ -349,13 +330,40 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
     </div>
 
     <!-- Navegação rápida de Pastas/Conjuntos -->
-    <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin: 0 auto 20px; max-width: 1200px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box;">
-        <button onclick="navegarConjunto(-1)" style="background: var(--secondary-color); padding: 8px 16px; font-weight: bold; border-radius: 5px; cursor: pointer; user-select: none; color: white;" title="Pasta Anterior">◀ Anterior</button>
-        <div style="font-weight: bold; font-size: 1.1em; color: var(--text-color); display: flex; align-items: center; gap: 8px; min-width: 180px; justify-content: center; user-select: none;">
-            <span>📁</span>
-            <span id="ia-nome-pasta-ativa">Geral</span>
+    <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; margin: 0 auto 20px; max-width: 1200px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box;">
+        
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <button onclick="navegarConjunto(-1)" style="background: var(--secondary-color); padding: 8px 16px; font-weight: bold; border-radius: 5px; cursor: pointer; user-select: none; color: white;" title="Pasta Anterior">◀ Anterior</button>
+            
+            <div style="font-weight: bold; font-size: 1.1em; color: var(--text-color); display: flex; align-items: center; gap: 8px; justify-content: center; user-select: none;">
+                <span>📁</span>
+                <select id="ia-conjunto-select" onchange="mudarConjuntoAssociacao()" style="appearance: none; -webkit-appearance: none; background: transparent; border: 2px solid transparent; color: var(--text-color); font-weight: bold; font-size: 1em; cursor: pointer; outline: none; text-align: center; text-align-last: center; padding: 4px 8px; border-radius: 6px; transition: 0.2s;">
+                    <!-- Preenchido via JS -->
+                </select>
+                <span id="ia-nome-pasta-ativa" style="display: none;"></span>
+            </div>
+            
+            <button onclick="navegarConjunto(1)" style="background: var(--secondary-color); padding: 8px 16px; font-weight: bold; border-radius: 5px; cursor: pointer; user-select: none; color: white;" title="Próxima Pasta">Próxima ▶</button>
         </div>
-        <button onclick="navegarConjunto(1)" style="background: var(--secondary-color); padding: 8px 16px; font-weight: bold; border-radius: 5px; cursor: pointer; user-select: none; color: white;" title="Próxima Pasta">Próxima ▶</button>
+
+        <!-- Botoes de Deletar / Novo Conjunto -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="btn-deletar-conjunto" onclick="confirmarDeletarConjunto()" class="btn-action btn-danger" style="display: none; padding: 8px 14px;">Deletar Conjunto</button>
+            <div id="ia-novo-conjunto-div" style="display: none; align-items: center; gap: 8px;">
+                <input type="text" id="ia-novo-conjunto-nome" placeholder="Novo conjunto..." style="padding: 8px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color); outline: none;">
+                <button onclick="criarNovoConjunto()" class="btn-action btn-primary" style="padding: 8px 14px;">Criar</button>
+            </div>
+        </div>
+
+        <!-- Switch Modo Associação -->
+        <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-color); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-left: auto;">
+            <span id="modo-associacao-label" style="font-weight: 600; color: gray; font-size: 0.9em;">Modo Associação Desativado</span>
+            <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 22px;">
+                <input type="checkbox" id="modo-associacao-chk" onchange="toggleModoAssociacao()" style="opacity: 0; width: 0; height: 0;">
+                <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 22px;"></span>
+            </label>
+        </div>
+
     </div>
 
     <!-- Paginação Superior -->
