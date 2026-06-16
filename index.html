@@ -130,12 +130,6 @@
         .pagination button:disabled { background-color: var(--border-color); color: gray; cursor: not-allowed; opacity: 0.6; }
         .page-info { font-weight: bold; font-size: 1.1em; color: var(--text-color); }
         
-        /* NOVO: Estilos do Modo Associação */
-        .switch input:checked + .slider { background-color: #27ae60; }
-        .switch input:checked + .slider:before { transform: translateX(22px); }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        .card.associando { border: 2px solid #27ae60 !important; background-color: rgba(39, 174, 96, 0.05) !important; }
-        .card.no-conjunto { border: 2px solid var(--highlight-color) !important; background-color: rgba(230, 126, 34, 0.08) !important; }
         .card-conjunto-badge { background-color: var(--highlight-color); color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.85em; }
         .card.associado-sucesso { animation: pulse-green 0.6s ease-out; }
         @keyframes pulse-green {
@@ -355,14 +349,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             </div>
         </div>
 
-        <!-- Switch Modo Associação -->
-        <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-color); padding: 8px 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-left: auto;">
-            <span id="modo-associacao-label" style="font-weight: 600; color: gray; font-size: 0.9em;">Modo Associação Desativado</span>
-            <label class="switch" style="position: relative; display: inline-block; width: 44px; height: 22px;">
-                <input type="checkbox" id="modo-associacao-chk" onchange="toggleModoAssociacao()" style="opacity: 0; width: 0; height: 0;">
-                <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; border-radius: 22px;"></span>
-            </label>
-        </div>
+
 
     </div>
 
@@ -719,41 +706,9 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             
             const select = document.getElementById('ia-conjunto-select');
             select.value = nome;
-            
-            // Ativa o Modo Associação automaticamente
-            const chk = document.getElementById('modo-associacao-chk');
-            chk.checked = true;
-            toggleModoAssociacao();
+            mudarConjuntoAssociacao();
             
             nomeInput.value = '';
-        }
-
-        let modoAssociacaoAtivo = false;
-        
-        function toggleModoAssociacao() {
-            const chk = document.getElementById('modo-associacao-chk');
-            const label = document.getElementById('modo-associacao-label');
-            modoAssociacaoAtivo = chk.checked;
-            
-            if (modoAssociacaoAtivo) {
-                label.textContent = "Modo Associação Ativo";
-                label.style.color = "#27ae60";
-                
-                const select = document.getElementById('ia-conjunto-select');
-                if (select.value === 'novo') {
-                    alert("Por favor, crie um conjunto primeiro ou selecione um existente para associar cards.");
-                    chk.checked = false;
-                    modoAssociacaoAtivo = false;
-                    label.textContent = "Modo Associação Desativado";
-                    label.style.color = "gray";
-                    return;
-                }
-            } else {
-                label.textContent = "Modo Associação Desativado";
-                label.style.color = "gray";
-            }
-            
-            renderizarPagina();
         }
 
         function mudarConjuntoAssociacao() {
@@ -763,10 +718,6 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             toggleNovoConjuntoInput();
             atualizarVisibilidadeBotaoDeletarConjunto();
             aplicarFiltros();
-            
-            if (modoAssociacaoAtivo) {
-                renderizarPagina();
-            }
         }
 
         function toggleNovoConjuntoInput() {
@@ -791,56 +742,6 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             }
         }
 
-        async function gerenciarCliqueCard(elementoCard, termoObj, event) {
-            if (event.target.tagName === 'BUTTON' || event.target.closest('button') || event.target.tagName === 'SUMMARY' || event.target.tagName === 'DETAILS' || event.target.closest('details')) {
-                return;
-            }
-            
-            if (!modoAssociacaoAtivo) return;
-
-            const select = document.getElementById('ia-conjunto-select');
-            const conjuntoSelecionado = select.value;
-            
-            if (!conjuntoSelecionado || conjuntoSelecionado === 'novo' || conjuntoSelecionado === 'Geral') {
-                alert("Selecione um conjunto válido para associar.");
-                return;
-            }
-            
-            const notasLimpa = removerTagConjuntos(termoObj.notas || '');
-            let conjuntosDoTermo = extrairConjuntos(termoObj.notas || '', termoObj.item);
-            
-            const pertence = conjuntosDoTermo.includes(conjuntoSelecionado);
-            let novaNota = notasLimpa.trim();
-            
-            if (pertence) {
-                conjuntosDoTermo = conjuntosDoTermo.filter(c => c !== conjuntoSelecionado);
-            } else {
-                conjuntosDoTermo.push(conjuntoSelecionado);
-            }
-            
-            const tagsParaAdicionar = conjuntosDoTermo.filter(c => c !== 'Geral');
-            if (tagsParaAdicionar.length > 0) {
-                if (novaNota.length > 0) novaNota += '\n\n';
-                novaNota += `[Conjunto: ${tagsParaAdicionar.join(', ')}]`;
-            }
-            
-            try {
-                if (termoObj.id) {
-                    await window.supabaseClient.from('vocabulario').update({ notas: novaNota }).eq('id', termoObj.id);
-                }
-                
-                termoObj.notas = novaNota;
-                
-                const idx = dadosCombinados.findIndex(d => d.item === termoObj.item);
-                if (idx !== -1) {
-                    dadosCombinados[idx].notas = novaNota;
-                }
-                
-                renderizarPagina();
-            } catch (err) {
-                console.error("Erro ao associar card:", err);
-            }
-        }
 
         async function excluirTermoDoCard(id, item) {
             if (!confirm(`Tem certeza que deseja excluir o termo "${item}"?`)) {
@@ -1175,17 +1076,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 const termoJson = JSON.stringify(d).replace(/"/g, '&quot;');
                 const conjuntosDoTermo = extrairConjuntos(d.notas, d.item);
                 
-                // Determina se o card pertence ao conjunto ativo
-                const estaNoConjuntoSelecionado = conjuntoSelecionado && conjuntosDoTermo.includes(conjuntoSelecionado);
-                
                 // Classes de estilo
                 let classes = 'card';
-                if (typeof modoAssociacaoAtivo !== 'undefined' && modoAssociacaoAtivo) {
-                    classes += ' associando';
-                    if (estaNoConjuntoSelecionado) {
-                        classes += ' no-conjunto';
-                    }
-                }
 
                 // Limpa as notas para exibição
                 const notasLimpa = removerTagConjuntos(d.notas || '');
@@ -1196,7 +1088,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 ).join(' ');
 
                 return `
-                    <div class="${classes}" style="position: relative; cursor: pointer;" onclick="gerenciarCliqueCard(this, ${termoJson}, event)">
+                    <div class="${classes}" style="position: relative;">
                         <button onclick="abrirModalConjuntosCard(${termoJson}, event)" style="position: absolute; top: 12px; right: 12px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; box-shadow: var(--shadow-subtle); transition: 0.2s;" title="Organizar Conjuntos" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗂️</button>
                         
                         <div style="display:flex; justify-content:center; align-items:center; margin-bottom: 15px; gap: 6px; flex-wrap: wrap;">
@@ -1466,12 +1358,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     // Selecionar o conjunto importado
                     document.getElementById('ia-conjunto-select').value = conjuntoSelecionado;
                     
-                    // Desligar Modo Associação
-                    const chk = document.getElementById('modo-associacao-chk');
-                    chk.checked = false;
-                    modoAssociacaoAtivo = false;
-                    document.getElementById('modo-associacao-label').textContent = "Modo Associação Desativado";
-                    document.getElementById('modo-associacao-label').style.color = "gray";
+
                     
                     aplicarFiltros();
                     
@@ -1881,12 +1768,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 // Selecionar o conjunto importado
                 document.getElementById('ia-conjunto-select').value = conjuntoSelecionado;
 
-                // Desligar Modo Associação
-                const chk = document.getElementById('modo-associacao-chk');
-                chk.checked = false;
-                modoAssociacaoAtivo = false;
-                document.getElementById('modo-associacao-label').textContent = 'Modo Associação Desativado';
-                document.getElementById('modo-associacao-label').style.color = 'gray';
+
 
                 aplicarFiltros();
 
