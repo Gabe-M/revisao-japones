@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revisão de Japonês - Quiz Relâmpago</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f0f2f5; --text-color: #2c3e50; --card-bg: #ffffff;
+            --primary-color: #2c3e50; --secondary-color: #34495e;
+            --border-color: #e1e4e8; --highlight-color: #e67e22;
+            --green: #2ecc71; --red: #e74c3c;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        [data-theme="dark"] {
+            --bg-color: #121212; --text-color: #f0f0f0; --card-bg: #1e1e1e;
+            --primary-color: #2c3e50; --secondary-color: #4b6584;
+            --border-color: #333333; --highlight-color: #d35400;
+            --green: #27ae60; --red: #c0392b;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        body { font-family: 'Inter', 'Segoe UI', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; transition: background 0.3s, color 0.3s; }
+        
+        .header-container { display: flex; justify-content: space-between; align-items: center; max-width: 800px; margin: 0 auto 20px; }
+        .nav-menu { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .nav-menu a { padding: 10px 15px; text-decoration: none; background: var(--primary-color); color: white; border-radius: 8px; font-weight: 600; font-size: 0.9em; transition: 0.2s; }
+        .nav-menu a:hover { background: var(--secondary-color); }
+        .nav-menu a.ativo { background: var(--highlight-color); }
+
+        .container { max-width: 800px; margin: 0 auto; background: var(--card-bg); border-radius: 12px; padding: 30px; box-shadow: var(--shadow); }
+        
+        /* Setup Screen */
+        #setup-screen { display: flex; flex-direction: column; gap: 20px; text-align: center; }
+        .form-group { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+        select { padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); font-size: 1em; }
+        button.start-btn { padding: 15px 30px; font-size: 1.2em; font-weight: bold; background: var(--highlight-color); color: white; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        button.start-btn:hover { filter: brightness(1.1); transform: scale(1.02); }
+
+        /* Quiz Screen */
+        #quiz-screen { display: none; flex-direction: column; gap: 20px; }
+        .status-bar { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1em; color: var(--text-muted); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+        .streak { color: var(--highlight-color); }
+        .timer { font-family: monospace; font-size: 1.2em; }
+        
+        .question-box { text-align: center; padding: 40px 20px; border-radius: 12px; background: var(--bg-color); margin-bottom: 20px; min-height: 150px; display: flex; flex-direction: column; justify-content: center; }
+        .question-type { font-size: 0.9em; color: gray; margin-bottom: 10px; text-transform: uppercase; font-weight: bold; }
+        .question-text { font-size: 4em; font-weight: bold; font-family: 'Noto Sans JP', sans-serif; margin: 0; line-height: 1.2; }
+        .question-subtext { font-size: 1.2em; color: gray; margin-top: 10px; }
+
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 600px) { .options-grid { grid-template-columns: 1fr; } }
+        
+        .option-btn {
+            padding: 20px; font-size: 1.1em; font-weight: 600; cursor: pointer;
+            border: 2px solid var(--border-color); border-radius: 12px; background: var(--card-bg); color: var(--text-color);
+            transition: all 0.2s; text-align: center; font-family: inherit;
+        }
+        .option-btn:hover:not(:disabled) { border-color: var(--primary-color); background: var(--bg-color); transform: translateY(-2px); }
+        .option-btn.correct { background: var(--green); color: white; border-color: var(--green); }
+        .option-btn.wrong { background: var(--red); color: white; border-color: var(--red); }
+        .option-btn:disabled { cursor: not-allowed; opacity: 0.9; }
+
+        /* Results Screen */
+        #results-screen { display: none; flex-direction: column; gap: 20px; text-align: center; }
+        .score-display { font-size: 3em; font-weight: bold; color: var(--highlight-color); }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .stat-card { background: var(--bg-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .stat-card .value { font-size: 1.5em; font-weight: bold; margin-top: 5px; }
+        
+        .errors-list { text-align: left; margin-top: 30px; }
+        .errors-list ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+        .errors-list li { background: var(--bg-color); padding: 15px; border-radius: 8px; border-left: 4px solid var(--red); display: flex; flex-direction: column; }
+        .error-term { font-weight: bold; font-size: 1.2em; }
+        .error-answer { color: var(--red); font-size: 0.9em; margin-top: 5px; }
+        .correct-answer { color: var(--green); font-size: 0.9em; font-weight: bold; }
+
+        .btn-restart { padding: 12px 24px; font-size: 1em; font-weight: bold; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <script src="vocabulario.js"></script>
+    <script>
+        // CONTROLE DE LOGIN
+        const sessaoLocalStorage = localStorage.getItem('supabase_session');
+        if (!sessaoLocalStorage) window.location.href = "login.html";
+        const sessao = JSON.parse(sessaoLocalStorage);
+        const tokenDeAcesso = `Bearer ${sessao.access_token}`;
+    </script>
+
+    <div class="header-container">
+        <h1>⚡ Quiz Relâmpago</h1>
+        <button onclick="toggleTheme()" style="padding:8px 12px; cursor:pointer; background:var(--primary-color); color:white; border:none; border-radius:5px; font-weight:bold;">🌙 Tema</button>
+    </div>
+
+    <div class="nav-menu">
+        <a href="index.html">📚 Vocabulário & Kanji</a>
+        <a href="frases.html">💬 Frases Práticas</a>
+        <a href="minigame.html">🎮 Minigame</a>
+        <a href="quiz.html" class="ativo">⚡ Quiz</a>
+        <a href="textos.html">📄 Textos</a>
+        <a href="srs.html">🧠 SRS</a>
+        <a href="perfil.html">👤 Perfil</a>
+    </div>
+
+    <div class="container">
+        
+        <!-- Setup Screen -->
+        <div id="setup-screen">
+            <h2>Configuração do Quiz</h2>
+            <p>Selecione um conjunto e a quantidade de perguntas para iniciar o treino rápido.</p>
+            
+            <div class="form-group">
+                <label>Conjunto de Estudo:</label>
+                <select id="select-conjunto">
+                    <option value="todos">Todos os termos</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Quantidade de Perguntas:</label>
+                <select id="select-quantidade">
+                    <option value="10">10 perguntas</option>
+                    <option value="20">20 perguntas</option>
+                    <option value="30">30 perguntas</option>
+                    <option value="50">50 perguntas</option>
+                    <option value="all">Todas possíveis</option>
+                </select>
+            </div>
+            
+            <button class="start-btn" onclick="iniciarQuiz()">Iniciar Quiz ➔</button>
+            <div id="loading-msg" style="display:none; color: gray; margin-top: 10px;">Carregando dados...</div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen">
+            <div class="status-bar">
+                <span>Pergunta: <span id="question-counter">1/10</span></span>
+                <span class="streak">🔥 Streak: <span id="streak-counter">0</span></span>
+                <span class="timer">⏱️ <span id="timer-display">00:00</span></span>
+            </div>
+
+            <div class="question-box">
+                <div class="question-type" id="question-type-label">Japonês → Significado</div>
+                <div class="question-text" id="question-main">...</div>
+                <div class="question-subtext" id="question-sub">...</div>
+            </div>
+
+            <div class="options-grid" id="options-container">
+                <!-- Botões gerados via JS -->
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen">
+            <h2>Quiz Concluído! 🎉</h2>
+            <div class="score-display"><span id="final-score">0</span>%</div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div>Acertos</div>
+                    <div class="value" style="color:var(--green);" id="stat-correct">0</div>
+                </div>
+                <div class="stat-card">
+                    <div>Erros</div>
+                    <div class="value" style="color:var(--red);" id="stat-wrong">0</div>
+                </div>
+                <div class="stat-card">
+                    <div>Maior Streak 🔥</div>
+                    <div class="value" id="stat-streak">0</div>
+                </div>
+                <div class="stat-card">
+                    <div>Tempo Total ⏱️</div>
+                    <div class="value" id="stat-time">00:00</div>
+                </div>
+            </div>
+
+            <div class="errors-list" id="errors-container" style="display:none;">
+                <h3>Revisão Rápida (Erros):</h3>
+                <ul id="errors-list-ul"></ul>
+            </div>
+
+            <button class="btn-restart" onclick="voltarParaSetup()">Novo Quiz ↺</button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Tema ---
+        if (localStorage.getItem('tema') === 'dark') document.body.setAttribute('data-theme', 'dark');
+        function toggleTheme() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            document.body.toggleAttribute('data-theme', !isDark);
+            localStorage.setItem('tema', isDark ? 'light' : 'dark');
+        }
+
+        // --- Estado do Quiz ---
+        let baseDeDados = [];
+        let conjuntoSelecionado = [];
+        let perguntas = [];
+        let perguntaAtualIndex = 0;
+        
+        let stats = { correct: 0, wrong: 0, streak: 0, maxStreak: 0 };
+        let errosCometidos = [];
+        
+        let timerInterval;
+        let segundosDecorridos = 0;
+        let respondido = false;
+
+        // --- Inicialização e Fetch de Dados ---
+        window.addEventListener('DOMContentLoaded', carregarDadosIniciais);
+
+        async function carregarDadosIniciais() {
+            try {
+                document.getElementById('loading-msg').style.display = 'block';
+                const response = await fetch('/api/jisho?acao=listar', {
+                    headers: { "Authorization": tokenDeAcesso, "Cache-Control": "no-cache", "Pragma": "no-cache" }
+                });
+                const resultado = await response.json();
+                
+                if (resultado && resultado.code === "PGRST303") {
+                    window.location.href = "login.html"; return;
+                }
+
+                if (Array.isArray(resultado)) {
+                    const itensExistentes = new Set(dadosRevisao.map(d => d.item));
+                    const dbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto');
+                    dadosRevisao.push(...dbFiltrados);
+                }
+            } catch (e) {
+                console.error("Erro na API, usando base local.", e);
+            }
+            
+            baseDeDados = dadosRevisao.filter(d => d.categoria !== 'Texto');
+            document.getElementById('loading-msg').style.display = 'none';
+            popularConjuntos();
+        }
+
+        function popularConjuntos() {
+            const select = document.getElementById('select-conjunto');
+            const conjuntosUnicos = new Set();
+            
+            baseDeDados.forEach(card => {
+                if(card.notas) {
+                    const matches = card.notas.match(/\[Conjuntos:\s*(.*?)\]/);
+                    if(matches && matches[1]) {
+                        matches[1].split(',').map(c => c.trim()).filter(c => c).forEach(c => conjuntosUnicos.add(c));
+                    }
+                }
+            });
+
+            Array.from(conjuntosUnicos).sort().forEach(conj => {
+                const opt = document.createElement('option');
+                opt.value = conj;
+                opt.textContent = conj;
+                select.appendChild(opt);
+            });
+        }
+
+        // --- Setup do Quiz ---
+        function iniciarQuiz() {
+            const conjuntoNome = document.getElementById('select-conjunto').value;
+            const qtd = document.getElementById('select-quantidade').value;
+            
+            // Filtrar conjunto
+            if (conjuntoNome === 'todos') {
+                conjuntoSelecionado = [...baseDeDados];
+            } else {
+                conjuntoSelecionado = baseDeDados.filter(c => {
+                    if(!c.notas) return false;
+                    return c.notas.includes(`[Conjuntos:`) && c.notas.includes(conjuntoNome);
+                });
+            }
+
+            if(conjuntoSelecionado.length < 4) {
+                alert("O conjunto selecionado precisa ter pelo menos 4 itens para gerar as opções!");
+                return;
+            }
+
+            // Embaralhar e limitar
+            shuffleArray(conjuntoSelecionado);
+            const numPerguntas = qtd === 'all' ? conjuntoSelecionado.length : Math.min(parseInt(qtd), conjuntoSelecionado.length);
+            
+            perguntas = conjuntoSelecionado.slice(0, numPerguntas).map(gerarPergunta);
+            
+            perguntaAtualIndex = 0;
+            stats = { correct: 0, wrong: 0, streak: 0, maxStreak: 0 };
+            errosCometidos = [];
+            segundosDecorridos = 0;
+            
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('quiz-screen').style.display = 'flex';
+            
+            iniciarTimer();
+            renderizarPergunta();
+        }
+
+        // --- Geração de Perguntas ---
+        function gerarPergunta(termoCorreto) {
+            // Escolher o tipo da pergunta (0: JP->PT, 1: PT->JP, 2: Leitura->PT)
+            const tipo = Math.floor(Math.random() * 3);
+            let pType = "", mainTxt = "", subTxt = "", correctAns = "";
+
+            if (tipo === 0) {
+                pType = "Japonês → Significado";
+                mainTxt = termoCorreto.item;
+                subTxt = termoCorreto.leitura || "";
+                correctAns = termoCorreto.significado;
+            } else if (tipo === 1) {
+                pType = "Significado → Japonês";
+                mainTxt = termoCorreto.significado;
+                subTxt = "";
+                correctAns = termoCorreto.item;
+            } else {
+                pType = "Leitura → Significado";
+                mainTxt = termoCorreto.leitura || termoCorreto.item;
+                subTxt = termoCorreto.item;
+                correctAns = termoCorreto.significado;
+            }
+
+            // Gerar 3 distratores
+            let pool = conjuntoSelecionado.filter(t => t.item !== termoCorreto.item);
+            shuffleArray(pool);
+            
+            let options = [correctAns];
+            for(let i = 0; i < 3 && i < pool.length; i++) {
+                if(tipo === 1) options.push(pool[i].item);
+                else options.push(pool[i].significado);
+            }
+            shuffleArray(options);
+
+            return {
+                tipoLabel: pType,
+                main: mainTxt,
+                sub: subTxt,
+                correta: correctAns,
+                opcoes: options,
+                termoOriginal: termoCorreto
+            };
+        }
+
+        // --- Renderização e Lógica ---
+        function renderizarPergunta() {
+            respondido = false;
+            const q = perguntas[perguntaAtualIndex];
+            
+            document.getElementById('question-counter').textContent = `${perguntaAtualIndex + 1}/${perguntas.length}`;
+            document.getElementById('streak-counter').textContent = stats.streak;
+            
+            document.getElementById('question-type-label').textContent = q.tipoLabel;
+            
+            const mainEl = document.getElementById('question-main');
+            mainEl.textContent = q.main;
+            // Ajustar tamanho fonte
+            if(q.main.length > 15) mainEl.style.fontSize = '2.5em';
+            else if(q.main.length > 8) mainEl.style.fontSize = '3em';
+            else mainEl.style.fontSize = '4em';
+
+            document.getElementById('question-sub').textContent = q.sub;
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            q.opcoes.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => verificarResposta(btn, opt, q.correta, q.termoOriginal);
+                container.appendChild(btn);
+            });
+        }
+
+        function verificarResposta(btnClicado, respostaEscolhida, respostaCorreta, termoOriginal) {
+            if (respondido) return;
+            respondido = true;
+            
+            const botoes = document.querySelectorAll('.option-btn');
+            botoes.forEach(b => b.disabled = true);
+
+            if (respostaEscolhida === respostaCorreta) {
+                // Acerto
+                btnClicado.classList.add('correct');
+                stats.correct++;
+                stats.streak++;
+                if (stats.streak > stats.maxStreak) stats.maxStreak = stats.streak;
+            } else {
+                // Erro
+                btnClicado.classList.add('wrong');
+                stats.wrong++;
+                stats.streak = 0;
+                errosCometidos.push({
+                    termo: termoOriginal.item,
+                    leitura: termoOriginal.leitura,
+                    significado: termoOriginal.significado,
+                    escolhido: respostaEscolhida
+                });
+                
+                // Mostrar a correta
+                botoes.forEach(b => {
+                    if (b.textContent === respostaCorreta) b.classList.add('correct');
+                });
+            }
+            
+            document.getElementById('streak-counter').textContent = stats.streak;
+
+            setTimeout(() => {
+                perguntaAtualIndex++;
+                if (perguntaAtualIndex < perguntas.length) {
+                    renderizarPergunta();
+                } else {
+                    finalizarQuiz();
+                }
+            }, 1200); // Pausa pra ver o feedback
+        }
+
+        // --- Timer e Resultado Final ---
+        function iniciarTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                segundosDecorridos++;
+                const mins = Math.floor(segundosDecorridos / 60).toString().padStart(2, '0');
+                const secs = (segundosDecorridos % 60).toString().padStart(2, '0');
+                document.getElementById('timer-display').textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function finalizarQuiz() {
+            clearInterval(timerInterval);
+            document.getElementById('quiz-screen').style.display = 'none';
+            document.getElementById('results-screen').style.display = 'flex';
+
+            const pct = Math.round((stats.correct / perguntas.length) * 100);
+            document.getElementById('final-score').textContent = pct;
+            
+            document.getElementById('stat-correct').textContent = stats.correct;
+            document.getElementById('stat-wrong').textContent = stats.wrong;
+            document.getElementById('stat-streak').textContent = stats.maxStreak;
+            
+            const mins = Math.floor(segundosDecorridos / 60).toString().padStart(2, '0');
+            const secs = (segundosDecorridos % 60).toString().padStart(2, '0');
+            document.getElementById('stat-time').textContent = `${mins}:${secs}`;
+
+            const errContainer = document.getElementById('errors-container');
+            const ul = document.getElementById('errors-list-ul');
+            ul.innerHTML = '';
+            
+            if (errosCometidos.length > 0) {
+                errContainer.style.display = 'block';
+                errosCometidos.forEach(e => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <div class="error-term">${e.termo} <span style="font-weight:normal; font-size:0.8em; color:gray;">${e.leitura}</span></div>
+                        <div class="error-answer">Você escolheu: ${e.escolhido}</div>
+                        <div class="correct-answer">Correto: ${e.significado}</div>
+                    `;
+                    ul.appendChild(li);
+                });
+            } else {
+                errContainer.style.display = 'none';
+            }
+        }
+
+        function voltarParaSetup() {
+            document.getElementById('results-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'flex';
+        }
+
+        // Utils
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+    </script>
+</body>
+</html>
