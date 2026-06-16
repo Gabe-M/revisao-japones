@@ -246,7 +246,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <input type="file" id="ia-import-file-input" accept=".json" onchange="atualizarNomeArquivoImport(this)" style="display: none;">
-                    <button onclick="document.getElementById('ia-import-file-input').click()" class="btn-action">📁 Escolher Arquivo</button>
+                    <label for="ia-import-file-input" class="btn-action" style="user-select: none;">📁 Escolher Arquivo</label>
                     <span id="ia-import-file-name" style="font-size: 0.9em; color: gray; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;">Nenhum arquivo</span>
                     
                     <button onclick="processarImportacaoJSON()" id="ia-btn-confirmar-import" class="btn-action btn-success">📤 Importar JSON</button>
@@ -286,7 +286,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <input type="file" id="ia-anki-file-input" accept=".txt" onchange="previewAnki(this)" style="display: none;">
-                    <button onclick="document.getElementById('ia-anki-file-input').click()" class="btn-action">📁 Escolher Arquivo .txt</button>
+                    <label for="ia-anki-file-input" class="btn-action" style="user-select: none;">📁 Escolher Arquivo .txt</label>
                     <span id="ia-anki-file-name" style="font-size: 0.9em; color: gray; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;">Nenhum arquivo</span>
                     
                     <button onclick="processarImportacaoAnki()" id="ia-btn-confirmar-anki" class="btn-action btn-success">📥 Importar Anki</button>
