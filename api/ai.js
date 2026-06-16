@@ -32,12 +32,12 @@ export default async function handler(req, res) {
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
         const messages = body.messages || [];
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'A lista de mensagens está vazia.' });
-        }
+        // Limita o histórico às últimas 10 mensagens para economizar tokens
+        const maxHistory = 10;
+        const messagesToProcess = messages.slice(-maxHistory);
 
         // Converte o histórico no formato Gemini para OpenAI
-        const openAIMessages = messages.map(msg => {
+        const openAIMessages = messagesToProcess.map(msg => {
             const role = msg.role === 'model' ? 'assistant' : msg.role;
             let content = '';
             if (msg.parts && msg.parts[0]) {
@@ -51,7 +51,8 @@ export default async function handler(req, res) {
         let payload = {
             model: 'gpt-4o-mini',
             messages: [],
-            temperature: 0.7
+            temperature: 0.7,
+            max_completion_tokens: 400 // Economia de tokens de saída
         };
 
         if (body.mode === 'json') {

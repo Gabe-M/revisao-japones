@@ -55,7 +55,8 @@ Termos para classificar: ${JSON.stringify(termos)}`;
                 { role: 'user', content: prompt }
             ],
             temperature: 0.1,
-            response_format: { type: "json_object" }
+            response_format: { type: "json_object" },
+            max_completion_tokens: 600 // Economia de tokens de saída
         };
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
