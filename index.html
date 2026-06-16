@@ -1617,12 +1617,18 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             nameLabel.style.color = 'var(--text-color)';
 
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const linhas = e.target.result.split('\n');
                     const termosValidos = [];
 
-                    for (const linha of linhas) {
+                    for (let i = 0; i < linhas.length; i++) {
+                        // Ceder controle para o navegador a cada 100 linhas para evitar INP elevado
+                        if (i > 0 && i % 100 === 0) {
+                            await new Promise(resolve => setTimeout(resolve, 0));
+                        }
+
+                        const linha = linhas[i];
                         const trimmed = linha.trim();
                         // Ignorar linhas de metadados (#) e linhas vazias
                         if (!trimmed || trimmed.startsWith('#')) continue;
@@ -1649,6 +1655,11 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             const val = (colunas[idx] || '').trim();
                             if (!val) continue;
 
+                            // Ignora mídias e arquivos de som logo no começo para evitar regex pesadas
+                            if (val.includes('[sound:') || val.includes('.mp3') || val.includes('.png') || val.includes('.jpg') || val.includes('.jpeg')) {
+                                continue;
+                            }
+
                             const jlptMatch = val.match(/\bN[1-5]\b/i) || val.match(/jlpt[ -]*n[1-5]/i);
                             if (jlptMatch) {
                                 jlptDetectado = jlptMatch[0].toUpperCase().match(/N[1-5]/)[0];
@@ -1662,13 +1673,10 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             } else if (hasJapanese) {
                                 fraseExemplo = val;
                             } else {
-                                // Ignorar áudios e arquivos de mídia padronizados
-                                if (!val.includes('[sound:') && !val.includes('.mp3')) {
-                                    if (!traducaoFrase) {
-                                        traducaoFrase = val;
-                                    } else {
-                                        notasGramaticais = val;
-                                    }
+                                if (!traducaoFrase) {
+                                    traducaoFrase = val;
+                                } else {
+                                    notasGramaticais = val;
                                 }
                             }
                         }
