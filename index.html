@@ -1642,11 +1642,17 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                         let furiganaFrase = '';
                         let traducaoFrase = '';
                         let notasGramaticais = '';
+                        let jlptDetectado = null;
 
                         // Analisa as colunas a partir do índice 6
                         for (let idx = 6; idx < colunas.length; idx++) {
                             const val = (colunas[idx] || '').trim();
                             if (!val) continue;
+
+                            const jlptMatch = val.match(/\bN[1-5]\b/i) || val.match(/jlpt[ -]*n[1-5]/i);
+                            if (jlptMatch) {
+                                jlptDetectado = jlptMatch[0].toUpperCase().match(/N[1-5]/)[0];
+                            }
 
                             const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(val);
                             const hasFurigana = hasJapanese && /\[[^\]]+\]/.test(val);
@@ -1677,7 +1683,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             fraseExemplo,
                             furiganaFrase,
                             traducaoFrase,
-                            notasGramaticais
+                            notasGramaticais,
+                            jlpt: jlptDetectado
                         });
                     }
 
@@ -1701,14 +1708,15 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                         .join(' ');
 
                     // Mostrar os primeiros 10 termos como preview
-                    const previewTermos = termosValidos.slice(0, 10).map(t =>
-                        `<div style="display: flex; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--border-color); align-items: center;">
+                    const previewTermos = termosValidos.slice(0, 10).map(t => {
+                        const jlptBadge = t.jlpt ? `<span style="background: var(--text-color); color: var(--bg-color); padding: 2px 4px; border-radius: 4px; font-size: 0.7em; margin-right: 5px;">${t.jlpt}</span>` : '';
+                        return `<div style="display: flex; gap: 10px; padding: 4px 0; border-bottom: 1px solid var(--border-color); align-items: center;">
                             <span style="font-family: 'Noto Sans JP', sans-serif; font-weight: 700; min-width: 80px;">${t.item}</span>
                             <span style="color: gray; min-width: 80px;">${t.leitura}</span>
-                            <span style="flex: 1;">${t.significado}</span>
+                            <span style="flex: 1;">${jlptBadge}${t.significado}</span>
                             <span style="background: rgba(52,73,94,0.1); color: var(--secondary-color); padding: 2px 6px; border-radius: 6px; font-size: 0.8em; font-weight: 600;">${t.categoria}</span>
-                        </div>`
-                    ).join('');
+                        </div>`;
+                    }).join('');
 
                     const maisTexto = termosValidos.length > 10 ? `<div style="text-align: center; padding: 8px; color: gray; font-style: italic;">... e mais ${termosValidos.length - 10} termos</div>` : '';
 

@@ -507,7 +507,8 @@
             <div class="card-3d" id="card-3d">
                 <!-- FRENTE -->
                 <div class="card-face front">
-                    <span class="card-badge" id="card-categoria-f">Categoria</span>
+                    <span class="card-badge" id="card-categoria-f" style="display:inline-block;">Categoria</span>
+                    <span class="card-badge" id="card-jlpt-f" style="display:none; margin-left:5px; background-color: var(--accent); color: white;">N?</span>
                     <span class="card-status-badge new" id="card-status">Novo</span>
                     <p class="card-termo" id="card-termo">?</p>
                     <span class="card-hint">Clique para revelar →</span>
@@ -896,6 +897,23 @@
             cardEl.classList.remove('flipped');
 
             document.getElementById('card-categoria-f').textContent = termoAtual.categoria || '';
+            const jlptBadge = document.getElementById('card-jlpt-f');
+            if (termoAtual.jlpt) {
+                jlptBadge.textContent = termoAtual.jlpt;
+                jlptBadge.style.display = 'inline-block';
+                
+                // Cores do JLPT
+                let color = 'var(--accent)';
+                if (termoAtual.jlpt === 'N5') color = '#27ae60';
+                else if (termoAtual.jlpt === 'N4') color = '#2980b9';
+                else if (termoAtual.jlpt === 'N3') color = '#f39c12';
+                else if (termoAtual.jlpt === 'N2') color = '#e67e22';
+                else if (termoAtual.jlpt === 'N1') color = '#c0392b';
+                jlptBadge.style.backgroundColor = color;
+            } else {
+                jlptBadge.style.display = 'none';
+            }
+
             const statusEl = document.getElementById('card-status');
             statusEl.textContent = statusLabel;
             statusEl.className = `card-status-badge ${statusClass}`;
