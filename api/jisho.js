@@ -41,7 +41,7 @@ export default async function handler(req, res) {
                     "apikey": SUPABASE_KEY,
                     "Authorization": tokenUsuario, // Usa a identidade real do usuário para o RLS
                     "Content-Type": "application/json",
-                    "Prefer": "return=representation"
+                    "Prefer": "resolution=merge-duplicates,return=representation"
                 },
                 cache: 'no-store',
                 body: JSON.stringify(corpo)
