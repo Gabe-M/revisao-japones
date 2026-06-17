@@ -54,20 +54,37 @@ export default async function handler(req, res) {
       synced_at:   new Date().toISOString(),
     }));
 
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/anki_cards?on_conflict=user_id,note_id`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: tokenUsuario,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates,return=representation',
-      },
-      body: JSON.stringify(payload),
-    });
+    // Envia em lotes de 200 para evitar limite de tamanho de payload no PostgREST
+    const BATCH_SIZE = 200;
+    let sincronizados = 0;
+    let lastResult = null;
 
-    const resultado = await response.json();
-    if (!response.ok) return res.status(response.status).json({ error: resultado });
-    return res.status(200).json({ sincronizados: payload.length, resultado });
+    for (let i = 0; i < payload.length; i += BATCH_SIZE) {
+      const lote = payload.slice(i, i + BATCH_SIZE);
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/anki_cards?on_conflict=user_id,note_id`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: tokenUsuario,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(lote),
+      });
+
+      const resultado = await response.json();
+      if (!response.ok) {
+        return res.status(response.status).json({ 
+          error: 'Falha no lote', 
+          detalhes: resultado,
+          index: i
+        });
+      }
+      sincronizados += lote.length;
+      lastResult = resultado;
+    }
+
+    return res.status(200).json({ sincronizados, resultado: lastResult });
   }
 
   // AÇÃO: Listar cartões já sincronizados

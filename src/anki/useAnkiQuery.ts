@@ -50,7 +50,16 @@ export function useSyncToSupabase() {
         },
         body: JSON.stringify(payload.cards),
       });
-      if (!response.ok) throw new Error(`Sync falhou: ${response.status}`);
+      if (!response.ok) {
+        let errDetails = '';
+        try {
+          const errData = await response.json();
+          errDetails = errData.detalhes ? JSON.stringify(errData.detalhes) : (errData.error || response.statusText);
+        } catch {
+          errDetails = response.statusText;
+        }
+        throw new Error(`Sync falhou (${response.status}): ${errDetails}`);
+      }
       return response.json();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['anki'] }),
