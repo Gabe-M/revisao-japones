@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Cloud, Download, RefreshCw, Layers, CheckCircle2, Circle } from 'lucide-react';
 import {
   useAnkiConnection,
   useAnkiDecks,
@@ -11,6 +13,7 @@ import './anki/anki.css';
 export default function AnkiApp() {
   const queryClient = useQueryClient();
   const [selectedDeck, setSelectedDeck] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'learned' | 'new'>('learned');
 
   const { data: conn, isFetching: isCheckingConn, refetch: checkConn } = useAnkiConnection();
   const isConnected = conn?.connected;
@@ -18,10 +21,7 @@ export default function AnkiApp() {
   const { data: cardsData, isFetching: isFetchingCards, refetch: fetchCards } = useAnkiCards(selectedDeck || null);
   const syncMutation = useSyncToSupabase();
 
-  const handleFetchCards = () => {
-    if (!selectedDeck) return;
-    fetchCards();
-  };
+  const handleFetchCards = () => { if (selectedDeck) fetchCards(); };
 
   const handleSync = async () => {
     if (!cardsData) return;
@@ -45,215 +45,170 @@ export default function AnkiApp() {
     }
   };
 
+  const displayCards = activeTab === 'learned' ? cardsData?.learned : cardsData?.newCards;
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1f2335] via-[#0f111a] to-[#0a0b10] text-[#e8eaf0] p-4 md:p-8 font-sans selection:bg-[#6c63ff]/30">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-[#09090b] text-[#fafafa] font-sans selection:bg-indigo-500/30 overflow-hidden relative">
+      {/* Soft glowing ambient background elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none" />
+      
+      <div className="max-w-5xl mx-auto p-6 md:p-12 relative z-10 flex flex-col h-screen">
         
-        {/* Header - Glassmorphism */}
-        <header className="relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 shadow-2xl">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#6c63ff] via-[#3b82f6] to-[#22c55e]"></div>
-          <div className="mb-4 md:mb-0">
-            <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 flex items-center gap-3">
-              <span className="text-4xl drop-shadow-[0_0_15px_rgba(108,99,255,0.5)]">🎴</span> 
-              AnkiConnect Sync
-            </h1>
-            <p className="text-[#a0a5b1] text-sm mt-2 font-medium">Extraia seu progresso local e sincronize com a nuvem Kaishi.</p>
+        {/* Top Navigation / Status */}
+        <header className="flex justify-between items-center mb-12">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <Layers className="text-white" size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Anki Connect</h1>
+              <p className="text-zinc-500 text-sm font-medium">Integração de Progresso Kaishi</p>
+            </div>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-4">
+
+          <div className="flex items-center gap-3">
             <button
               onClick={() => checkConn()}
-              disabled={isCheckingConn}
-              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-semibold transition-all hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] active:scale-95"
+              className="p-3 rounded-full hover:bg-zinc-800/50 text-zinc-400 hover:text-zinc-100 transition-colors"
             >
-              {isCheckingConn ? 'Verificando...' : '🔄 Atualizar'}
+              <RefreshCw size={20} className={isCheckingConn ? 'animate-spin' : ''} />
             </button>
-            <div className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-3 shadow-lg ${isConnected ? 'bg-[#22c55e]/10 text-[#4ade80] border border-[#22c55e]/20' : 'bg-[#ef4444]/10 text-[#f87171] border border-[#ef4444]/20'}`}>
-              <div className="relative flex h-3 w-3">
-                {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4ade80] opacity-75"></span>}
-                <span className={`relative inline-flex rounded-full h-3 w-3 ${isConnected ? 'bg-[#22c55e]' : 'bg-[#ef4444]'}`}></span>
+            <div className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 ${isConnected ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+              <div className="relative flex h-2 w-2">
+                {isConnected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
               </div>
-              {isConnected ? `Online (v${conn?.version})` : 'Offline'}
+              {isConnected ? 'Online' : 'Offline'}
             </div>
           </div>
         </header>
 
-        {/* Status Error */}
-        {!isConnected && !isCheckingConn && (
-          <div className="bg-red-500/10 border border-red-500/20 p-5 rounded-2xl text-red-400 flex items-start gap-4 animate-pulse">
-            <span className="text-2xl">⚠️</span>
-            <div>
-              <p className="font-bold text-lg">Falha na conexão com o AnkiConnect</p>
-              <p className="text-sm mt-1 opacity-80">Abra o Anki Desktop, vá em Ferramentas &gt; Complementos &gt; AnkiConnect &gt; Config e certifique-se de que <code className="bg-black/30 px-1.5 py-0.5 rounded text-red-300">http://localhost:5173</code> está na lista <code className="bg-black/30 px-1.5 py-0.5 rounded text-red-300">webCorsOriginList</code>.</p>
-            </div>
-          </div>
-        )}
-
-        {/* Main Controls Panel */}
+        {/* Action Center - Soft pill shape */}
         {isConnected && (
-          <div className="bg-white/[0.03] backdrop-blur-md p-6 md:p-8 rounded-2xl border border-white/5 shadow-2xl relative overflow-hidden">
-            {/* Decoration */}
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#6c63ff] rounded-full blur-[100px] opacity-20"></div>
-            
-            <div className="flex flex-col md:flex-row gap-6 items-end relative z-10">
-              <div className="flex-1 w-full">
-                <label className="block text-xs font-bold text-[#8b92a5] mb-3 uppercase tracking-widest">
-                  📚 Selecione o Baralho de Origem
-                </label>
-                <div className="relative">
-                  <select
-                    className="w-full appearance-none bg-black/40 border border-white/10 text-white rounded-xl pl-5 pr-12 py-4 focus:outline-none focus:border-[#6c63ff] focus:ring-1 focus:ring-[#6c63ff] transition-all text-lg font-medium cursor-pointer"
-                    value={selectedDeck}
-                    onChange={(e) => setSelectedDeck(e.target.value)}
-                    disabled={isLoadingDecks}
-                  >
-                    <option value="" disabled>-- Escolha um baralho --</option>
-                    {decks?.map((deck) => (
-                      <option key={deck} value={deck}>{deck}</option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-5 flex items-center pointer-events-none text-gray-400">
-                    ▼
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleFetchCards}
-                disabled={!selectedDeck || isFetchingCards}
-                className="w-full md:w-auto px-10 py-4 bg-gradient-to-r from-[#6c63ff] to-[#4b45bd] hover:from-[#5a52d5] hover:to-[#3e399c] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-lg transition-all shadow-[0_0_20px_rgba(108,99,255,0.4)] hover:shadow-[0_0_30px_rgba(108,99,255,0.6)] active:scale-95 flex items-center justify-center gap-3"
+          <div className="flex flex-col md:flex-row gap-4 items-center bg-zinc-900/50 p-3 rounded-[2.5rem] backdrop-blur-md shadow-xl mb-12 border border-white/5">
+            <div className="flex-1 w-full relative">
+              <select
+                className="w-full appearance-none bg-transparent text-zinc-200 pl-6 pr-12 py-4 focus:outline-none text-lg font-medium cursor-pointer rounded-full"
+                value={selectedDeck}
+                onChange={(e) => setSelectedDeck(e.target.value)}
+                disabled={isLoadingDecks}
               >
-                {isFetchingCards ? (
-                  <><span className="animate-spin text-xl">⏳</span> Buscando...</>
-                ) : (
-                  <><span className="text-xl">📥</span> Buscar Cartões</>
-                )}
-              </button>
-            </div>
-
-            {/* Sync Summary Section */}
-            {cardsData && (
-              <div className="mt-8 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                    <div className="text-3xl font-black text-white">{cardsData.learned.length + cardsData.newCards.length}</div>
-                    <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Total de Cartões</div>
-                  </div>
-                </div>
-                <button
-                  onClick={handleSync}
-                  disabled={syncMutation.isPending}
-                  className="w-full md:w-auto px-8 py-4 bg-gradient-to-r from-[#22c55e] to-[#16a34a] hover:from-[#16a34a] hover:to-[#15803d] disabled:opacity-50 text-white rounded-xl font-black text-lg transition-all shadow-[0_0_25px_rgba(34,197,94,0.4)] hover:shadow-[0_0_40px_rgba(34,197,94,0.6)] active:scale-95 flex items-center justify-center gap-3"
-                >
-                  {syncMutation.isPending ? 'Sincronizando com a Nuvem...' : '☁️ Iniciar Sincronização'}
-                </button>
+                <option value="" disabled className="bg-zinc-900">Selecione o Baralho...</option>
+                {decks?.map((deck) => (
+                  <option key={deck} value={deck} className="bg-zinc-900">{deck}</option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-6 flex items-center pointer-events-none text-zinc-500">
+                ▼
               </div>
+            </div>
+            
+            <button
+              onClick={handleFetchCards}
+              disabled={!selectedDeck || isFetchingCards}
+              className="w-full md:w-auto px-10 py-4 bg-white text-black hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-full font-bold transition-all flex items-center justify-center gap-2"
+            >
+              {isFetchingCards ? <RefreshCw className="animate-spin" size={20} /> : <Download size={20} />}
+              <span>Extrair</span>
+            </button>
+            
+            {cardsData && (
+              <button
+                onClick={handleSync}
+                disabled={syncMutation.isPending}
+                className="w-full md:w-auto px-10 py-4 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 text-emerald-950 disabled:opacity-50 rounded-full font-bold transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+              >
+                {syncMutation.isPending ? <RefreshCw className="animate-spin" size={20} /> : <Cloud size={20} />}
+                <span>Sincronizar {cardsData.learned.length + cardsData.newCards.length} Cartões</span>
+              </button>
             )}
           </div>
         )}
 
-        {/* Data Visualization Grid */}
+        {/* Content Area - Fluid List */}
         {cardsData && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            {/* Coluna Aprendidos */}
-            <div className="flex flex-col bg-white/[0.02] rounded-3xl border border-white/5 overflow-hidden shadow-2xl h-[700px]">
-              <div className="p-6 bg-gradient-to-r from-[#22c55e]/10 to-transparent border-b border-white/5 flex justify-between items-center backdrop-blur-md sticky top-0 z-10">
-                <div>
-                  <h2 className="font-black text-xl text-white flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#4ade80] to-[#22c55e] shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
-                    Aprendidos / Revisão
-                  </h2>
-                  <p className="text-sm text-gray-400 mt-1 font-medium">Cartões já introduzidos</p>
-                </div>
-                <span className="bg-[#22c55e]/20 text-[#4ade80] border border-[#22c55e]/30 px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">
-                  {cardsData.learned.length}
-                </span>
-              </div>
-              <div className="overflow-y-auto flex-1 p-4 space-y-3 custom-scrollbar">
-                {cardsData.learned.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-500 gap-4">
-                    <span className="text-5xl opacity-50">👻</span>
-                    <p className="font-medium text-lg">Nenhum cartão aprendido</p>
-                  </div>
-                ) : (
-                  <>
-                    {cardsData.learned.slice(0, 100).map(card => (
-                      <div key={card.cardId} className="group p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] cursor-default">
-                        <div className="flex items-baseline justify-between mb-2 gap-4">
-                          <h3 className="text-2xl font-black text-white group-hover:text-[#4ade80] transition-colors">{card.vocabulary}</h3>
-                          <span className="text-xs font-bold text-gray-400 bg-black/40 px-3 py-1 rounded-lg shrink-0">
+          <div className="flex-1 flex flex-col min-h-0 bg-zinc-900/20 rounded-[3rem] p-6 backdrop-blur-sm border border-white/5">
+            {/* Tabs */}
+            <div className="flex gap-8 mb-6 px-4">
+              <button 
+                onClick={() => setActiveTab('learned')}
+                className={`text-lg font-bold transition-colors relative pb-2 flex items-center gap-3 ${activeTab === 'learned' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
+              >
+                Revisão <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300">{cardsData.learned.length}</span>
+                {activeTab === 'learned' && (
+                  <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />
+                )}
+              </button>
+              <button 
+                onClick={() => setActiveTab('new')}
+                className={`text-lg font-bold transition-colors relative pb-2 flex items-center gap-3 ${activeTab === 'new' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
+              >
+                Novos <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300">{cardsData.newCards.length}</span>
+                {activeTab === 'new' && (
+                  <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
+                )}
+              </button>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto pb-8 custom-scrollbar px-2" style={{ maskImage: 'linear-gradient(to bottom, black 90%, transparent)' }}>
+              <div className="flex flex-col gap-3">
+                <AnimatePresence mode="popLayout">
+                  {displayCards?.slice(0, 100).map((card, index) => (
+                    <motion.div
+                      key={card.cardId}
+                      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ delay: Math.min(index * 0.02, 0.5), duration: 0.2 }}
+                      className="group flex flex-col md:flex-row md:items-center justify-between p-5 md:px-8 rounded-full bg-zinc-800/20 hover:bg-zinc-800/50 transition-colors gap-4"
+                    >
+                      <div className="flex items-center gap-6">
+                        {activeTab === 'learned' ? (
+                          <CheckCircle2 size={24} className="text-emerald-500/50 shrink-0" />
+                        ) : (
+                          <Circle size={24} className="text-blue-500/50 shrink-0" />
+                        )}
+                        <div className="flex items-baseline gap-4">
+                          <span className="text-2xl font-bold text-white tracking-wide">{card.vocabulary}</span>
+                          <span className="text-sm font-medium text-zinc-400 bg-black/20 px-4 py-1.5 rounded-full">
                             {card.reading}
                           </span>
                         </div>
-                        <p className="text-[#a0a5b1] font-medium text-sm line-clamp-2 leading-relaxed">
+                      </div>
+                      
+                      <div className="md:w-1/2 flex justify-end">
+                        <p className="text-zinc-400 text-sm font-medium text-left md:text-right truncate leading-relaxed">
                           {card.meaning}
                         </p>
                       </div>
-                    ))}
-                    {cardsData.learned.length > 100 && (
-                      <div className="text-center p-4 text-gray-500 font-bold text-sm">
-                        + {cardsData.learned.length - 100} outros cartões ocultos (sincronização os inclui)
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
 
-            {/* Coluna Novos */}
-            <div className="flex flex-col bg-white/[0.02] rounded-3xl border border-white/5 overflow-hidden shadow-2xl h-[700px]">
-              <div className="p-6 bg-gradient-to-r from-[#3b82f6]/10 to-transparent border-b border-white/5 flex justify-between items-center backdrop-blur-md sticky top-0 z-10">
-                <div>
-                  <h2 className="font-black text-xl text-white flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#60a5fa] to-[#3b82f6] shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
-                    Cartões Novos
-                  </h2>
-                  <p className="text-sm text-gray-400 mt-1 font-medium">Cartões na fila de aprendizado</p>
-                </div>
-                <span className="bg-[#3b82f6]/20 text-[#60a5fa] border border-[#3b82f6]/30 px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">
-                  {cardsData.newCards.length}
-                </span>
-              </div>
-              <div className="overflow-y-auto flex-1 p-4 space-y-3 custom-scrollbar">
-                {cardsData.newCards.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-500 gap-4">
-                    <span className="text-5xl opacity-50">📭</span>
-                    <p className="font-medium text-lg">Fila de novos vazia</p>
+                {displayCards && displayCards.length > 100 && (
+                  <motion.div 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="text-center p-8 text-zinc-600 font-medium"
+                  >
+                    + {displayCards.length - 100} cartões adicionais ocultos
+                  </motion.div>
+                )}
+                
+                {displayCards && displayCards.length === 0 && (
+                  <div className="text-center p-20 text-zinc-600 font-medium text-lg">
+                    Nenhum cartão encontrado nesta lista.
                   </div>
-                ) : (
-                  <>
-                    {cardsData.newCards.slice(0, 100).map(card => (
-                      <div key={card.cardId} className="group p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] cursor-default">
-                        <div className="flex items-baseline justify-between mb-2 gap-4">
-                          <h3 className="text-2xl font-black text-white group-hover:text-[#60a5fa] transition-colors">{card.vocabulary}</h3>
-                          <span className="text-xs font-bold text-gray-400 bg-black/40 px-3 py-1 rounded-lg shrink-0">
-                            {card.reading}
-                          </span>
-                        </div>
-                        <p className="text-[#a0a5b1] font-medium text-sm line-clamp-2 leading-relaxed">
-                          {card.meaning}
-                        </p>
-                      </div>
-                    ))}
-                    {cardsData.newCards.length > 100 && (
-                      <div className="text-center p-4 text-gray-500 font-bold text-sm">
-                        + {cardsData.newCards.length - 100} outros cartões ocultos (sincronização os inclui)
-                      </div>
-                    )}
-                  </>
                 )}
               </div>
             </div>
-
           </div>
         )}
-
       </div>
-      
-      {/* Estilos Globais Auxiliares embutidos temporariamente para o Scrollbar e text-selection */}
+
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
       `}</style>
