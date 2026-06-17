@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos adicionais globais da página Anki podem vir aqui */
+body {
+    background-color: var(--bg, #0f1117);
+    color: var(--text, #e8eaf0);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}

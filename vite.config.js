@@ -76,7 +76,8 @@ export default defineConfig({
         setup: resolve(__dirname, 'setup.html'),
         srs: resolve(__dirname, 'srs.html'),
         textos: resolve(__dirname, 'textos.html'),
-        dialogo: resolve(__dirname, 'dialogo.html')
+        dialogo: resolve(__dirname, 'dialogo.html'),
+        anki: resolve(__dirname, 'anki.html')
       }
     }
   }

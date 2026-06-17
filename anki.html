@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AnkiConnect Sync - Japonês</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* Estilos copiados do nav original */
+    body { margin: 0; background-color: #0f1117; }
+    .nav-menu {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 20px;
+      flex-wrap: wrap;
+      background: #1a1d27;
+      border-bottom: 1px solid #2e3347;
+      font-family: 'Inter', sans-serif;
+    }
+    .nav-menu a {
+      padding: 8px 16px;
+      text-decoration: none;
+      background: #22263a;
+      border: 1px solid #2e3347;
+      color: #7b8099;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85em;
+      transition: 0.2s;
+    }
+    .nav-menu a:hover { color: #e8eaf0; border-color: #6c63ff; }
+    .nav-menu a.ativo { background: #6c63ff; color: white; border-color: #6c63ff; }
+  </style>
+</head>
+<body>
+  <script>
+    // CONTROLE DE LOGIN
+    const sessaoLocalStorage = localStorage.getItem('supabase_session');
+    if (!sessaoLocalStorage) { 
+        window.location.href = "login.html"; 
+    }
+  </script>
+
+  <nav class="nav-menu">
+      <a href="index.html">📚 Vocabulário</a>
+      <a href="frases.html">💬 Frases</a>
+      <a href="minigame.html">🎮 Minigame</a>
+      <a href="quiz.html">⚡ Quiz</a>
+      <a href="srs.html">🧠 SRS</a>
+      <a href="dialogo.html">💬 Diálogo</a>
+      <a href="textos.html">📄 Textos</a>
+      <a href="anki.html" class="ativo">🎴 Anki</a>
+      <a href="perfil.html">👤 Perfil</a>
+  </nav>
+
+  <div id="root"></div>
+  <script type="module" src="/src/ankiMain.tsx"></script>
+</body>
+</html>
