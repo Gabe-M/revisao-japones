@@ -26,7 +26,7 @@ export default function AnkiApp() {
   const { data: decks, isLoading: isLoadingDecks } = useAnkiDecks(!!isConnected);
   const { data: cardsData, isFetching: isFetchingCards, refetch: fetchCards } = useAnkiCards(selectedDeck || null);
   const syncMutation = useSyncToSupabase();
-  const { data: syncedCards } = useSyncedCards(authToken);
+  const { data: syncedCards, isFetching: isFetchingSynced, isError: isErrorSynced } = useSyncedCards(authToken);
 
   // Group synced cards by deck
   const syncedDecks = React.useMemo(() => {
@@ -240,7 +240,26 @@ export default function AnkiApp() {
 
             <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar px-2" style={{ maskImage: 'linear-gradient(to bottom, black 90%, transparent)' }}>
               <div className="flex flex-col gap-4">
-                {syncedDecks.map((deck, index) => (
+                {isFetchingSynced && !syncedDecks.length && (
+                  <div className="flex flex-col items-center justify-center p-12 text-sky-500 gap-3">
+                    <RefreshCw className="animate-spin" size={24} />
+                    <span className="font-bold text-sm">Carregando nuvem...</span>
+                  </div>
+                )}
+                
+                {isErrorSynced && (
+                  <div className="text-center p-8 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 font-medium">
+                    Erro ao listar cartões da nuvem. Verifique o console ou as permissões do Supabase (RLS).
+                  </div>
+                )}
+
+                {!isFetchingSynced && !isErrorSynced && syncedDecks.length === 0 && (
+                  <div className="text-center p-12 text-zinc-600 font-medium">
+                    Nenhum baralho encontrado. Se você acabou de sincronizar, verifique a política de SELECT (RLS) no Supabase!
+                  </div>
+                )}
+
+                {!isErrorSynced && syncedDecks.map((deck, index) => (
                   <motion.div
                     key={deck.name}
                     initial={{ opacity: 0, y: 10, scale: 0.98 }}
@@ -259,12 +278,6 @@ export default function AnkiApp() {
                     </p>
                   </motion.div>
                 ))}
-
-                {syncedDecks.length === 0 && (
-                  <div className="text-center p-12 text-zinc-600 font-medium">
-                    Nenhum baralho sincronizado ainda. Extraia e sincronize!
-                  </div>
-                )}
               </div>
             </div>
           </div>

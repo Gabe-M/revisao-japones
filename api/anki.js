@@ -100,11 +100,18 @@ export default async function handler(req, res) {
   // AÇÃO: Listar cartões já sincronizados
   if (acao === 'listar' && req.method === 'GET') {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/anki_cards?user_id=eq.${userId}&order=vocabulary.asc`,
+      `${SUPABASE_URL}/rest/v1/anki_cards?select=deck_name,synced_at&user_id=eq.${userId}&order=synced_at.desc`,
       {
         headers: { apikey: SUPABASE_KEY, Authorization: tokenUsuario },
       }
     );
+    
+    if (!response.ok) {
+      let errData;
+      try { errData = await response.json(); } catch (e) { errData = await response.text(); }
+      return res.status(response.status).json({ error: 'Falha ao listar', detalhes: errData });
+    }
+    
     const dados = await response.json();
     return res.status(200).json(dados);
   }
