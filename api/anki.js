@@ -37,7 +37,17 @@ export default async function handler(req, res) {
   // AÇÃO: Sincronizar cartões do Anki com o Supabase
   if (acao === 'sincronizar' && req.method === 'POST') {
     const corpo = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const cards = Array.isArray(corpo) ? corpo : [corpo];
+    let cards = Array.isArray(corpo) ? corpo : [corpo];
+
+    // Remove duplicatas de noteId (notas com múltiplos cartões geram erro no ON CONFLICT do Postgres)
+    const uniqueCardsMap = new Map();
+    for (const card of cards) {
+      if (!card.noteId) continue;
+      // Se a nota tiver múltiplos cartões (ex: frente/verso), pegaremos apenas 1 representação
+      // pois os campos (vocabulary, reading, meaning) são idênticos na mesma nota.
+      uniqueCardsMap.set(card.noteId, card);
+    }
+    cards = Array.from(uniqueCardsMap.values());
 
     const payload = cards.map(card => ({
       user_id:     userId,
