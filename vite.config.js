@@ -75,7 +75,8 @@ export default defineConfig({
         quiz: resolve(__dirname, 'quiz.html'),
         setup: resolve(__dirname, 'setup.html'),
         srs: resolve(__dirname, 'srs.html'),
-        textos: resolve(__dirname, 'textos.html')
+        textos: resolve(__dirname, 'textos.html'),
+        dialogo: resolve(__dirname, 'dialogo.html')
       }
     }
   }
