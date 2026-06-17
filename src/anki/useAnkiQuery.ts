@@ -65,3 +65,19 @@ export function useSyncToSupabase() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['anki'] }),
   });
 }
+
+// Hook: buscar cartões já sincronizados no Supabase
+export function useSyncedCards(authToken: string | null) {
+  return useQuery({
+    queryKey: ['anki', 'synced'],
+    queryFn: async () => {
+      const response = await fetch('/api/anki?acao=listar', {
+        headers: { 'Authorization': authToken! }
+      });
+      if (!response.ok) throw new Error(`Falha ao buscar sincronizados: ${response.status}`);
+      return response.json();
+    },
+    enabled: !!authToken,
+    staleTime: 60_000,
+  });
+}

@@ -7,19 +7,39 @@ import {
   useAnkiDecks,
   useAnkiCards,
   useSyncToSupabase,
+  useSyncedCards,
 } from './anki/useAnkiQuery';
 import './anki/anki.css';
 
 export default function AnkiApp() {
   const queryClient = useQueryClient();
   const [selectedDeck, setSelectedDeck] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'learned' | 'new'>('learned');
+  const [activeTab, setActiveTab] = useState<'learned' | 'new' | 'cloud'>('learned');
+
+  // Recuperar Token
+  const sessaoLocalStorage = localStorage.getItem('supabase_session');
+  const sessao = sessaoLocalStorage ? JSON.parse(sessaoLocalStorage) : null;
+  const authToken = sessao ? `Bearer ${sessao.access_token}` : null;
 
   const { data: conn, isFetching: isCheckingConn, refetch: checkConn } = useAnkiConnection();
   const isConnected = conn?.connected;
   const { data: decks, isLoading: isLoadingDecks } = useAnkiDecks(!!isConnected);
   const { data: cardsData, isFetching: isFetchingCards, refetch: fetchCards } = useAnkiCards(selectedDeck || null);
   const syncMutation = useSyncToSupabase();
+  const { data: syncedCards } = useSyncedCards(authToken);
+
+  // Group synced cards by deck
+  const syncedDecks = React.useMemo(() => {
+    if (!syncedCards) return [];
+    const decksMap = new Map<string, { count: number; latestSync: string }>();
+    for (const card of syncedCards) {
+      if (!decksMap.has(card.deck_name)) decksMap.set(card.deck_name, { count: 0, latestSync: card.synced_at });
+      const stats = decksMap.get(card.deck_name)!;
+      stats.count++;
+      if (new Date(card.synced_at) > new Date(stats.latestSync)) stats.latestSync = card.synced_at;
+    }
+    return Array.from(decksMap.entries()).map(([name, stats]) => ({ name, ...stats }));
+  }, [syncedCards]);
 
   const handleFetchCards = () => { if (selectedDeck) fetchCards(); };
 
@@ -130,7 +150,7 @@ export default function AnkiApp() {
         {cardsData && (
           <div className="flex-1 flex flex-col min-h-0 bg-zinc-900/20 rounded-[3rem] p-6 backdrop-blur-sm border border-white/5">
             {/* Tabs */}
-            <div className="flex gap-8 mb-6 px-4">
+            <div className="flex flex-wrap gap-4 md:gap-8 mb-6 px-4">
               <button 
                 onClick={() => setActiveTab('learned')}
                 className={`text-lg font-bold transition-colors relative pb-2 flex items-center gap-3 ${activeTab === 'learned' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
@@ -149,13 +169,22 @@ export default function AnkiApp() {
                   <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
                 )}
               </button>
+              <button 
+                onClick={() => setActiveTab('cloud')}
+                className={`text-lg font-bold transition-colors relative pb-2 flex items-center gap-3 ${activeTab === 'cloud' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
+              >
+                Nuvem <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300">{syncedDecks.length} Baralhos</span>
+                {activeTab === 'cloud' && (
+                  <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-500 rounded-full" />
+                )}
+              </button>
             </div>
 
             {/* List */}
             <div className="flex-1 overflow-y-auto pb-8 custom-scrollbar px-2" style={{ maskImage: 'linear-gradient(to bottom, black 90%, transparent)' }}>
               <div className="flex flex-col gap-3">
                 <AnimatePresence mode="popLayout">
-                  {displayCards?.slice(0, 100).map((card, index) => (
+                  {activeTab !== 'cloud' && displayCards?.slice(0, 100).map((card, index) => (
                     <motion.div
                       key={card.cardId}
                       initial={{ opacity: 0, y: 10, scale: 0.98 }}
@@ -186,7 +215,7 @@ export default function AnkiApp() {
                   ))}
                 </AnimatePresence>
 
-                {displayCards && displayCards.length > 100 && (
+                {activeTab !== 'cloud' && displayCards && displayCards.length > 100 && (
                   <motion.div 
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                     className="text-center p-8 text-zinc-600 font-medium"
@@ -195,9 +224,43 @@ export default function AnkiApp() {
                   </motion.div>
                 )}
                 
-                {displayCards && displayCards.length === 0 && (
+                {activeTab !== 'cloud' && displayCards && displayCards.length === 0 && (
                   <div className="text-center p-20 text-zinc-600 font-medium text-lg">
                     Nenhum cartão encontrado nesta lista.
+                  </div>
+                )}
+
+                {activeTab === 'cloud' && syncedDecks.map((deck, index) => (
+                  <motion.div
+                    key={deck.name}
+                    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: Math.min(index * 0.05, 0.5), duration: 0.2 }}
+                    className="group flex flex-col md:flex-row md:items-center justify-between p-6 md:px-8 rounded-[2rem] bg-sky-900/10 hover:bg-sky-900/20 border border-sky-500/10 transition-colors gap-4"
+                  >
+                    <div className="flex items-center gap-6">
+                      <Cloud size={28} className="text-sky-500/50 shrink-0" />
+                      <div>
+                        <div className="flex items-baseline gap-4 mb-2">
+                          <span className="text-xl font-bold text-white tracking-wide">{deck.name}</span>
+                        </div>
+                        <p className="text-zinc-500 text-sm font-medium">
+                          Última sincronização: {new Date(deck.latestSync).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="md:w-1/3 flex justify-end">
+                      <div className="bg-sky-500/10 text-sky-400 px-5 py-2.5 rounded-full font-bold text-sm border border-sky-500/20">
+                        {deck.count} cartões na nuvem
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {activeTab === 'cloud' && syncedDecks.length === 0 && (
+                  <div className="text-center p-20 text-zinc-600 font-medium text-lg">
+                    Nenhum baralho sincronizado ainda. Extraia e sincronize!
                   </div>
                 )}
               </div>
