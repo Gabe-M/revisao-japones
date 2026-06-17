@@ -1,0 +1,23 @@
+#separator:tab
+#html:false
+#guid column:1
+#notetype column:2
+#deck column:3
+#tags column:18
+J!F|q?*7Gx	Kaishi 1.5k	Sessão de Estudo Personalizado	どれ	どれ	which, what	どれ		どれが好きですか。	Which would you like?	どれが 好[す]きですか。			ドレ		930		
+p@lWpT]Cr[	Kaishi 1.5k	Sessão de Estudo Personalizado	いる	いる	to have, to exist (animate)	いる		兄がいます。	I have an older brother.	兄[あに]がいます。			イル		21		
+lt~b=q&8zJ	Kaishi 1.5k	Sessão de Estudo Personalizado	あまり	あまり	(not) very, (not) much	あまり		スポーツはあまり好きじゃありません。	I don't really like sports.	スポーツはあまり 好[す]きじゃありません。			アマリ		388		
+t@^SDA}L0%	Kaishi 1.5k	Sessão de Estudo Personalizado	無い	ない	nonexistent, not being	無[な]い		今はあまり時間が無いのです。	I don't have much time now.	今[いま]はあまり 時[じ] 間[かん]が無[な]いのです。		This is often used as the negative form of the verb ある. See a grammar book for more details on how to use it.	ナイ		33		
+"doQSx#_f#u"	Kaishi 1.5k	Sessão de Estudo Personalizado	全然	ぜんぜん	(not) at all	全[ぜん] 然[ぜん]		テレビを全然見ません。	I never watch television.	テレビを全[ぜん] 然[ぜん] 見[み]ません。			ゼンゼン		550		
+mfuJjTwDI4	Kaishi 1.5k	Sessão de Estudo Personalizado	なる	なる	to become, to result in, to come (to do)	なる		日本語の勉強が好きになりました。	I have come to like Japanese study.	日本[にほん] 語[ご]の 勉[べん] 強[きょう]が 好[す]きになりました。		This verb has many meanings and will take some time to assimilate properly.	ナル		15		
+f&(tDTL>90	Kaishi 1.5k	Sessão de Estudo Personalizado	教える	おしえる	to teach, to tell	教[おし]える		あなたの名前を教えてください。	Please tell me your name.	あなたの 名[な] 前[まえ]を教[おし]えてください。			オシエル		257		
+QEpjUA4U)Y	Kaishi 1.5k	Sessão de Estudo Personalizado	どこ	どこ	where	どこ		あの本をどこに置きましたか。	Where did you put that book?	あの 本[ほん]をどこに 置[お]きましたか。			ドコ		182		
+D/6?w0V?4`	Kaishi 1.5k	Sessão de Estudo Personalizado	帰る	かえる	to return, to go back	帰[かえ]る		家に帰ろう。	Let's go home.	家[うち]に帰[かえ]ろう。			カエル		220		
+K4]+3Ar1a3	Kaishi 1.5k	Sessão de Estudo Personalizado	話	はなし	talk, story	話[はなし]		あなたの話は面白いね。	Your story is interesting.	あなたの話[はなし]は 面[おも] 白[しろ]いね。			ハナシ		101		
+kD){c?imQq	Kaishi 1.5k	Sessão de Estudo Personalizado	彼女	かのじょ	she, her, girlfriend	彼[かの] 女[じょ]		彼女の名前を知っていますか。	Do you know her name?	彼[かの] 女[じょ]の 名[な] 前[まえ]を 知[し]っていますか。			カノジョ		100		
+rl?V}~3?MC	Kaishi 1.5k	Sessão de Estudo Personalizado	学校	がっこう	school	学[がっ] 校[こう]		学校は日本にあります。	The school is in Japan.	学[がっ] 校[こう]は 日本[にほん]にあります。			ガッコー		563		
+f?pXJV(gju	Kaishi 1.5k	Sessão de Estudo Personalizado	行く	いく	to go	行[い]く		学校へ行きます。	I will go to school.	学[がっ] 校[こう]へ行[い]きます。			イク		58		
+Lvo|RkKOen	Kaishi 1.5k	Sessão de Estudo Personalizado	明日	あした	tomorrow	明日[あした]		明日、学校へ行きます。	Tomorrow, I will go to school.	明日[あした]、 学[がっ] 校[こう]へ 行[い]きます。		Can be read あす as well.	アシタ		423		
+y|bOVbGbo!	Kaishi 1.5k	Sessão de Estudo Personalizado	来る	くる	to come	来[く]る		明日、来ますか。	Will you come tomorrow?	明日[あした]、来[き]ますか。			クル		34		
+p(T[aZB$L-	Kaishi 1.5k	Sessão de Estudo Personalizado	また	また	again, also	また		明日、また来ます。	I'll come again tomorrow.	明日[あした]、また 来[き]ます。			マタ		99		
+IeYtLxJCO(	Kaishi 1.5k	Sessão de Estudo Personalizado	いつ	いつ	when	いつ		彼女はいつ来ますか。	When is she coming?	彼[かの] 女[じょ]はいつ 来[き]ますか。			イツ		407		
