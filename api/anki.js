@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       synced_at:   new Date().toISOString(),
     }));
 
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/anki_cards`, {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/anki_cards?on_conflict=user_id,note_id`, {
       method: 'POST',
       headers: {
         apikey: SUPABASE_KEY,
