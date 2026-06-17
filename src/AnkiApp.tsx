@@ -146,127 +146,130 @@ export default function AnkiApp() {
           </div>
         )}
 
-        {/* Content Area - Fluid List */}
-        {cardsData && (
-          <div className="flex-1 flex flex-col min-h-0 bg-zinc-900/20 rounded-[3rem] p-6 backdrop-blur-sm border border-white/5">
-            {/* Tabs */}
-            <div className="flex flex-wrap gap-4 md:gap-8 mb-6 px-4">
-              <button 
-                onClick={() => setActiveTab('learned')}
-                className={`text-lg font-bold transition-colors relative pb-2 flex items-center gap-3 ${activeTab === 'learned' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
-              >
-                Revisão <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300">{cardsData.learned.length}</span>
-                {activeTab === 'learned' && (
-                  <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />
-                )}
-              </button>
-              <button 
-                onClick={() => setActiveTab('new')}
-                className={`text-lg font-bold transition-colors relative pb-2 flex items-center gap-3 ${activeTab === 'new' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
-              >
-                Novos <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300">{cardsData.newCards.length}</span>
-                {activeTab === 'new' && (
-                  <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
-                )}
-              </button>
-              <button 
-                onClick={() => setActiveTab('cloud')}
-                className={`text-lg font-bold transition-colors relative pb-2 flex items-center gap-3 ${activeTab === 'cloud' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
-              >
-                Nuvem <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300">{syncedDecks.length} Baralhos</span>
-                {activeTab === 'cloud' && (
-                  <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-500 rounded-full" />
-                )}
-              </button>
+        {/* Main Content Areas Split */}
+        <div className="flex flex-col xl:flex-row gap-8 flex-1 min-h-0 pb-8">
+          
+          {/* Left Column: Local Cards Area */}
+          {cardsData && (
+            <div className="flex-[2] flex flex-col min-h-[500px] xl:min-h-0 bg-zinc-900/20 rounded-[3rem] p-6 backdrop-blur-sm border border-white/5 relative">
+              {/* Tabs for Local Cards */}
+              <div className="flex flex-wrap gap-4 md:gap-8 mb-6 px-4 shrink-0">
+                <button 
+                  onClick={() => setActiveTab('learned')}
+                  className={`text-lg font-bold transition-colors relative pb-2 flex items-center gap-3 ${activeTab === 'learned' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
+                >
+                  Revisão <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300">{cardsData.learned.length}</span>
+                  {activeTab === 'learned' && (
+                    <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />
+                  )}
+                </button>
+                <button 
+                  onClick={() => setActiveTab('new')}
+                  className={`text-lg font-bold transition-colors relative pb-2 flex items-center gap-3 ${activeTab === 'new' ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
+                >
+                  Novos <span className="px-3 py-1 rounded-full bg-zinc-800 text-xs text-zinc-300">{cardsData.newCards.length}</span>
+                  {activeTab === 'new' && (
+                    <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full" />
+                  )}
+                </button>
+              </div>
+
+              {/* Local Cards List */}
+              <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar px-2" style={{ maskImage: 'linear-gradient(to bottom, black 90%, transparent)' }}>
+                <div className="flex flex-col gap-3">
+                  <AnimatePresence mode="popLayout">
+                    {displayCards?.slice(0, 100).map((card, index) => (
+                      <motion.div
+                        key={card.cardId}
+                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ delay: Math.min(index * 0.02, 0.5), duration: 0.2 }}
+                        className="group flex flex-col md:flex-row md:items-center justify-between p-5 md:px-8 rounded-full bg-zinc-800/20 hover:bg-zinc-800/50 transition-colors gap-4"
+                      >
+                        <div className="flex items-center gap-6 shrink-0">
+                          {activeTab === 'learned' ? (
+                            <CheckCircle2 size={24} className="text-emerald-500/50 shrink-0" />
+                          ) : (
+                            <Circle size={24} className="text-blue-500/50 shrink-0" />
+                          )}
+                          <div className="flex items-baseline gap-4">
+                            <span className="text-2xl font-bold text-white tracking-wide">{card.vocabulary}</span>
+                            <span className="text-sm font-medium text-zinc-400 bg-black/20 px-4 py-1.5 rounded-full shrink-0">
+                              {card.reading}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="md:w-1/2 flex justify-end">
+                          <p className="text-zinc-400 text-sm font-medium text-left md:text-right truncate leading-relaxed">
+                            {card.meaning}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+
+                  {displayCards && displayCards.length > 100 && (
+                    <motion.div 
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      className="text-center p-8 text-zinc-600 font-medium"
+                    >
+                      + {displayCards.length - 100} cartões adicionais ocultos
+                    </motion.div>
+                  )}
+                  
+                  {displayCards && displayCards.length === 0 && (
+                    <div className="text-center p-20 text-zinc-600 font-medium text-lg">
+                      Nenhum cartão encontrado nesta lista.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Right Column: Cloud / Synced Decks Area */}
+          <div className="flex-1 flex flex-col min-h-[400px] xl:min-h-0 bg-sky-900/5 rounded-[3rem] p-6 backdrop-blur-sm border border-sky-500/10">
+            <div className="flex items-center gap-3 mb-6 px-4 shrink-0">
+              <Cloud className="text-sky-400" size={28} />
+              <h2 className="text-xl font-bold text-white">Nuvem Sincronizada</h2>
+              <span className="ml-auto px-3 py-1 rounded-full bg-sky-500/10 text-sky-400 text-xs font-bold border border-sky-500/20">
+                {syncedDecks.length} Baralhos
+              </span>
             </div>
 
-            {/* List */}
-            <div className="flex-1 overflow-y-auto pb-8 custom-scrollbar px-2" style={{ maskImage: 'linear-gradient(to bottom, black 90%, transparent)' }}>
-              <div className="flex flex-col gap-3">
-                <AnimatePresence mode="popLayout">
-                  {activeTab !== 'cloud' && displayCards?.slice(0, 100).map((card, index) => (
-                    <motion.div
-                      key={card.cardId}
-                      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ delay: Math.min(index * 0.02, 0.5), duration: 0.2 }}
-                      className="group flex flex-col md:flex-row md:items-center justify-between p-5 md:px-8 rounded-full bg-zinc-800/20 hover:bg-zinc-800/50 transition-colors gap-4"
-                    >
-                      <div className="flex items-center gap-6">
-                        {activeTab === 'learned' ? (
-                          <CheckCircle2 size={24} className="text-emerald-500/50 shrink-0" />
-                        ) : (
-                          <Circle size={24} className="text-blue-500/50 shrink-0" />
-                        )}
-                        <div className="flex items-baseline gap-4">
-                          <span className="text-2xl font-bold text-white tracking-wide">{card.vocabulary}</span>
-                          <span className="text-sm font-medium text-zinc-400 bg-black/20 px-4 py-1.5 rounded-full">
-                            {card.reading}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="md:w-1/2 flex justify-end">
-                        <p className="text-zinc-400 text-sm font-medium text-left md:text-right truncate leading-relaxed">
-                          {card.meaning}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-
-                {activeTab !== 'cloud' && displayCards && displayCards.length > 100 && (
-                  <motion.div 
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                    className="text-center p-8 text-zinc-600 font-medium"
-                  >
-                    + {displayCards.length - 100} cartões adicionais ocultos
-                  </motion.div>
-                )}
-                
-                {activeTab !== 'cloud' && displayCards && displayCards.length === 0 && (
-                  <div className="text-center p-20 text-zinc-600 font-medium text-lg">
-                    Nenhum cartão encontrado nesta lista.
-                  </div>
-                )}
-
-                {activeTab === 'cloud' && syncedDecks.map((deck, index) => (
+            <div className="flex-1 overflow-y-auto pb-4 custom-scrollbar px-2" style={{ maskImage: 'linear-gradient(to bottom, black 90%, transparent)' }}>
+              <div className="flex flex-col gap-4">
+                {syncedDecks.map((deck, index) => (
                   <motion.div
                     key={deck.name}
                     initial={{ opacity: 0, y: 10, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ delay: Math.min(index * 0.05, 0.5), duration: 0.2 }}
-                    className="group flex flex-col md:flex-row md:items-center justify-between p-6 md:px-8 rounded-[2rem] bg-sky-900/10 hover:bg-sky-900/20 border border-sky-500/10 transition-colors gap-4"
+                    className="group flex flex-col p-6 rounded-[2rem] bg-sky-900/10 hover:bg-sky-900/20 border border-sky-500/10 transition-colors gap-3"
                   >
-                    <div className="flex items-center gap-6">
-                      <Cloud size={28} className="text-sky-500/50 shrink-0" />
-                      <div>
-                        <div className="flex items-baseline gap-4 mb-2">
-                          <span className="text-xl font-bold text-white tracking-wide">{deck.name}</span>
-                        </div>
-                        <p className="text-zinc-500 text-sm font-medium">
-                          Última sincronização: {new Date(deck.latestSync).toLocaleString('pt-BR')}
-                        </p>
+                    <div className="flex justify-between items-start gap-4">
+                      <span className="text-lg font-bold text-white tracking-wide break-words">{deck.name}</span>
+                      <div className="bg-sky-500/10 text-sky-400 px-4 py-1.5 rounded-full font-bold text-xs border border-sky-500/20 shrink-0">
+                        {deck.count} cartões
                       </div>
                     </div>
-                    
-                    <div className="md:w-1/3 flex justify-end">
-                      <div className="bg-sky-500/10 text-sky-400 px-5 py-2.5 rounded-full font-bold text-sm border border-sky-500/20">
-                        {deck.count} cartões na nuvem
-                      </div>
-                    </div>
+                    <p className="text-zinc-500 text-xs font-medium">
+                      Atualizado em {new Date(deck.latestSync).toLocaleString('pt-BR')}
+                    </p>
                   </motion.div>
                 ))}
 
-                {activeTab === 'cloud' && syncedDecks.length === 0 && (
-                  <div className="text-center p-20 text-zinc-600 font-medium text-lg">
+                {syncedDecks.length === 0 && (
+                  <div className="text-center p-12 text-zinc-600 font-medium">
                     Nenhum baralho sincronizado ainda. Extraia e sincronize!
                   </div>
                 )}
               </div>
             </div>
           </div>
-        )}
+
+        </div>
       </div>
 
       <style>{`
