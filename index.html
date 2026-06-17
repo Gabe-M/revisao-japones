@@ -445,7 +445,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         const sessao = JSON.parse(sessaoLocalStorage);
         const tokenDeAcesso = `Bearer ${sessao.access_token}`;
         const idDoUsuarioLogado = sessao.user.id;
-        if (localStorage.getItem('tema') === 'dark') document.body.setAttribute('data-theme', 'dark');
+        if (localStorage.getItem('tema') !== 'light') document.body.setAttribute('data-theme', 'dark');
         function toggleTheme() {
             const isDark = document.body.getAttribute('data-theme') === 'dark';
             document.body.toggleAttribute('data-theme', !isDark);

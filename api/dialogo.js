@@ -1,38 +1,39 @@
-async function callAI(systemInstruction, messages, geminiKey, openAIKey) {
+async function callAI(systemInstruction, messages, geminiKey, openAIKey, provider = 'gemini') {
     const isJson = true; // Sempre esperamos JSON no diálogo
 
-    if (geminiKey) {
-        try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
-            
-            // Format messages for Gemini
-            const geminiMessages = messages.map(msg => ({
-                role: msg.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: msg.content }]
-            }));
-
-            const payload = {
-                contents: geminiMessages,
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                generationConfig: {
-                    temperature: 0.7,
-                    responseMimeType: "application/json"
-                }
-            };
-            
-            const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data?.error?.message || JSON.stringify(data));
-            
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-            return JSON.parse(text);
-        } catch (e) {
-            console.warn("[Dialogo API] Gemini falhou, tentando OpenAI...", e.message);
-            if (!openAIKey) throw e;
+    if (provider === 'gemini') {
+        if (!geminiKey) {
+            throw new Error("Chave de API do Gemini não configurada.");
         }
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiKey}`;
+        
+        // Format messages for Gemini
+        const geminiMessages = messages.map(msg => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+        }));
+
+        const payload = {
+            contents: geminiMessages,
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            generationConfig: {
+                temperature: 0.7,
+                responseMimeType: "application/json"
+            }
+        };
+        
+        const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error?.message || JSON.stringify(data));
+        
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+        return JSON.parse(text);
     }
 
-    if (openAIKey) {
+    if (provider === 'openai') {
+        if (!openAIKey) {
+            throw new Error("Chave de API da OpenAI não configurada.");
+        }
         const url = 'https://api.openai.com/v1/chat/completions';
         const payload = {
             model: 'gpt-4o-mini',
@@ -52,7 +53,7 @@ async function callAI(systemInstruction, messages, geminiKey, openAIKey) {
         return JSON.parse(content);
     }
     
-    throw new Error("Nenhuma chave de API válida disponível.");
+    throw new Error(`Provedor de IA inválido: ${provider}`);
 }
 
 export default async function handler(req, res) {
@@ -63,14 +64,23 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
 
-    const clientKey = req.headers['x-openai-key'] || req.headers['x-gemini-key'];
     let geminiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '') : null;
     let openAIKey = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '') : null;
 
-    if (clientKey) {
-        const cleanedKey = clientKey.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
-        if (cleanedKey.startsWith('sk-')) openAIKey = cleanedKey;
-        else geminiKey = cleanedKey;
+    const clientGeminiKey = req.headers['x-gemini-key'];
+    const clientOpenAIKey = req.headers['x-openai-key'];
+
+    if (clientGeminiKey) {
+        const cleaned = clientGeminiKey.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+        if (cleaned.startsWith('sk-')) {
+            openAIKey = cleaned;
+        } else {
+            geminiKey = cleaned;
+        }
+    }
+    if (clientOpenAIKey) {
+        const cleaned = clientOpenAIKey.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+        openAIKey = cleaned;
     }
 
     if (!geminiKey && !openAIKey) {
@@ -79,7 +89,7 @@ export default async function handler(req, res) {
 
     try {
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-        const { acao, tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp } = body;
+        const { provider = 'gemini', acao, tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp } = body;
 
         let systemInstruction = "";
         let prompt = "";
@@ -106,7 +116,7 @@ export default async function handler(req, res) {
                 }
                 Retorne no mínimo 3 regras, 8 vocabulários e 4 frases úteis.`;
                 
-                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey);
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, provider);
                 return res.status(200).json(result);
 
             case 'gerar_traducao':
@@ -121,7 +131,7 @@ export default async function handler(req, res) {
                     "dica": "uma dica gramatical curta sobre a frase"
                 }`;
                 
-                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey);
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, provider);
                 return res.status(200).json(result);
 
             case 'analisar_traducao':
@@ -138,7 +148,7 @@ export default async function handler(req, res) {
                     "traducao_correta": "Tradução ideal"
                 }`;
                 
-                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey);
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, provider);
                 return res.status(200).json(result);
 
             case 'iniciar_dialogo':
@@ -154,7 +164,7 @@ export default async function handler(req, res) {
                     "contexto": "Breve explicação do cenário em português (ex: Você entra na loja e o atendente diz:)"
                 }`;
                 
-                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey);
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, provider);
                 return res.status(200).json(result);
 
             case 'continuar_dialogo':
@@ -181,7 +191,7 @@ export default async function handler(req, res) {
                     }`
                 });
 
-                result = await callAI(systemInstruction, msgs, geminiKey, openAIKey);
+                result = await callAI(systemInstruction, msgs, geminiKey, openAIKey, provider);
                 return res.status(200).json(result);
 
             default:

@@ -191,14 +191,14 @@
             const body = document.body;
             if (body.getAttribute('data-theme') === 'dark') {
                 body.removeAttribute('data-theme');
-                localStorage.setItem('theme', 'light');
+                localStorage.setItem('tema', 'light');
             } else {
                 body.setAttribute('data-theme', 'dark');
-                localStorage.setItem('theme', 'dark');
+                localStorage.setItem('tema', 'dark');
             }
         }
         
-        if (localStorage.getItem('theme') === 'dark') {
+        if (localStorage.getItem('tema') !== 'light') {
             document.body.setAttribute('data-theme', 'dark');
         }
     </script>

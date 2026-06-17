@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import FuriganaText from './components/FuriganaText';
 import ScoreBadge from './components/ScoreBadge';
 import * as wanakana from 'wanakana';
+import AiLoader from './components/AiLoader';
+import AiFallbackPopup from './components/AiFallbackPopup';
 
 interface DialoGoPanelProps {
     context: any;
@@ -14,6 +16,11 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
     const [historico, setHistorico] = useState<any[]>([]);
     const [inputUser, setInputUser] = useState('');
     const [enviando, setEnviando] = useState(false);
+    const [provider, setProvider] = useState<'gemini' | 'openai'>('gemini');
+    const [fallbackOpen, setFallbackOpen] = useState(false);
+    const [fallbackError, setFallbackError] = useState('');
+    const [pendingAction, setPendingAction] = useState<'iniciar' | 'continuar' | null>(null);
+    const [pendingMessage, setPendingMessage] = useState('');
     
     const inputRef = useRef<HTMLInputElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -35,19 +42,33 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [historico, enviando]);
 
-    const iniciarDialogo = async () => {
+    const iniciarDialogo = async (targetProvider: 'gemini' | 'openai' = 'gemini') => {
         setLoading(true);
+        setProvider(targetProvider);
         try {
+            const userKey = localStorage.getItem('gemini_api_key') || '';
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (userKey) {
+                headers['X-Gemini-Key'] = userKey;
+            }
+
             const res = await fetch('/api/dialogo', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify({
+                    provider: targetProvider,
                     acao: 'iniciar_dialogo',
                     tema: context.tema,
                     jlpt: context.jlpt,
                     vocabulario: context.vocabularioBanco?.map((v:any) => v.item) || []
                 })
             });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.message || errData.error || `HTTP error ${res.status}`);
+            }
+
             const data = await res.json();
             
             setContextoDialogo(data.contexto);
@@ -59,35 +80,60 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                     content: data.mensagem_ia_jp
                 }
             ]);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert("Erro ao iniciar diálogo.");
+            if (targetProvider === 'gemini') {
+                setPendingAction('iniciar');
+                setFallbackError(e.message || String(e));
+                setFallbackOpen(true);
+            } else {
+                alert(`Erro ao iniciar diálogo com OpenAI: ${e.message || e}`);
+            }
         }
         setLoading(false);
     };
 
-    const enviarMensagem = async (e?: React.FormEvent) => {
+    const enviarMensagem = async (e?: React.FormEvent, targetProvider: 'gemini' | 'openai' = 'gemini', textToSend?: string) => {
         if (e) e.preventDefault();
-        const textoJp = inputUser.trim();
+        const textoJp = textToSend !== undefined ? textToSend : inputUser.trim();
         if (!textoJp) return;
 
         setEnviando(true);
-        setInputUser('');
+        setProvider(targetProvider);
+        if (textToSend === undefined) {
+            setInputUser('');
+        }
         
-        // Add user message optimistically
-        const novoHistorico = [...historico, { role: 'user', content: textoJp, jp: textoJp }];
-        setHistorico(novoHistorico);
+        // Add user message optimistically (only on first attempt, not retry)
+        let novoHistorico = [...historico];
+        if (textToSend === undefined) {
+            novoHistorico.push({ role: 'user', content: textoJp, jp: textoJp });
+            setHistorico(novoHistorico);
+        }
 
         try {
+            const userKey = localStorage.getItem('gemini_api_key') || '';
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (userKey) {
+                headers['X-Gemini-Key'] = userKey;
+            }
+
             const res = await fetch('/api/dialogo', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify({
+                    provider: targetProvider,
                     acao: 'continuar_dialogo',
-                    historico: historico.map(m => ({ role: m.role, content: m.content })),
+                    historico: novoHistorico.map(m => ({ role: m.role, content: m.content })),
                     resposta_usuario_jp: textoJp
                 })
             });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.message || errData.error || `HTTP error ${res.status}`);
+            }
+
             const data = await res.json();
 
             // Atualiza a ultima msg do user com a analise
@@ -104,11 +150,17 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
             });
             
             setHistorico(updateHistorico);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            alert("Erro ao enviar mensagem.");
-            setInputUser(textoJp); // restore input
-            setHistorico(historico); // revert
+            if (targetProvider === 'gemini') {
+                setPendingAction('continuar');
+                setPendingMessage(textoJp);
+                setFallbackError(error.message || String(error));
+                setFallbackOpen(true);
+            } else {
+                alert(`Erro ao enviar mensagem com OpenAI: ${error.message || error}`);
+                setInputUser(textoJp); // restore input
+            }
         }
         setEnviando(false);
     };
@@ -123,7 +175,16 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
         window.speechSynthesis.speak(utterance);
     };
 
-    if (loading) return <div style={{ textAlign: 'center', padding: '50px' }}>Preparando cenário do diálogo... ⏳</div>;
+    if (loading) {
+        return (
+            <div style={{ padding: '20px' }}>
+                <AiLoader 
+                    provider={provider} 
+                    message={provider === 'gemini' ? "O Gemini está preparando o Cenário" : "A OpenAI está preparando o Cenário"} 
+                />
+            </div>
+        );
+    }
 
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto', height: '80vh', display: 'flex', flexDirection: 'column' }}>
@@ -180,11 +241,33 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                         </div>
                     );
                 })}
-                {enviando && <div style={{ fontStyle: 'italic', color: 'gray' }}>A IA está digitando...</div>}
+                {enviando && (
+                    <div style={{ 
+                        alignSelf: 'flex-start',
+                        maxWidth: '80%', 
+                        padding: '12px 18px', 
+                        borderRadius: '16px', 
+                        borderBottomLeftRadius: 0,
+                        background: 'rgba(0,0,0,0.05)', 
+                        color: 'var(--text-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px'
+                    }}>
+                        <img 
+                            src={provider === 'gemini' ? "https://cdnl.iconscout.com/lottie/premium/thumb/gemini-logo-animation-gif-download-10900314.gif" : "https://cdnl.iconscout.com/lottie/premium/thumb/chatgpt-animation-gif-download-6633794.gif"} 
+                            alt={provider} 
+                            style={{ width: '28px', height: '28px', objectFit: 'contain' }}
+                        />
+                        <span style={{ fontSize: '0.9em', fontStyle: 'italic', color: 'gray' }}>
+                            {provider === 'gemini' ? "Gemini está digitando..." : "ChatGPT está digitando..."}
+                        </span>
+                    </div>
+                )}
                 <div ref={chatEndRef} />
             </div>
 
-            <form onSubmit={enviarMensagem} style={{ display: 'flex', gap: '10px' }}>
+            <form onSubmit={(e) => enviarMensagem(e, 'gemini')} style={{ display: 'flex', gap: '10px' }}>
                 <input 
                     ref={inputRef}
                     type="text" 
@@ -202,6 +285,22 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                     Enviar
                 </button>
             </form>
+
+            <AiFallbackPopup 
+                isOpen={fallbackOpen} 
+                errorMessage={fallbackError}
+                onRetryGemini={() => {
+                    setFallbackOpen(false);
+                    if (pendingAction === 'iniciar') iniciarDialogo('gemini');
+                    else if (pendingAction === 'continuar') enviarMensagem(undefined, 'gemini', pendingMessage);
+                }}
+                onFallbackOpenAI={() => {
+                    setFallbackOpen(false);
+                    if (pendingAction === 'iniciar') iniciarDialogo('openai');
+                    else if (pendingAction === 'continuar') enviarMensagem(undefined, 'openai', pendingMessage);
+                }}
+                onCancel={() => setFallbackOpen(false)}
+            />
         </div>
     );
 }

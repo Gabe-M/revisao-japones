@@ -8,15 +8,21 @@ interface VocabularioChipProps {
     jlpt?: string;
     jaPossui: boolean;
     onAdd: () => void;
+    onClickCard?: () => void;
 }
 
-export default function VocabularioChip({ item, leitura, significado, jlpt, jaPossui, onAdd }: VocabularioChipProps) {
+export default function VocabularioChip({ item, leitura, significado, jlpt, jaPossui, onAdd, onClickCard }: VocabularioChipProps) {
     const [added, setAdded] = useState(false);
 
     const isAdded = jaPossui || added;
 
     return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '8px' }}>
+        <div 
+            onClick={onClickCard}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '8px', cursor: onClickCard ? 'pointer' : 'default', transition: 'background 0.2s' }}
+            onMouseOver={(e) => onClickCard && (e.currentTarget.style.background = 'rgba(0,0,0,0.05)')}
+            onMouseOut={(e) => onClickCard && (e.currentTarget.style.background = 'rgba(0,0,0,0.02)')}
+        >
             <div>
                 <div style={{ fontSize: '1.2em', fontWeight: 'bold', marginBottom: '4px' }}>
                     <FuriganaText text={item} fallbackLeitura={leitura} />
@@ -37,7 +43,7 @@ export default function VocabularioChip({ item, leitura, significado, jlpt, jaPo
                     </span>
                 ) : (
                     <button 
-                        onClick={() => { setAdded(true); onAdd(); }}
+                        onClick={(e) => { e.stopPropagation(); setAdded(true); onAdd(); }}
                         style={{ padding: '6px 12px', background: 'var(--highlight-color)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8em' }}
                     >
                         + Adicionar
