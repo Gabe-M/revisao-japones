@@ -61,6 +61,19 @@
         .instrucoes { font-size: 0.85em; color: gray; text-align: center; margin-top: -10px; opacity: 0.7; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Filtros e Visão */
+        .toggle-segmented { display: flex; background: rgba(0, 0, 0, 0.05); padding: 4px; border-radius: 20px; gap: 4px; border: 1px solid var(--border-color); justify-content: center; margin-bottom: 10px; }
+        [data-theme="dark"] .toggle-segmented { background: rgba(255, 255, 255, 0.04); }
+        .toggle-segmented button { padding: 6px 16px; font-size: 0.9em; font-weight: 600; border: none; border-radius: 17px; cursor: pointer; background: transparent; color: var(--text-color); opacity: 0.65; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; gap: 6px; }
+        .toggle-segmented button:hover { opacity: 0.9; }
+        .toggle-segmented button.active { background: var(--card-bg); color: var(--text-color); opacity: 1; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+        [data-theme="dark"] .toggle-segmented button.active { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+
+        .form-group { display: flex; flex-direction: column; gap: 10px; text-align: left; width: 100%; }
+        select { padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); font-size: 1em; width: 100%; outline: none; }
+        button.start-btn { padding: 15px 30px; font-size: 1.2em; font-weight: bold; background: var(--highlight-color); color: white; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; width: 100%; font-family: inherit; }
+        button.start-btn:hover { filter: brightness(1.1); transform: scale(1.02); }
     </style>
 </head>
 <body>
@@ -96,20 +109,61 @@
     </div>
 
     <div class="game-container">
-        <!-- Evento de clique único para revelar e avançar -->
-        <div class="flashcard" id="flashcard" onclick="gerenciarAcao()">
-            <span class="categoria-badge" id="card-categoria">Categoria</span>
-            <p class="termo-gigante" id="card-termo">?</p>
-            
-            <div class="resposta" id="card-resposta">
-                <span class="leitura" id="card-leitura">leitura</span>
-                <p class="significado" id="card-significado">Significado</p>
-                <p class="notas" id="card-notas">Notas explicativas aqui.</p>
-            </div>
+        <!-- Tela de Carregamento -->
+        <div id="loading-msg" style="text-align: center; padding: 20px; font-weight: bold; color: gray;">
+            ⏳ Carregando dados do vocabulário e SRS...
         </div>
 
-        <button class="btn-proximo" id="btn-proximo" onclick="sortearTermo()">Próximo Termo ➔</button>
-        <p class="instrucoes">Dica: Use a <b>Barra de Espaço</b> ou <b>Clique</b> no card para revelar e avançar.</p>
+        <!-- Setup Screen -->
+        <div id="setup-screen" style="display: none; width: 100%; flex-direction: column; gap: 20px; text-align: center; background: var(--card-bg); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); box-sizing: border-box;">
+            <h2>Configuração do Minigame</h2>
+            <p style="margin-top: -10px; opacity: 0.8; font-size: 0.95em;">Escolha um conjunto ou baralho e o filtro de progresso para iniciar os Flashcards.</p>
+            
+            <div class="toggle-segmented" style="align-self: center;">
+                <button id="btn-view-conjuntos" class="active" onclick="mudarVisaoMinigame('conjuntos')">📁 Conjuntos</button>
+                <button id="btn-view-baralhos" onclick="mudarVisaoMinigame('baralhos')">🎴 Baralhos</button>
+            </div>
+
+            <div class="form-group">
+                <label id="label-selecao">Conjunto de Estudo:</label>
+                <select id="select-conjunto">
+                    <option value="todos">Todos</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="filtro-srs-group" style="display: none;">
+                <label>Filtro SRS (Progresso):</label>
+                <select id="select-srs">
+                    <option value="Todos">Ambos (Todos)</option>
+                    <option value="Aprendidos">Apenas Já Aprendidos</option>
+                    <option value="Novos">Apenas Não Aprendidos</option>
+                </select>
+            </div>
+            
+            <button class="start-btn" onclick="iniciarJogoDinamico()">Começar ➔</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" style="display: none; width: 100%; flex-direction: column; align-items: center; gap: 20px;">
+            <div style="width: 100%; display: flex; justify-content: flex-start; margin-bottom: -10px;">
+                <button onclick="voltarParaConfig()" style="background: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: inherit; transition: 0.2s;">⚙️ Configurações ↺</button>
+            </div>
+            
+            <!-- Evento de clique único para revelar e avançar -->
+            <div class="flashcard" id="flashcard" onclick="gerenciarAcao()">
+                <span class="categoria-badge" id="card-categoria">Categoria</span>
+                <p class="termo-gigante" id="card-termo">?</p>
+                
+                <div class="resposta" id="card-resposta">
+                    <span class="leitura" id="card-leitura">leitura</span>
+                    <p class="significado" id="card-significado">Significado</p>
+                    <p class="notas" id="card-notas">Notas explicativas aqui.</p>
+                </div>
+            </div>
+
+            <button class="btn-proximo" id="btn-proximo" onclick="sortearTermo()">Próximo Termo ➔</button>
+            <p class="instrucoes">Dica: Use a <b>Barra de Espaço</b> ou <b>Clique</b> no card para revelar e avançar.</p>
+        </div>
     </div>
 
     <script>
@@ -124,8 +178,34 @@
         let termoAtual = null;
         let totalTermos = 0;
         let respostaRevelada = false;
-        async function iniciarJogo() {
+
+        let baseDeDados = [];
+        let srsProgressData = {};
+        let baralhosDisponiveis = [];
+        let visaoMinigame = 'conjuntos';
+
+        async function ankiConnectApi(action, params = {}) {
             try {
+                const response = await fetch('http://127.0.0.1:8765', {
+                    method: 'POST',
+                    body: JSON.stringify({ action, version: 6, params })
+                });
+                if (!response.ok) throw new Error('AnkiConnect indisponível');
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                return data.result;
+            } catch (error) {
+                console.error("AnkiConnect Error:", error);
+                throw error;
+            }
+        }
+
+        async function carregarDadosIniciais() {
+            try {
+                document.getElementById('loading-msg').style.display = 'block';
+                document.getElementById('setup-screen').style.display = 'none';
+                document.getElementById('game-screen').style.display = 'none';
+
                 const response = await fetch('/api/jisho?acao=listar', {
                     headers: { 
                         "Authorization": tokenDeAcesso,
@@ -145,28 +225,148 @@
                     return;
                 }
 
+                // Carregar SRS
+                try {
+                    const resSrs = await fetch('/api/srs?acao=listar', {
+                        headers: { "Authorization": tokenDeAcesso }
+                    });
+                    const srsList = await resSrs.json();
+                    if (Array.isArray(srsList)) {
+                        srsList.forEach(item => {
+                            srsProgressData[item.item] = item;
+                        });
+                    }
+                } catch (err) {
+                    console.error("Erro ao buscar progresso do SRS", err);
+                }
+
                 if (Array.isArray(resultado)) {
-                    // Combinar com os dados estáticos base, evitando duplicatas e ignorando apenas textos longos
                     const itensExistentes = new Set(dadosRevisao.map(d => d.item));
-                    const dadosDbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto');
-                    dadosRevisao.push(...dadosDbFiltrados);
+                    const dbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto');
+                    dadosRevisao.push(...dbFiltrados);
                 }
             } catch (e) {
                 console.error("Erro ao buscar dados do banco para o minigame, usando dados locais.", e);
             }
 
-            // Garante que o jogo inicializa e sorteia o primeiro termo mesmo se a chamada da API falhar
-            inicializarBaralho();
-            sortearTermo();
+            baseDeDados = dadosRevisao.filter(d => d.categoria !== 'Texto');
+
+            // Carregar Anki Decks
+            const baralhosSet = new Set();
+            baseDeDados.forEach(d => {
+                if (Array.isArray(d.baralhos)) d.baralhos.forEach(b => baralhosSet.add(b));
+            });
+            try {
+                const decks = await ankiConnectApi('deckNames');
+                if (decks && decks.length > 0) decks.forEach(d => baralhosSet.add(d));
+            } catch(e) {}
+            baralhosDisponiveis = Array.from(baralhosSet).sort();
+
+            document.getElementById('loading-msg').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'flex';
+
+            popularSeletores();
         }
-window.addEventListener('DOMContentLoaded', iniciarJogo);
-        function inicializarBaralho() {
-            baralho = [...dadosRevisao];
+
+        window.addEventListener('DOMContentLoaded', carregarDadosIniciais);
+
+        function mudarVisaoMinigame(visao) {
+            visaoMinigame = visao;
+            document.getElementById('btn-view-conjuntos').classList.toggle('active', visao === 'conjuntos');
+            document.getElementById('btn-view-baralhos').classList.toggle('active', visao === 'baralhos');
+            document.getElementById('label-selecao').textContent = visao === 'conjuntos' ? 'Conjunto de Estudo:' : 'Baralho do Anki:';
+            
+            const srsGroup = document.getElementById('filtro-srs-group');
+            if (srsGroup) {
+                srsGroup.style.display = visao === 'baralhos' ? 'flex' : 'none';
+            }
+            if (visao !== 'baralhos') {
+                const selectSrs = document.getElementById('select-srs');
+                if (selectSrs) selectSrs.value = 'Todos';
+            }
+
+            popularSeletores();
+        }
+
+        function popularSeletores() {
+            const select = document.getElementById('select-conjunto');
+            select.innerHTML = '<option value="todos">Todos</option>';
+            
+            if (visaoMinigame === 'baralhos') {
+                baralhosDisponiveis.forEach(baralhoName => {
+                    const opt = document.createElement('option');
+                    opt.value = baralhoName;
+                    opt.textContent = baralhoName;
+                    select.appendChild(opt);
+                });
+            } else {
+                const conjuntosUnicos = new Set();
+                baseDeDados.forEach(card => {
+                    if(card.notas) {
+                        const matches = card.notas.match(/\[Conjuntos:\s*(.*?)\]/);
+                        if(matches && matches[1]) {
+                            matches[1].split(',').map(c => c.trim()).filter(c => c).forEach(c => conjuntosUnicos.add(c));
+                        }
+                    }
+                });
+                Array.from(conjuntosUnicos).sort().forEach(conj => {
+                    const opt = document.createElement('option');
+                    opt.value = conj;
+                    opt.textContent = conj;
+                    select.appendChild(opt);
+                });
+            }
+        }
+
+        function iniciarJogoDinamico() {
+            const filtroConjunto = document.getElementById('select-conjunto').value;
+            const filtroSrs = document.getElementById('select-srs').value;
+
+            // Filtrar conjunto e SRS
+            const conjuntoSelecionado = baseDeDados.filter(c => {
+                let matchVisao = true;
+                if (filtroConjunto !== 'todos') {
+                    if (visaoMinigame === 'conjuntos') {
+                        if (!c.notas) matchVisao = false;
+                        else matchVisao = c.notas.includes(`[Conjuntos:`) && c.notas.includes(filtroConjunto);
+                    } else {
+                        matchVisao = (Array.isArray(c.baralhos) && c.baralhos.includes(filtroConjunto));
+                    }
+                }
+                
+                let matchSrs = true;
+                const estaNoSrs = !!srsProgressData[c.item];
+                if (filtroSrs === 'Aprendidos') matchSrs = estaNoSrs;
+                else if (filtroSrs === 'Novos') matchSrs = !estaNoSrs;
+                
+                return matchVisao && matchSrs;
+            });
+
+            if(conjuntoSelecionado.length === 0) {
+                alert(`Combinação muito restrita! O Minigame encontrou 0 termos. Tente um filtro menos restrito.`);
+                return;
+            }
+
+            // Inicializa baralho com os itens filtrados
+            baralho = [...conjuntoSelecionado];
             totalTermos = baralho.length;
+            
+            // Embaralhar
             for (let i = baralho.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [baralho[i], baralho[j]] = [baralho[j], baralho[i]];
             }
+
+            // Exibir a tela de jogo e ocultar a de setup
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+
+            sortearTermo();
+        }
+
+        function voltarParaConfig() {
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'flex';
         }
 
         function sortearTermo() {
@@ -175,7 +375,9 @@ window.addEventListener('DOMContentLoaded', iniciarJogo);
             document.getElementById('btn-proximo').classList.remove('visivel');
 
             if (baralho.length === 0) {
-                inicializarBaralho();
+                alert("Você completou todos os termos deste baralho/conjunto! Reiniciando...");
+                iniciarJogoDinamico();
+                return;
             }
 
             termoAtual = baralho.pop();
@@ -217,12 +419,13 @@ window.addEventListener('DOMContentLoaded', iniciarJogo);
         // Captura o clique da barra de espaço no teclado
         window.addEventListener('keydown', (event) => {
             if (event.code === 'Space') {
-                event.preventDefault(); // Impede a página de rolar para baixo com o espaço
-                gerenciarAcao();
+                const gameScreen = document.getElementById('game-screen');
+                if (gameScreen && gameScreen.style.display !== 'none') {
+                    event.preventDefault(); // Impede a página de rolar para baixo com o espaço
+                    gerenciarAcao();
+                }
             }
         });
-
-        // O jogo é inicializado dinamicamente via o listener de iniciarJogo acima.
     </script>
 </body>
 </html>
