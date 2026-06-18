@@ -64,6 +64,11 @@ const vercelApiPlugin = () => ({
 
 export default defineConfig({
   plugins: [react(), vercelApiPlugin()],
+  resolve: {
+    alias: {
+      "@": resolve(__dirname, "./src"),
+    },
+  },
   build: {
     rollupOptions: {
       input: {

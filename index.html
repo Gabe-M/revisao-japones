@@ -178,6 +178,58 @@
         [data-theme="dark"] #ia-conjunto-select:hover {
             background: rgba(255,255,255,0.05);
         }
+
+        /* Minimalist Toggle Segmented Control */
+        .toggle-segmented {
+            display: inline-flex;
+            background: rgba(0, 0, 0, 0.04);
+            border-radius: 20px;
+            padding: 3px;
+            gap: 2px;
+            border: 1px solid var(--border-color);
+        }
+        [data-theme="dark"] .toggle-segmented {
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .toggle-segmented button {
+            padding: 6px 16px;
+            font-size: 0.9em;
+            font-weight: 600;
+            border: none;
+            border-radius: 17px;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-color);
+            opacity: 0.65;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .toggle-segmented button:hover {
+            opacity: 0.9;
+        }
+        .toggle-segmented button.active {
+            background: var(--card-bg);
+            color: var(--text-color);
+            opacity: 1;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        [data-theme="dark"] .toggle-segmented button.active {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Painel de Filtros Animado */
+        .filtros-header { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .btn-toggle-filtros { background-color: var(--card-bg); color: var(--text-color); border: 2px solid var(--border-color); padding: 10px 20px; border-radius: 12px; font-weight: bold; font-size: 1em; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .btn-toggle-filtros:hover { border-color: var(--highlight-color); transform: translateY(-2px); }
+        .filtros-badges-container { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .filtro-badge { background: rgba(39, 174, 96, 0.1); color: #27ae60; border: 1px solid rgba(39, 174, 96, 0.3); padding: 4px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+        [data-theme="dark"] .filtro-badge { background: rgba(39, 174, 96, 0.2); border: 1px solid rgba(39, 174, 96, 0.5); color: #2ecc71; }
+        
+        .painel-filtros-gaveta { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, margin 0.4s ease; margin-bottom: 0; }
+        .painel-filtros-gaveta.expandido { max-height: 800px; opacity: 1; margin-bottom: 20px; }
+        .painel-filtros-inner { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; align-items: center; gap: 15px; }
 </style>
 </head>
 <body>
@@ -198,7 +250,6 @@
         <a href="minigame.html">🎮 Minigame</a>
         <a href="quiz.html">⚡ Quiz</a>
         <a href="textos.html">📄 Textos</a>
-        <a href="anki.html">🎴 Anki</a>
         <a href="srs.html">🧠 SRS</a>
         <a href="dialogo.html">💬 Diálogo</a>
         <a href="perfil.html">👤 Perfil</a>
@@ -338,6 +389,74 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         </div>
     </div>
 
+    <!-- Painel de Importação via AnkiConnect (Local) -->
+    <div class="panel-container" style="flex-direction: column; align-items: stretch; display: flex; gap: 10px; box-sizing: border-box;">
+        <div class="panel-header" onclick="togglePainelAnkiConnect()">
+            <span>🔌 Importar via AnkiConnect (Local)</span>
+            <span id="ia-ankiconnect-icon" style="background: var(--bg-color); padding: 4px 8px; border-radius: 6px;">▼</span>
+        </div>
+        
+        <div id="ia-painel-ankiconnect-content" style="display: none; flex-direction: column; gap: 15px; border-top: 2px dashed var(--border-color); padding-top: 20px; margin-top: 10px;">
+            <p style="margin: 0; font-size: 0.95em; opacity: 0.9; line-height: 1.5; text-align: left; width: 100%;">
+                Importe termos diretamente do seu Anki Desktop local utilizando a extensão <strong>AnkiConnect</strong>. Certifique-se de que o Anki esteja aberto e rodando no mesmo computador.
+            </p>
+            
+            <div style="background: var(--bg-color); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; width: 100%; box-sizing: border-box;">
+                
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span style="font-weight: bold; color: var(--text-color);">Baralho Local:</span>
+                    <select id="ia-ankiconnect-deck-select" style="padding: 10px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-color); outline: none; cursor: pointer; min-width: 200px;">
+                        <option value="">Aguardando conexão...</option>
+                    </select>
+                    <button onclick="carregarBaralhosAnkiConnect()" class="btn-action" style="padding: 8px 12px;" title="Atualizar Conexão/Baralhos">🔄</button>
+                    <span id="ankiconnect-status" style="font-size: 0.8em; font-weight: bold; margin-left: 10px; padding: 4px 8px; border-radius: 6px;"></span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <span style="font-weight: bold; color: var(--text-color);">Salvar no(s) Conjunto(s):</span>
+                    <div style="position: relative; display: inline-block;">
+                        <button id="ia-ankiconnect-conjunto-btn" onclick="toggleMultiSelect(event, 'ia-ankiconnect-conjunto-dropdown')" style="padding: 10px 14px; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-color); font-weight: bold; outline: none; cursor: pointer; text-align: left; min-width: 180px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <span>Geral</span>
+                            <span style="font-size: 0.8em; opacity: 0.7;">▼</span>
+                        </button>
+                        <div id="ia-ankiconnect-conjunto-dropdown" class="multiselect-dropdown" style="display: none; position: absolute; top: 100%; left: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow-hover); padding: 12px; min-width: 220px; z-index: 1000; max-height: 200px; overflow-y: auto; flex-direction: column; gap: 8px; box-sizing: border-box;">
+                            <!-- Checkboxes preenchidos via JS -->
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 15px; margin-left: 10px; background: rgba(0,0,0,0.02); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <span style="font-size: 0.85em; font-weight: bold; color: var(--text-color);">Aplicar Conjunto a:</span>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9em; color: var(--text-color);">
+                            <input type="radio" name="anki-filtro-conjunto" value="todos" checked> Todos os cards
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9em; color: var(--text-color);">
+                            <input type="radio" name="anki-filtro-conjunto" value="aprendidos"> Apenas Aprendidos
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9em; color: var(--text-color);">
+                            <input type="radio" name="anki-filtro-conjunto" value="novos"> Apenas Novos
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; justify-content: flex-end; margin-top: 10px; border-top: 1px solid rgba(120,120,120,0.1); padding-top: 15px;">
+                    <button onclick="escanearProgressoAnki()" id="ia-btn-atualizar-progresso" class="btn-action" style="background: var(--secondary-color); color: white; border: none;">🔄 Atualizar Progresso</button>
+                    <button onclick="extrairCardsAnkiConnect()" id="ia-btn-extrair-ankiconnect" class="btn-action" style="background: var(--primary-color); color: white; border: none;">📥 Extrair do Anki</button>
+                    <button onclick="processarImportacaoAnkiConnect()" id="ia-btn-confirmar-ankiconnect" class="btn-action btn-success" style="display: none;">☁️ Sincronizar para a Nuvem</button>
+                </div>
+            </div>
+            
+            <div id="ia-ankiconnect-preview" style="display: none; background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);">
+                <div style="font-weight: bold; margin-bottom: 12px; color: var(--text-color); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>📋 Cartões Extraídos do Baralho Local:</span>
+                    <span id="ia-ankiconnect-preview-count" style="font-size: 0.85em; background: rgba(120,120,120,0.2); padding: 4px 8px; border-radius: 12px;">0 cartões</span>
+                </div>
+                <div id="ia-ankiconnect-preview-content" style="max-height: 300px; overflow-y: auto; font-size: 0.9em; display: flex; flex-direction: column; gap: 10px;"></div>
+            </div>
+            
+            <div id="ia-ankiconnect-feedback" style="display: none; font-weight: bold; text-align: center; font-size: 0.95em; padding: 10px; background: rgba(39, 174, 96, 0.1); color: #27ae60; border-radius: 8px; width: 100%; box-sizing: border-box;"></div>
+        </div>
+    </div>
+
             </div>
         </div>
     </div>
@@ -348,32 +467,66 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar termo, significado ou leitura..." onkeyup="aplicarFiltros()">
     </div>
     
-    <div class="controls" id="botoes-filtro-jlpt" style="margin-bottom: 15px;">
-        <button onclick="mudarJLPT('Todos')" class="active">Níveis (Todos)</button>
-        <button onclick="mudarJLPT('N5')" style="border-bottom: 2px solid #27ae60;">N5</button>
-        <button onclick="mudarJLPT('N4')" style="border-bottom: 2px solid #2980b9;">N4</button>
-        <button onclick="mudarJLPT('N3')" style="border-bottom: 2px solid #f39c12;">N3</button>
-        <button onclick="mudarJLPT('N2')" style="border-bottom: 2px solid #e67e22;">N2</button>
-        <button onclick="mudarJLPT('N1')" style="border-bottom: 2px solid #c0392b;">N1</button>
+    <div class="filtros-header">
+        <button id="btn-toggle-filtros" class="btn-toggle-filtros" onclick="toggleFiltrosGaveta()">
+            <span>⚙️ Filtros Avançados</span>
+            <span id="icone-toggle-filtros" style="transition: transform 0.3s; display: inline-block;">▼</span>
+        </button>
+        <div id="filtros-badges-container" class="filtros-badges-container">
+            <!-- Badges injetados via JS -->
+        </div>
     </div>
-    
-    <div class="controls" id="botoes-filtro">
-        <button onclick="mudarCategoria('Todos')" class="active">Todos</button>
-        <button onclick="mudarCategoria('Kanji')">Kanjis</button>
-        <button onclick="mudarCategoria('Partícula')">Partículas</button>
-        <button onclick="mudarCategoria('Verbo')">Verbos</button>
-        <button onclick="mudarCategoria('Demonstrativo')">Demonstrativos</button>
-        <button onclick="mudarCategoria('Vocabulário')">Vocabulário</button>
+
+    <div id="painel-filtros-gaveta" class="painel-filtros-gaveta">
+        <div class="painel-filtros-inner">
+            <!-- Seção de Ações / Atualizar Baralho -->
+            <div id="secao-atualizar-baralho-gaveta" style="margin-bottom: 10px; border-bottom: 1px solid var(--border-color); width: 100%; display: none; flex-direction: column; align-items: center; gap: 8px; padding-bottom: 15px;">
+                <button id="btn-atualizar-baralho-gaveta" onclick="atualizarBaralhoDoFiltro()" class="btn-action" style="background: var(--primary-color, #27ae60); color: white; border: none; display: flex; align-items: center; gap: 8px; padding: 10px 20px; font-weight: bold; border-radius: 8px; transition: all 0.2s; cursor: pointer;">
+                    <span>🔄 Sincronizar Progresso do Baralho</span>
+                </button>
+                <span id="label-atualizar-baralho-info" style="font-size: 0.85em; color: var(--text-color); opacity: 0.8; text-align: center;"></span>
+            </div>
+
+            <div class="controls" id="botoes-filtro-jlpt" style="margin-bottom: 0;">
+                <button onclick="mudarJLPT('Todos')" class="active">Níveis (Todos)</button>
+                <button onclick="mudarJLPT('N5')" style="border-bottom: 2px solid #27ae60;">N5</button>
+                <button onclick="mudarJLPT('N4')" style="border-bottom: 2px solid #2980b9;">N4</button>
+                <button onclick="mudarJLPT('N3')" style="border-bottom: 2px solid #f39c12;">N3</button>
+                <button onclick="mudarJLPT('N2')" style="border-bottom: 2px solid #e67e22;">N2</button>
+                <button onclick="mudarJLPT('N1')" style="border-bottom: 2px solid #c0392b;">N1</button>
+            </div>
+
+            <div class="controls" id="botoes-filtro-srs" style="margin-bottom: 0;">
+                <button onclick="mudarSRS('Todos')" class="active">SRS: Ambos</button>
+                <button onclick="mudarSRS('Aprendidos')">Já Aprendidos</button>
+                <button onclick="mudarSRS('Novos')">Não Aprendidos</button>
+            </div>
+            
+            <div class="controls" id="botoes-filtro" style="margin-bottom: 0;">
+                <button onclick="mudarCategoria('Todos')" class="active">Todos</button>
+                <button onclick="mudarCategoria('Kanji')">Kanjis</button>
+                <button onclick="mudarCategoria('Partícula')">Partículas</button>
+                <button onclick="mudarCategoria('Verbo')">Verbos</button>
+                <button onclick="mudarCategoria('Demonstrativo')">Demonstrativos</button>
+                <button onclick="mudarCategoria('Vocabulário')">Vocabulário</button>
+            </div>
+        </div>
     </div>
 
     <!-- Navegação rápida de Pastas/Conjuntos -->
     <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; margin: 0 auto 20px; max-width: 1200px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box;">
         
+        <!-- Toggle Conjuntos / Baralhos -->
+        <div class="toggle-segmented">
+            <button id="btn-view-conjuntos" class="active" onclick="mudarVisao('conjuntos')">📁 Conjuntos</button>
+            <button id="btn-view-baralhos" onclick="mudarVisao('baralhos')">🎴 Baralhos</button>
+        </div>
+
         <div style="display: flex; align-items: center; gap: 15px;">
             <button onclick="navegarConjunto(-1)" style="background: var(--secondary-color); padding: 8px 16px; font-weight: bold; border-radius: 5px; cursor: pointer; user-select: none; color: white;" title="Pasta Anterior">◀ Anterior</button>
             
             <div style="font-weight: bold; font-size: 1.1em; color: var(--text-color); display: flex; align-items: center; gap: 8px; justify-content: center; user-select: none;">
-                <span>📁</span>
+                <span id="icone-visao-atual">📁</span>
                 <select id="ia-conjunto-select" onchange="mudarConjuntoAssociacao()" style="background: var(--bg-color); border: 2px solid var(--border-color); color: var(--text-color); font-weight: bold; font-size: 1em; cursor: pointer; outline: none; text-align: center; text-align-last: center; padding: 6px 12px; border-radius: 8px; transition: 0.2s; min-width: 150px;">
                     <!-- Preenchido via JS -->
                 </select>
@@ -616,13 +769,17 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
         // Variáveis de estado para a paginação e conjuntos
         let filtroAtual = 'Todos';
         let filtroJLPT = 'Todos';
+        let filtroSRS = 'Todos';
         let dadosFiltrados = [];
+        let srsProgressData = {};
         let dadosCombinados = [];
         let currentPage = 1;
         const itemsPerPage = 12;
 
         let tiposDisponiveis = ['Kanji', 'Partícula', 'Verbo', 'Demonstrativo', 'Vocabulário'];
         let conjuntosDisponiveis = [];
+        let baralhosDisponiveis = [];
+        let visaoAtual = 'conjuntos'; // pode ser 'conjuntos' ou 'baralhos'
 
         async function carregarDados() {
             try {
@@ -650,6 +807,21 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     dadosDb = resultado;
                 }
 
+                // Buscar dados do SRS para filtrar os cards
+                try {
+                    const resSrs = await fetch('/api/srs?acao=listar', {
+                        headers: { "Authorization": tokenDeAcesso }
+                    });
+                    const srsList = await resSrs.json();
+                    if (Array.isArray(srsList)) {
+                        srsList.forEach(item => {
+                            srsProgressData[item.item] = item;
+                        });
+                    }
+                } catch (err) {
+                    console.error("Erro ao buscar progresso do SRS", err);
+                }
+
                 // Filtrar os dados dinâmicos
                 const dadosDbFiltrados = dadosDb.filter(d => d && d.item && d.categoria !== 'Texto' && !(d.categoria && d.categoria.startsWith('Frase:')));
 
@@ -671,6 +843,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 // Descobrir tipos gramaticais e conjuntos de forma separada
                 const tiposSet = new Set(['Kanji', 'Partícula', 'Verbo', 'Demonstrativo', 'Vocabulário']);
                 const conjuntosSet = new Set(['Geral']); // Sempre inicia com Geral
+                const baralhosSet = new Set(['Geral']);
 
                 dadosCombinados.forEach(d => {
                     if (d.categoria && d.categoria !== 'Texto' && !d.categoria.startsWith('Frase:')) {
@@ -678,10 +851,25 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                     }
                     const conjuntos = extrairConjuntos(d.notas, d.item);
                     conjuntos.forEach(c => conjuntosSet.add(c));
+
+                    if (Array.isArray(d.baralhos)) {
+                        d.baralhos.forEach(b => baralhosSet.add(b));
+                    }
                 });
 
                 tiposDisponiveis = Array.from(tiposSet);
                 conjuntosDisponiveis = Array.from(conjuntosSet);
+
+                try {
+                    const ankiDecks = await ankiConnectApi('deckNames');
+                    if (ankiDecks && ankiDecks.length > 0) {
+                        ankiDecks.forEach(d => baralhosSet.add(d));
+                    }
+                } catch(e) {
+                    console.log("Anki não conectado, exibindo apenas baralhos locais.");
+                }
+
+                baralhosDisponiveis = Array.from(baralhosSet);
 
                 atualizarSeletoresDeConjunto();
                 atualizarBotoesFiltro();
@@ -706,24 +894,47 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             const select = document.getElementById('ia-conjunto-select');
             const currentVal = select.value;
             
-            // Garante que o conjunto 'Geral' sempre esteja disponível no seletor
-            if (!conjuntosDisponiveis.includes('Geral')) {
-                conjuntosDisponiveis.unshift('Geral');
+            let listaAtiva = visaoAtual === 'baralhos' ? baralhosDisponiveis : conjuntosDisponiveis;
+
+            if (!listaAtiva.includes('Geral')) {
+                listaAtiva.unshift('Geral');
             }
 
-            let html = conjuntosDisponiveis.map(conj => `<option value="${conj}">${conj}</option>`).join('');
-            html += `<option value="novo">Criar Novo Conjunto...</option>`;
+            let html = listaAtiva.map(item => `<option value="${item}">${item}</option>`).join('');
+            if (visaoAtual === 'conjuntos') {
+                html += `<option value="novo">Criar Novo Conjunto...</option>`;
+            }
             select.innerHTML = html;
 
-            if (currentVal) {
+            if (currentVal && listaAtiva.includes(currentVal)) {
                 select.value = currentVal;
             } else {
-                select.value = 'Geral'; // Seleciona o conjunto base 'Geral' por padrão
+                select.value = 'Geral';
             }
 
-            // Garante que o campo de input de novo conjunto apareça se a opção for "novo"
             toggleNovoConjuntoInput();
             atualizarVisibilidadeBotaoDeletarConjunto();
+            atualizarBotaoAtualizarBaralhoGaveta();
+        }
+
+        function mudarVisao(visao) {
+            visaoAtual = visao;
+            
+            const btnConjuntos = document.getElementById('btn-view-conjuntos');
+            const btnBaralhos = document.getElementById('btn-view-baralhos');
+            
+            if (visao === 'conjuntos') {
+                btnConjuntos.classList.add('active');
+                btnBaralhos.classList.remove('active');
+            } else {
+                btnConjuntos.classList.remove('active');
+                btnBaralhos.classList.add('active');
+            }
+            
+            document.getElementById('icone-visao-atual').textContent = visao === 'conjuntos' ? '📁' : '🎴';
+
+            atualizarSeletoresDeConjunto();
+            aplicarFiltros();
         }
 
         function atualizarBotoesFiltro() {
@@ -773,6 +984,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             toggleNovoConjuntoInput();
             atualizarVisibilidadeBotaoDeletarConjunto();
             aplicarFiltros();
+            atualizarBotaoAtualizarBaralhoGaveta();
         }
 
         function toggleNovoConjuntoInput() {
@@ -792,6 +1004,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             
             if (select.value !== 'Geral' && select.value !== 'novo') {
                 btn.style.display = 'inline-block';
+                btn.textContent = visaoAtual === 'baralhos' ? 'Deletar Baralho' : 'Deletar Conjunto';
             } else {
                 btn.style.display = 'none';
             }
@@ -829,6 +1042,12 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             const conjunto = select.value;
             if (!conjunto || conjunto === 'Geral' || conjunto === 'novo') return;
 
+            const isBaralho = visaoAtual === 'baralhos';
+            const titulo = isBaralho ? `🎴 Excluir Baralho: "${conjunto}"` : `⚠️ Excluir Conjunto: "${conjunto}"`;
+            const textoDesc = isBaralho ? "este baralho de vocabulários" : "este conjunto de vocabulários";
+            const acaoApi = isBaralho ? 'deletar_baralho' : 'deletar_conjunto';
+            const payloadKey = isBaralho ? 'baralho' : 'conjunto';
+
             // Criar modal customizado dinamicamente
             const modalDiv = document.createElement('div');
             modalDiv.id = 'modal-deletar-conjunto';
@@ -846,9 +1065,9 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
 
             modalDiv.innerHTML = `
                 <div style="background: var(--card-bg, white); color: var(--text-color, #333); padding: 30px; border-radius: var(--card-radius, 16px); max-width: 500px; width: 90%; box-shadow: var(--shadow-hover, 0 10px 25px rgba(0,0,0,0.2)); border: 1px solid var(--border-color, #ccc); font-family: 'Inter', sans-serif;">
-                    <h3 style="margin-top: 0; font-size: 1.4em; color: #e74c3c; display: flex; align-items: center; gap: 8px;">⚠️ Excluir Conjunto: "${conjunto}"</h3>
+                    <h3 style="margin-top: 0; font-size: 1.4em; color: #e74c3c; display: flex; align-items: center; gap: 8px;">${titulo}</h3>
                     <p style="font-size: 0.95em; line-height: 1.5; margin-bottom: 20px;">
-                        Escolha como deseja prosseguir com a exclusão deste conjunto de vocabulários:
+                        Escolha como deseja prosseguir com a exclusão d${textoDesc}:
                     </p>
                     
                     <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
@@ -857,7 +1076,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             <div>
                                 <strong style="font-size: 0.95em; display: block; color: var(--text-color);">Remover apenas termos exclusivos</strong>
                                 <span style="font-size: 0.85em; color: gray; display: block; margin-top: 2px;">
-                                    Deleta definitivamente do banco os cards que pertencem <strong>somente</strong> a este conjunto. Cards associados a outros conjuntos serão preservados, apenas perdendo a etiqueta de "${conjunto}".
+                                    Deleta definitivamente do banco os cards que pertencem <strong>somente</strong> a este item. Cards associados a outros conjuntos/baralhos serão preservados, apenas perdendo a etiqueta.
                                 </span>
                             </div>
                         </label>
@@ -867,7 +1086,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                             <div>
                                 <strong style="font-size: 0.95em; display: block; color: #e74c3c;">Deletar todos os termos associados</strong>
                                 <span style="font-size: 0.85em; color: #c0392b; display: block; margin-top: 2px;">
-                                    Deleta permanentemente <strong>todos os cards</strong> associados a este conjunto, incluindo o progresso deles, mesmo se também estiverem vinculados a outros conjuntos.
+                                    Deleta permanentemente <strong>todos os cards</strong> associados, incluindo o progresso deles, mesmo se também estiverem vinculados a outros itens.
                                 </span>
                             </div>
                         </label>
@@ -897,18 +1116,22 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 btnCancelar.disabled = true;
 
                 try {
-                    const response = await fetch('/api/jisho?acao=deletar_conjunto', {
+                    const bodyObj = { modoExclusao };
+                    bodyObj[payloadKey] = conjunto;
+
+                    const response = await fetch('/api/jisho?acao=' + acaoApi, {
                         method: 'POST',
                         headers: {
                             "Authorization": tokenDeAcesso,
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({ conjunto, modoExclusao })
+                        body: JSON.stringify(bodyObj)
                     });
 
                     if (response.ok) {
                         const res = await response.json();
-                        alert(`Conjunto deletado com sucesso!\n- Cards excluídos: ${res.deletados}\n- Cards atualizados (etiqueta removida): ${res.atualizados}`);
+                        const termoSucesso = isBaralho ? 'Baralho' : 'Conjunto';
+                        alert(`${termoSucesso} deletado com sucesso!\n- Cards excluídos: ${res.deletados}\n- Cards atualizados (etiqueta removida): ${res.atualizados}`);
                         document.body.removeChild(modalDiv);
                         
                         // Reseta a seleção e recarrega dados
@@ -950,9 +1173,19 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             aplicarFiltros();
         }
 
+        function mudarSRS(status) {
+            filtroSRS = status;
+            document.querySelectorAll('#botoes-filtro-srs button').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('onclick').includes(`'${status}'`));
+            });
+            aplicarFiltros();
+        }
+
         function aplicarFiltros() {
             const texto = document.getElementById('searchInput').value.toLowerCase();
             const filtroConjunto = document.getElementById('ia-conjunto-select').value;
+            
+            atualizarBadgesFiltro();
             
             // Sincroniza o label de visualização da pasta ativa
             const labelPasta = document.getElementById('ia-nome-pasta-ativa');
@@ -961,11 +1194,20 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             }
             
             dadosFiltrados = dadosCombinados.filter(d => {
-                // 1. Filtro de Conjunto (apenas se o modo de associação estiver desativado)
+                // 1. Filtro de Conjunto ou Baralho
                 let pertenceAoConjunto = true;
                 if (filtroConjunto !== 'novo') {
-                    const conjuntosDoTermo = extrairConjuntos(d.notas, d.item);
-                    pertenceAoConjunto = conjuntosDoTermo.includes(filtroConjunto);
+                    if (visaoAtual === 'baralhos') {
+                        const baralhos = Array.isArray(d.baralhos) ? d.baralhos : [];
+                        if (filtroConjunto === 'Geral') {
+                            pertenceAoConjunto = baralhos.length > 0;
+                        } else {
+                            pertenceAoConjunto = baralhos.includes(filtroConjunto);
+                        }
+                    } else {
+                        const conjuntosDoTermo = extrairConjuntos(d.notas, d.item);
+                        pertenceAoConjunto = conjuntosDoTermo.includes(filtroConjunto);
+                    }
                 }
                 
                 // 2. Filtro de Categoria/Tipo (Kanji, Verbo, etc.)
@@ -984,8 +1226,23 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 const textoMatch = d.item.toLowerCase().includes(texto) || 
                                    d.leitura.toLowerCase().includes(texto) || 
                                    d.significado.toLowerCase().includes(texto);
+
+                // 5. Filtro SRS
+                let pertenceAoSRS = true;
+                if (filtroSRS !== 'Todos') {
+                    let temProgresso = !!srsProgressData[d.item];
+                    
+                    // Se não tiver progresso local, mas veio do Anki já aprendido (queue > 0)
+                    if (!temProgresso && d.campos_anki && d.campos_anki.queue !== undefined) {
+                        const q = parseInt(d.campos_anki.queue);
+                        if (!isNaN(q) && q > 0) temProgresso = true;
+                    }
+
+                    if (filtroSRS === 'Aprendidos') pertenceAoSRS = temProgresso;
+                    if (filtroSRS === 'Novos') pertenceAoSRS = !temProgresso;
+                }
                                    
-                return pertenceAoConjunto && pertenceACategoria && pertenceAoJLPT && textoMatch;
+                return pertenceAoConjunto && pertenceACategoria && pertenceAoJLPT && textoMatch && pertenceAoSRS;
             });
             currentPage = 1;
             renderizarPagina();
@@ -1230,11 +1487,13 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             const btn = document.getElementById(btnId);
             if (!dropdown || !btn) return;
             
-            const selecionados = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+            const selecionados = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked'))
+                .filter(cb => cb.name && cb.name.endsWith('-conjunto'))
+                .map(cb => cb.value);
             const span = btn.querySelector('span:first-child');
             if (span) {
                 if (selecionados.length === 0) {
-                    span.textContent = "Nenhum selecionado";
+                    span.textContent = "Sem conjunto";
                 } else if (selecionados.length === 1) {
                     span.textContent = selecionados[0];
                 } else {
@@ -1255,16 +1514,26 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 atualizarSeletoresDeConjunto();
                 atualizarSeletorImportacao();
                 atualizarSeletorAnki();
+                if (typeof atualizarSeletorAnkiConnect === 'function') atualizarSeletorAnkiConnect();
             }
             
             // Marca o novo conjunto criado como selecionado
-            const dropdownId = tipo === 'import' ? 'ia-import-conjunto-dropdown' : 'ia-anki-conjunto-dropdown';
+            let dropdownId = 'ia-import-conjunto-dropdown';
+            let btnId = 'ia-import-conjunto-btn';
+            if (tipo === 'anki') {
+                dropdownId = 'ia-anki-conjunto-dropdown';
+                btnId = 'ia-anki-conjunto-btn';
+            } else if (tipo === 'ankiconnect') {
+                dropdownId = 'ia-ankiconnect-conjunto-dropdown';
+                btnId = 'ia-ankiconnect-conjunto-btn';
+            }
+            
             const dropdown = document.getElementById(dropdownId);
             if (dropdown) {
                 const cb = dropdown.querySelector(`input[value="${nome}"]`);
                 if (cb) {
                     cb.checked = true;
-                    atualizarBotaoTexto(dropdownId, tipo === 'import' ? 'ia-import-conjunto-btn' : 'ia-anki-conjunto-btn');
+                    atualizarBotaoTexto(dropdownId, btnId);
                 }
             }
         }
@@ -1276,7 +1545,14 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             // Filtra para remover opções especiais
             const conjuntos = conjuntosDisponiveis.filter(c => c !== 'novo' && c !== 'Todos');
             
-            let html = conjuntos.map(conj => `
+            let html = `
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; padding: 4px 6px; border-radius: 4px; color: var(--text-color); border-bottom: 1px dashed var(--border-color); padding-bottom: 6px; margin-bottom: 4px; font-weight: 600;">
+                    <input type="checkbox" name="import-conjunto-nenhum" id="ia-import-conjunto-nenhum" style="cursor: pointer;">
+                    <span>Sem Conjunto</span>
+                </label>
+            `;
+            
+            html += conjuntos.map(conj => `
                 <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; padding: 4px 6px; border-radius: 4px; color: var(--text-color);">
                     <input type="checkbox" name="import-conjunto" value="${conj}" ${conj === 'Geral' ? 'checked' : ''} style="cursor: pointer;">
                     <span>${conj}</span>
@@ -1292,9 +1568,26 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             
             atualizarBotaoTexto('ia-import-conjunto-dropdown', 'ia-import-conjunto-btn');
             
-            // Adiciona listeners para atualizar o texto do botão
-            dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            const nenhumCb = dropdown.querySelector('#ia-import-conjunto-nenhum');
+            const outrosCbs = dropdown.querySelectorAll('input[name="import-conjunto"]');
+            
+            nenhumCb.addEventListener('change', () => {
+                if (nenhumCb.checked) {
+                    outrosCbs.forEach(cb => cb.checked = false);
+                }
+                atualizarBotaoTexto('ia-import-conjunto-dropdown', 'ia-import-conjunto-btn');
+            });
+            
+            outrosCbs.forEach(cb => {
                 cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        nenhumCb.checked = false;
+                    } else {
+                        const algumAtivo = Array.from(outrosCbs).some(c => c.checked);
+                        if (!algumAtivo) {
+                            nenhumCb.checked = true;
+                        }
+                    }
                     atualizarBotaoTexto('ia-import-conjunto-dropdown', 'ia-import-conjunto-btn');
                 });
             });
@@ -1350,12 +1643,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             const checkboxes = document.querySelectorAll('#ia-import-conjunto-dropdown input[name="import-conjunto"]:checked');
             const conjuntosSelecionados = Array.from(checkboxes).map(cb => cb.value);
             
-            if (conjuntosSelecionados.length === 0) {
-                alert("Por favor, selecione pelo menos um conjunto.");
-                return;
-            }
-            
-            const conjuntoSelecionado = conjuntosSelecionados.find(c => c !== 'Geral') || conjuntosSelecionados[0] || 'Geral';
+            // É válido não selecionar nenhum conjunto.
+            const conjuntoSelecionado = conjuntosSelecionados.find(c => c !== 'Geral') || conjuntosSelecionados[0] || 'Nenhum conjunto';
 
             const feedback = document.getElementById('ia-import-feedback');
             const btn = document.getElementById('ia-btn-confirmar-import');
@@ -1477,8 +1766,10 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             const select = document.getElementById('ia-conjunto-select');
             if (!select) return;
             
-            // Filtra para garantir que apenas conjuntos reais entrem na lista de opções (ignorando "novo")
-            const opcoes = [...conjuntosDisponiveis.filter(c => c !== 'novo' && c !== 'Todos')];
+            const listaOriginal = visaoAtual === 'baralhos' ? baralhosDisponiveis : conjuntosDisponiveis;
+            
+            // Filtra para garantir que apenas conjuntos reais entrem na lista de opções (ignorando "novo" e "Todos")
+            const opcoes = [...listaOriginal.filter(c => c !== 'novo' && c !== 'Todos')];
             
             // Garante que 'Geral' esteja na lista se não estiver por algum motivo
             if (!opcoes.includes('Geral')) {
@@ -1570,7 +1861,14 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             // Filtra para remover opções especiais
             const conjuntos = conjuntosDisponiveis.filter(c => c !== 'novo' && c !== 'Todos');
             
-            let html = conjuntos.map(conj => `
+            let html = `
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; padding: 4px 6px; border-radius: 4px; color: var(--text-color); border-bottom: 1px dashed var(--border-color); padding-bottom: 6px; margin-bottom: 4px; font-weight: 600;">
+                    <input type="checkbox" name="anki-conjunto-nenhum" id="ia-anki-conjunto-nenhum" style="cursor: pointer;">
+                    <span>Sem Conjunto</span>
+                </label>
+            `;
+            
+            html += conjuntos.map(conj => `
                 <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; padding: 4px 6px; border-radius: 4px; color: var(--text-color);">
                     <input type="checkbox" name="anki-conjunto" value="${conj}" ${conj === 'Geral' ? 'checked' : ''} style="cursor: pointer;">
                     <span>${conj}</span>
@@ -1586,9 +1884,26 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             
             atualizarBotaoTexto('ia-anki-conjunto-dropdown', 'ia-anki-conjunto-btn');
             
-            // Adiciona listeners para atualizar o texto do botão
-            dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            const nenhumCb = dropdown.querySelector('#ia-anki-conjunto-nenhum');
+            const outrosCbs = dropdown.querySelectorAll('input[name="anki-conjunto"]');
+            
+            nenhumCb.addEventListener('change', () => {
+                if (nenhumCb.checked) {
+                    outrosCbs.forEach(cb => cb.checked = false);
+                }
+                atualizarBotaoTexto('ia-anki-conjunto-dropdown', 'ia-anki-conjunto-btn');
+            });
+            
+            outrosCbs.forEach(cb => {
                 cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        nenhumCb.checked = false;
+                    } else {
+                        const algumAtivo = Array.from(outrosCbs).some(c => c.checked);
+                        if (!algumAtivo) {
+                            nenhumCb.checked = true;
+                        }
+                    }
                     atualizarBotaoTexto('ia-anki-conjunto-dropdown', 'ia-anki-conjunto-btn');
                 });
             });
@@ -1657,44 +1972,91 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             const reader = new FileReader();
             reader.onload = async function(e) {
                 try {
-                    const linhas = e.target.result.split('\n');
-                    const termosValidos = [];
-
-                    for (let i = 0; i < linhas.length; i++) {
-                        // Ceder controle para o navegador a cada 100 linhas para evitar INP elevado
-                        if (i > 0 && i % 100 === 0) {
+                    const text = e.target.result;
+                    
+                    // Parser TSV robusto que suporta aspas e quebras de linha dentro dos campos
+                    const rows = [];
+                    let currentRow = [];
+                    let currentCell = '';
+                    let inQuotes = false;
+                    
+                    for (let i = 0; i < text.length; i++) {
+                        // Ceder controle para evitar travamento da aba com arquivos grandes
+                        if (i > 0 && i % 50000 === 0) {
                             await new Promise(resolve => setTimeout(resolve, 0));
                         }
+                        const char = text[i];
+                        
+                        if (inQuotes) {
+                            if (char === '"') {
+                                if (i + 1 < text.length && text[i + 1] === '"') {
+                                    currentCell += '"';
+                                    i++; // Pula aspas duplas escapadas
+                                } else {
+                                    inQuotes = false;
+                                }
+                            } else {
+                                currentCell += char;
+                            }
+                        } else {
+                            if (char === '"') {
+                                inQuotes = true;
+                            } else if (char === '\t') {
+                                currentRow.push(currentCell);
+                                currentCell = '';
+                            } else if (char === '\n') {
+                                currentRow.push(currentCell);
+                                rows.push(currentRow);
+                                currentRow = [];
+                                currentCell = '';
+                            } else if (char !== '\r') {
+                                currentCell += char;
+                            }
+                        }
+                    }
+                    if (currentCell !== '' || currentRow.length > 0) {
+                        currentRow.push(currentCell);
+                        rows.push(currentRow);
+                    }
 
-                        const linha = linhas[i];
-                        const trimmed = linha.trim();
-                        // Ignorar linhas de metadados (#) e linhas vazias
-                        if (!trimmed || trimmed.startsWith('#')) continue;
+                    const termosValidos = [];
+                    let offset = 0;
+                    
+                    for (let i = 0; i < rows.length; i++) {
+                        const colunas = rows[i];
+                        if (colunas.length === 0 || (colunas.length === 1 && !colunas[0].trim())) continue;
+                        
+                        const firstCol = colunas[0].trim();
+                        // Linhas de comentários/cabeçalhos
+                        if (firstCol.startsWith('#')) {
+                            if (firstCol.includes('#guid column:')) offset++;
+                            if (firstCol.includes('#notetype column:')) offset++;
+                            if (firstCol.includes('#deck column:')) offset++;
+                            continue;
+                        }
 
-                        const colunas = trimmed.split('\t');
-                        // Precisa ter pelo menos 6 colunas (até o significado)
-                        if (colunas.length < 6) continue;
+                        // Precisamos de pelo menos item (offset) e mais uma coluna
+                        if (colunas.length <= offset + 1) continue;
 
-                        const item = (colunas[3] || '').trim();
-                        const leitura = (colunas[4] || '').trim();
-                        const significado = (colunas[5] || '').trim();
+                        const item = (colunas[offset] || '').trim();
+                        const leitura = (colunas[offset + 1] || '').trim();
+                        const significado = (colunas[offset + 2] || '').trim();
 
-                        if (!item || !significado) continue;
+                        if (!item) continue;
+                        // Para não ser tão restrito, deve ter pelo menos leitura ou significado
+                        if (!leitura && !significado) continue;
 
-                        // Auto-detector inteligente para colunas extras de exemplo/tradução/furigana
                         let fraseExemplo = '';
                         let furiganaFrase = '';
                         let traducaoFrase = '';
                         let notasGramaticais = '';
                         let jlptDetectado = null;
 
-                        // Analisa as colunas a partir do índice 6
-                        for (let idx = 6; idx < colunas.length; idx++) {
+                        for (let idx = offset + 3; idx < colunas.length; idx++) {
                             const val = (colunas[idx] || '').trim();
                             if (!val) continue;
 
-                            // Ignora mídias e arquivos de som logo no começo para evitar regex pesadas
-                            if (val.includes('[sound:') || val.includes('.mp3') || val.includes('.png') || val.includes('.jpg') || val.includes('.jpeg')) {
+                            if (val.includes('[sound:') || val.includes('.mp3') || val.includes('.png') || val.includes('.jpg') || val.includes('.jpeg') || val.includes('<img')) {
                                 continue;
                             }
 
@@ -1724,7 +2086,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                         termosValidos.push({
                             item,
                             leitura: leitura || '',
-                            significado,
+                            significado: significado || leitura,
                             categoria: categoriaDetectada,
                             fraseExemplo,
                             furiganaFrase,
@@ -1789,12 +2151,8 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             const checkboxes = document.querySelectorAll('#ia-anki-conjunto-dropdown input[name="anki-conjunto"]:checked');
             const conjuntosSelecionados = Array.from(checkboxes).map(cb => cb.value);
             
-            if (conjuntosSelecionados.length === 0) {
-                alert("Por favor, selecione pelo menos um conjunto.");
-                return;
-            }
-            
-            const conjuntoSelecionado = conjuntosSelecionados.find(c => c !== 'Geral') || conjuntosSelecionados[0] || 'Geral';
+            // É válido não selecionar nenhum conjunto.
+            const conjuntoSelecionado = conjuntosSelecionados.find(c => c !== 'Geral') || conjuntosSelecionados[0] || 'Nenhum conjunto';
 
             const feedback = document.getElementById('ia-anki-feedback');
             const btn = document.getElementById('ia-btn-confirmar-anki');
@@ -1951,7 +2309,695 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 btn.disabled = false;
             }
         }
+        // ==============================================
+        // INTEGRAÇÃO ANKICONNECT (LOCAL)
+        // ==============================================
+        let ankiConnectPreviewData = [];
 
+        function togglePainelAnkiConnect() {
+            const content = document.getElementById('ia-painel-ankiconnect-content');
+            const icon = document.getElementById('ia-ankiconnect-icon');
+            if (content.style.display === 'none') {
+                content.style.display = 'flex';
+                icon.textContent = '▲';
+                atualizarSeletorAnkiConnect();
+                carregarBaralhosAnkiConnect();
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▼';
+            }
+        }
+
+        function atualizarSeletorAnkiConnect() {
+            const dropdown = document.getElementById('ia-ankiconnect-conjunto-dropdown');
+            if (!dropdown) return;
+            const conjuntos = conjuntosDisponiveis.filter(c => c !== 'novo' && c !== 'Todos');
+            
+            let html = `
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; padding: 4px 6px; border-radius: 4px; color: var(--text-color); border-bottom: 1px dashed var(--border-color); padding-bottom: 6px; margin-bottom: 4px; font-weight: 600;">
+                    <input type="checkbox" name="ankiconnect-conjunto-nenhum" id="ia-ankiconnect-conjunto-nenhum" style="cursor: pointer;">
+                    <span>Sem Conjunto</span>
+                </label>
+            `;
+            
+            html += conjuntos.map(conj => `
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; padding: 4px 6px; border-radius: 4px; color: var(--text-color);">
+                    <input type="checkbox" name="ankiconnect-conjunto" value="${conj}" ${conj === 'Geral' ? 'checked' : ''} style="cursor: pointer;">
+                    <span>${conj}</span>
+                </label>
+            `).join('');
+            
+            html += `
+                <div style="border-top: 1px solid var(--border-color); margin-top: 5px; padding-top: 5px;">
+                    <button onclick="criarNovoConjuntoImport('ankiconnect')" style="width: 100%; font-size: 0.85em; padding: 6px; background-color: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">+ Criar Conjunto</button>
+                </div>
+            `;
+            dropdown.innerHTML = html;
+            atualizarBotaoTexto('ia-ankiconnect-conjunto-dropdown', 'ia-ankiconnect-conjunto-btn');
+            
+            const nenhumCb = dropdown.querySelector('#ia-ankiconnect-conjunto-nenhum');
+            const outrosCbs = dropdown.querySelectorAll('input[name="ankiconnect-conjunto"]');
+            
+            nenhumCb.addEventListener('change', () => {
+                if (nenhumCb.checked) {
+                    outrosCbs.forEach(cb => cb.checked = false);
+                }
+                atualizarBotaoTexto('ia-ankiconnect-conjunto-dropdown', 'ia-ankiconnect-conjunto-btn');
+            });
+            
+            outrosCbs.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        nenhumCb.checked = false;
+                    } else {
+                        const algumAtivo = Array.from(outrosCbs).some(c => c.checked);
+                        if (!algumAtivo) {
+                            nenhumCb.checked = true;
+                        }
+                    }
+                    atualizarBotaoTexto('ia-ankiconnect-conjunto-dropdown', 'ia-ankiconnect-conjunto-btn');
+                });
+            });
+        }
+
+        async function ankiConnectApi(action, params = {}) {
+            try {
+                const response = await fetch('http://127.0.0.1:8765', {
+                    method: 'POST',
+                    body: JSON.stringify({ action, version: 6, params })
+                });
+                if (!response.ok) throw new Error('AnkiConnect indisponível');
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                return data.result;
+            } catch (error) {
+                console.error("AnkiConnect Error:", error);
+                throw error;
+            }
+        }
+
+        async function carregarBaralhosAnkiConnect() {
+            const select = document.getElementById('ia-ankiconnect-deck-select');
+            const status = document.getElementById('ankiconnect-status');
+            try {
+                status.textContent = '⏳ Conectando...';
+                status.style.color = '#f39c12';
+                
+                const decks = await ankiConnectApi('deckNames');
+                
+                status.textContent = '✓ Conectado';
+                status.style.color = '#27ae60';
+                status.style.background = 'rgba(39, 174, 96, 0.1)';
+                
+                select.innerHTML = '<option value="" disabled selected>Selecione um baralho...</option>';
+                decks.forEach(deck => {
+                    select.innerHTML += `<option value="${deck}">${deck}</option>`;
+                });
+            } catch (err) {
+                status.textContent = '❌ Offline';
+                status.style.color = '#e74c3c';
+                status.style.background = 'rgba(231, 76, 60, 0.1)';
+                select.innerHTML = '<option value="">Anki fechado ou AnkiConnect ausente</option>';
+            }
+        }
+
+        async function extrairCardsAnkiConnect() {
+            const deck = document.getElementById('ia-ankiconnect-deck-select').value;
+            if (!deck) return alert("Selecione um baralho primeiro.");
+            
+            const btn = document.getElementById('ia-btn-extrair-ankiconnect');
+            const originalText = btn.textContent;
+            btn.textContent = "⏳ Extraindo...";
+            btn.disabled = true;
+            
+            try {
+                const query = `"deck:${deck}"`;
+                const cardsInfo = await ankiConnectApi('findCards', { query });
+                
+                if (cardsInfo.length === 0) {
+                    alert("Nenhum cartão encontrado neste baralho.");
+                    return;
+                }
+                
+                const cardsDetails = await ankiConnectApi('cardsInfo', { cards: cardsInfo });
+                
+                ankiConnectPreviewData = cardsDetails.map(c => {
+                    const fieldNames = Object.keys(c.fields);
+                    
+                    let frontHtml = '';
+                    let backHtml = '';
+                    let readingHtml = '';
+
+                    const isName = (name, list) => list.some(l => name.toLowerCase().includes(l));
+                    
+                    const frontNames = ['front', 'vocabulary', 'vocabulario', 'word', 'palavra', 'express', 'item', 'termo', 'frente'];
+                    const backNames = ['back', 'meaning', 'significado', 'translation', 'tradu', 'verso', 'english'];
+                    const readingNames = ['reading', 'leitura', 'furigana', 'kana', 'pronuncia', 'kana'];
+
+                    for (const f of fieldNames) {
+                        if (!frontHtml && isName(f, frontNames)) frontHtml = c.fields[f].value;
+                        else if (!backHtml && isName(f, backNames)) backHtml = c.fields[f].value;
+                        else if (!readingHtml && isName(f, readingNames)) readingHtml = c.fields[f].value;
+                    }
+
+                    // Fallback para campos posicionais
+                    if (!frontHtml && fieldNames.length > 0) {
+                        frontHtml = c.fields[fieldNames[0]].value;
+                    }
+                    if (!backHtml && fieldNames.length > 1) {
+                        if (fieldNames.length >= 3) {
+                            if (!readingHtml) readingHtml = c.fields[fieldNames[1]].value;
+                            backHtml = c.fields[fieldNames[2]].value;
+                        } else {
+                            backHtml = c.fields[fieldNames[1]].value;
+                        }
+                    }
+                    
+                    const cleanHtml = (html) => {
+                        const temp = document.createElement('div');
+                        temp.innerHTML = html;
+                        return temp.textContent || temp.innerText || "";
+                    };
+                    
+                    const camposAnki = {};
+                    for (const f of fieldNames) {
+                        camposAnki[f] = cleanHtml(c.fields[f].value);
+                    }
+
+                    return {
+                        item: cleanHtml(frontHtml) || '?',
+                        leitura: cleanHtml(readingHtml) || '',
+                        significado: cleanHtml(backHtml) || cleanHtml(readingHtml) || 'Sem significado',
+                        categoria: 'Vocabulário', // Padrão, mas pode ser ajustado com IA depois
+                        jlpt: null,
+                        notas: `Importado do Anki (${deck})\nFront: ${cleanHtml(frontHtml)}\nBack: ${cleanHtml(backHtml)}`,
+                        queue: c.queue,
+                        baralhos: [deck],
+                        campos_anki: camposAnki
+                    };
+                }).filter(c => c.item !== '?');
+
+                const previewDiv = document.getElementById('ia-ankiconnect-preview');
+                const contentDiv = document.getElementById('ia-ankiconnect-preview-content');
+                const countSpan = document.getElementById('ia-ankiconnect-preview-count');
+                
+                previewDiv.style.display = 'block';
+                countSpan.textContent = `${ankiConnectPreviewData.length} cartões`;
+                
+                contentDiv.innerHTML = ankiConnectPreviewData.slice(0, 50).map(t => `
+                    <div style="display: flex; flex-direction: column; padding: 10px; background: rgba(0,0,0,0.1); border: 1px solid var(--border-color); border-radius: 8px;">
+                        <div style="font-size: 1.1em; font-weight: bold; color: var(--text-color);">${t.item} <span style="font-size: 0.8em; color: var(--primary-color);">${t.leitura}</span></div>
+                        <div style="font-size: 0.9em; color: gray; margin-top: 4px;">${t.significado}</div>
+                    </div>
+                `).join('');
+                
+                if (ankiConnectPreviewData.length > 50) {
+                    contentDiv.innerHTML += `<div style="text-align: center; color: gray; padding: 10px; font-weight: bold;">+ ${ankiConnectPreviewData.length - 50} ocultos</div>`;
+                }
+
+                document.getElementById('ia-btn-confirmar-ankiconnect').style.display = 'inline-block';
+                
+            } catch (err) {
+                alert("Erro ao extrair: " + err.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function processarImportacaoAnkiConnect() {
+            const checkboxes = document.querySelectorAll('#ia-ankiconnect-conjunto-dropdown input[name="ankiconnect-conjunto"]:checked');
+            const conjuntosSelecionados = Array.from(checkboxes).map(cb => cb.value);
+            const filtroAnki = document.querySelector('input[name="anki-filtro-conjunto"]:checked').value;
+            
+            // É válido não selecionar nenhum conjunto, os cards simplesmente irão para o baralho.
+            const conjuntoSelecionado = conjuntosSelecionados.find(c => c !== 'Geral') || conjuntosSelecionados[0] || 'Nenhum conjunto';
+
+            const feedback = document.getElementById('ia-ankiconnect-feedback');
+            const btn = document.getElementById('ia-btn-confirmar-ankiconnect');
+            
+            if (ankiConnectPreviewData.length === 0) return;
+
+            feedback.style.display = 'block';
+            feedback.style.color = 'var(--text-color)';
+            feedback.textContent = `Preparando ${ankiConnectPreviewData.length} termos para sincronização...`;
+            btn.disabled = true;
+
+            try {
+                const termosFormatados = ankiConnectPreviewData.map(t => {
+                    let aplicarConjunto = false;
+                    
+                    if (conjuntosSelecionados.length > 0) {
+                        if (filtroAnki === 'todos') {
+                            aplicarConjunto = true;
+                        } else if (filtroAnki === 'aprendidos' && t.queue > 0) {
+                            aplicarConjunto = true;
+                        } else if (filtroAnki === 'novos' && t.queue === 0) {
+                            aplicarConjunto = true;
+                        }
+                    }
+
+                    let novasNotas = t.notas;
+                    if (aplicarConjunto) {
+                        novasNotas = atualizarNotasComConjuntos(t.notas, conjuntosSelecionados);
+                    }
+                    
+                    // Remove prop temporária 'queue'
+                    const { queue, ...payload } = t;
+                    
+                    return { ...payload, notas: novasNotas, user_id: idDoUsuarioLogado };
+                });
+
+                // Reutilizando a mesma lógica do JSON para enviar pro Supabase
+                const response = await fetch('/api/jisho?acao=salvar', {
+                    method: 'POST',
+                    headers: {
+                        "Authorization": tokenDeAcesso,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(termosFormatados)
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || 'Erro do servidor ao salvar os dados.');
+                }
+
+                // Salvar progresso inicial para os cards que JÁ SÃO aprendidos no Anki
+                const srsProgressoInicial = [];
+                ankiConnectPreviewData.forEach(t => {
+                    if (t.queue > 0) {
+                        srsProgressoInicial.push({
+                            item: t.item,
+                            repetitions: 2, 
+                            interval: 1, 
+                            ease: 2.5,
+                            lapses: 0,
+                            due: Date.now() + (24 * 60 * 60 * 1000), // revisão para daqui 1 dia
+                            user_id: idDoUsuarioLogado
+                        });
+                    }
+                });
+
+                if (srsProgressoInicial.length > 0) {
+                    try {
+                        const responseSrs = await fetch('/api/srs?acao=salvar', {
+                            method: 'POST',
+                            headers: {
+                                "Authorization": tokenDeAcesso,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(srsProgressoInicial)
+                        });
+                        if (responseSrs.ok) {
+                            srsProgressoInicial.forEach(p => {
+                                srsProgressData[p.item] = p;
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Aviso: falha ao salvar progresso inicial SRS', e);
+                    }
+                }
+
+                const salvos = await response.json();
+                const salvosArray = Array.isArray(salvos) ? salvos : [salvos];
+
+                salvosArray.forEach(salvo => {
+                    if (!salvo || !salvo.item) return;
+                    const index = dadosCombinados.findIndex(d => d.item === salvo.item);
+                    if (index !== -1) {
+                        dadosCombinados[index] = salvo;
+                    } else {
+                        dadosCombinados.push(salvo);
+                    }
+                });
+
+                const conjuntosSet = new Set(['Geral']);
+                const baralhosSet = new Set(['Geral']);
+                dadosCombinados.forEach(d => {
+                    const conjuntos = extrairConjuntos(d.notas, d.item);
+                    conjuntos.forEach(c => conjuntosSet.add(c));
+                    if (Array.isArray(d.baralhos)) {
+                        d.baralhos.forEach(b => baralhosSet.add(b));
+                    }
+                });
+                conjuntosDisponiveis = Array.from(conjuntosSet);
+                baralhosDisponiveis = Array.from(baralhosSet);
+
+                atualizarSeletoresDeConjunto();
+                atualizarSeletorImportacao();
+                atualizarSeletorAnkiConnect();
+
+                document.getElementById('ia-conjunto-select').value = conjuntoSelecionado;
+                aplicarFiltros();
+
+                feedback.style.color = '#27ae60';
+                feedback.textContent = `Sucesso! ${termosFormatados.length} termos sincronizados com o conjunto "${conjuntoSelecionado}".`;
+
+                // Limpar estado
+                ankiConnectPreviewData = [];
+                document.getElementById('ia-ankiconnect-preview').style.display = 'none';
+                btn.style.display = 'none';
+
+                setTimeout(() => { feedback.style.display = 'none'; }, 5000);
+            } catch (err) {
+                console.error('Erro na sincronização AnkiConnect:', err);
+                feedback.style.color = '#e74c3c';
+                feedback.textContent = `Erro: ${err.message}`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function escanearProgressoAnki() {
+            const deck = document.getElementById('ia-ankiconnect-deck-select').value;
+            if (!deck) return alert("Selecione um baralho primeiro.");
+            
+            const btn = document.getElementById('ia-btn-atualizar-progresso');
+            const originalText = btn.textContent;
+            btn.textContent = "⏳ Escaneando...";
+            btn.disabled = true;
+            
+            try {
+                const query = `"deck:${deck}"`;
+                const cardsInfo = await ankiConnectApi('findCards', { query });
+                if (cardsInfo.length === 0) {
+                    alert("Nenhum cartão encontrado neste baralho.");
+                    return;
+                }
+                
+                const cardsDetails = await ankiConnectApi('cardsInfo', { cards: cardsInfo });
+                
+                // Mapear itens do Anki (extraindo o Front para cruzar com dadosCombinados.item)
+                const recemAprendidos = [];
+                
+                cardsDetails.forEach(c => {
+                    if (c.queue > 0) { // Aprendido no Anki
+                        const fieldNames = Object.keys(c.fields);
+                        const frontNames = ['front', 'vocabulary', 'vocabulario', 'word', 'palavra', 'express', 'item', 'termo', 'frente'];
+                        let frontHtml = '';
+                        const isName = (name, list) => list.some(l => name.toLowerCase().includes(l));
+                        for (const f of fieldNames) {
+                            if (!frontHtml && isName(f, frontNames)) frontHtml = c.fields[f].value;
+                        }
+                        if (!frontHtml && fieldNames.length > 0) frontHtml = c.fields[fieldNames[0]].value;
+                        
+                        const temp = document.createElement('div');
+                        temp.innerHTML = frontHtml;
+                        const itemAnki = temp.textContent || temp.innerText || "";
+                        
+                        if (itemAnki) {
+                            // Procura na base local
+                            const cardLocal = dadosCombinados.find(d => d.item === itemAnki);
+                            if (cardLocal) {
+                                const temProgressoLocal = !!srsProgressData[cardLocal.item];
+                                // Se não tem progresso local (é "Novo"), consideramos que recém-aprendeu
+                                if (!temProgressoLocal) {
+                                    if (!recemAprendidos.some(r => r.item === cardLocal.item)) {
+                                        recemAprendidos.push(cardLocal);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                if (recemAprendidos.length === 0) {
+                    alert("Varredura completa! Não foram encontrados novos cards aprendidos que já não estejam atualizados no seu progresso local.");
+                    return;
+                }
+
+                // Abrir modal
+                abrirModalAtualizarProgresso(recemAprendidos);
+                
+            } catch (err) {
+                alert("Erro ao escanear progresso: " + err.message);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function abrirModalAtualizarProgresso(cards) {
+            const modalDiv = document.createElement('div');
+            modalDiv.id = 'modal-atualizar-progresso';
+            modalDiv.style.position = 'fixed';
+            modalDiv.style.top = '0';
+            modalDiv.style.left = '0';
+            modalDiv.style.width = '100%';
+            modalDiv.style.height = '100%';
+            modalDiv.style.backgroundColor = 'rgba(0,0,0,0.6)';
+            modalDiv.style.display = 'flex';
+            modalDiv.style.justifyContent = 'center';
+            modalDiv.style.alignItems = 'center';
+            modalDiv.style.zIndex = '9999';
+            modalDiv.style.backdropFilter = 'blur(4px)';
+
+            const optsConjuntos = conjuntosDisponiveis.filter(c => c !== 'Geral').map(c => `<option value="${c}">${c}</option>`).join('');
+
+            modalDiv.innerHTML = `
+                <div style="background: var(--card-bg, white); color: var(--text-color, #333); padding: 30px; border-radius: var(--card-radius, 16px); max-width: 500px; width: 90%; box-shadow: var(--shadow-hover, 0 10px 25px rgba(0,0,0,0.2)); border: 1px solid var(--border-color, #ccc); font-family: 'Inter', sans-serif;">
+                    <h3 style="margin-top: 0; font-size: 1.4em; color: var(--highlight-color); display: flex; align-items: center; gap: 8px;">🔄 Atualizar Progresso</h3>
+                    <p style="font-size: 0.95em; line-height: 1.5; margin-bottom: 20px;">
+                        Encontramos <strong>${cards.length} cards</strong> que você aprendeu recentemente no Anki!<br><br>
+                        O progresso deles será salvo no sistema para que não sejam mais considerados "Novos". Você também pode movê-los entre os conjuntos abaixo (opcional).
+                    </p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
+                        <div>
+                            <label style="font-weight: bold; font-size: 0.9em; display: block; margin-bottom: 5px;">Remover do Conjunto Anterior:</label>
+                            <select id="modal-remover-conjunto" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
+                                <option value="">Nenhum (Manter onde está)</option>
+                                ${optsConjuntos}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-weight: bold; font-size: 0.9em; display: block; margin-bottom: 5px;">Adicionar ao Novo Conjunto:</label>
+                            <select id="modal-adicionar-conjunto" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
+                                <option value="">Nenhum (Não adicionar)</option>
+                                ${optsConjuntos}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                        <button id="btn-cancelar-progresso" style="background-color: var(--secondary-color, #7f8c8d); padding: 10px 20px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s;">Cancelar</button>
+                        <button id="btn-confirmar-progresso" style="background-color: var(--primary-color, #27ae60); padding: 10px 20px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s;">Atualizar Cards</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modalDiv);
+
+            document.getElementById('btn-cancelar-progresso').onclick = () => document.body.removeChild(modalDiv);
+            
+            document.getElementById('btn-confirmar-progresso').onclick = async () => {
+                const remover = document.getElementById('modal-remover-conjunto').value;
+                const adicionar = document.getElementById('modal-adicionar-conjunto').value;
+                const btnConf = document.getElementById('btn-confirmar-progresso');
+                btnConf.disabled = true;
+                btnConf.textContent = 'Processando...';
+
+                await confirmarAtualizacaoProgressoAnki(cards, remover, adicionar, modalDiv);
+            };
+        }
+
+        async function confirmarAtualizacaoProgressoAnki(cards, remover, adicionar, modalDiv) {
+            try {
+                // 1. Preparar e enviar o progresso pro SRS
+                const srsProgressoNovos = cards.map(c => ({
+                    item: c.item,
+                    repetitions: 2, 
+                    interval: 1, 
+                    ease: 2.5,
+                    lapses: 0,
+                    due: Date.now() + (24 * 60 * 60 * 1000), // 1 dia
+                    user_id: idDoUsuarioLogado
+                }));
+
+                const responseSrs = await fetch('/api/srs?acao=salvar', {
+                    method: 'POST',
+                    headers: { "Authorization": tokenDeAcesso, "Content-Type": "application/json" },
+                    body: JSON.stringify(srsProgressoNovos)
+                });
+
+                if (!responseSrs.ok) {
+                    const errTxt = await responseSrs.text();
+                    console.error("SRS Error Details:", errTxt);
+                    throw new Error(`Erro ao salvar progresso SRS. Servidor retornou: ${responseSrs.status}`);
+                }
+
+                // Atualizar cache local do SRS
+                srsProgressoNovos.forEach(p => { srsProgressData[p.item] = p; });
+
+                // 2. Modificar as tags de conjunto (se solicitado)
+                if (remover || adicionar) {
+                    const cardsAtualizados = cards.map(c => {
+                        let conjDoCard = extrairConjuntos(c.notas, c.item);
+                        
+                        if (remover) conjDoCard = conjDoCard.filter(x => x !== remover);
+                        if (adicionar && !conjDoCard.includes(adicionar)) conjDoCard.push(adicionar);
+
+                        // Recriar a tag nas notas
+                        const notasSemTag = c.notas ? c.notas.replace(/\s*\[Conjuntos:\s*([^\]]+)\]/, '').trim() : '';
+                        const novaTag = conjDoCard.length > 0 ? `[Conjuntos: ${conjDoCard.join(', ')}]` : '';
+                        const notasFinais = notasSemTag ? (novaTag ? `${notasSemTag}\n${novaTag}` : notasSemTag) : novaTag;
+
+                        // Atualiza no cache local imediatamente
+                        c.notas = notasFinais;
+
+                        return { ...c, notas: notasFinais }; // Cópia para envio ao DB
+                    });
+
+                    // Enviar ao DB para atualizar os Conjuntos
+                    const responseDb = await fetch('/api/jisho?acao=salvar', {
+                        method: 'POST',
+                        headers: { "Authorization": tokenDeAcesso, "Content-Type": "application/json" },
+                        body: JSON.stringify(cardsAtualizados)
+                    });
+
+                    if (!responseDb.ok) throw new Error("Erro ao atualizar os conjuntos dos cards");
+                }
+
+                alert(`Sucesso! ${cards.length} cards foram marcados como aprendidos.`);
+                document.body.removeChild(modalDiv);
+                
+                atualizarSeletoresDeConjunto();
+                aplicarFiltros();
+            } catch (err) {
+                console.error(err);
+                alert("Ocorreu um erro na atualização: " + err.message);
+                document.getElementById('btn-confirmar-progresso').disabled = false;
+                document.getElementById('btn-confirmar-progresso').textContent = 'Tentar Novamente';
+            }
+        }
+
+        function toggleFiltrosGaveta() {
+            const painel = document.getElementById('painel-filtros-gaveta');
+            const icone = document.getElementById('icone-toggle-filtros');
+            
+            if (painel.classList.contains('expandido')) {
+                painel.classList.remove('expandido');
+                icone.style.transform = 'rotate(0deg)';
+            } else {
+                painel.classList.add('expandido');
+                icone.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        function atualizarBadgesFiltro() {
+            const container = document.getElementById('filtros-badges-container');
+            if (!container) return;
+            container.innerHTML = ''; 
+            
+            if (filtroAtual !== 'Todos') {
+                container.innerHTML += `<span class="filtro-badge">${filtroAtual}</span>`;
+            }
+            if (filtroJLPT !== 'Todos') {
+                container.innerHTML += `<span class="filtro-badge">${filtroJLPT}</span>`;
+            }
+            if (filtroSRS !== 'Todos') {
+                container.innerHTML += `<span class="filtro-badge">SRS: ${filtroSRS}</span>`;
+            }
+        }
+
+        function atualizarBotaoAtualizarBaralhoGaveta() {
+            const container = document.getElementById('secao-atualizar-baralho-gaveta');
+            const btn = document.getElementById('btn-atualizar-baralho-gaveta');
+            const labelInfo = document.getElementById('label-atualizar-baralho-info');
+            if (!container || !btn || !labelInfo) return;
+
+            const select = document.getElementById('ia-conjunto-select');
+            const selectedVal = select ? select.value : '';
+
+            if (visaoAtual === 'baralhos' && selectedVal && selectedVal !== 'Geral' && selectedVal !== 'novo') {
+                container.style.display = 'flex';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+                labelInfo.innerHTML = `Sincronizar progresso do baralho local <strong>"${selectedVal}"</strong> do Anki`;
+            } else if (visaoAtual === 'baralhos') {
+                container.style.display = 'flex';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+                labelInfo.innerHTML = `Selecione um baralho específico (diferente de Geral) para sincronizar`;
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        async function atualizarBaralhoDoFiltro() {
+            if (visaoAtual !== 'baralhos') {
+                alert("Por favor, ative a visão de 'Baralhos' e selecione o baralho desejado para sincronizar.");
+                return;
+            }
+            const deck = document.getElementById('ia-conjunto-select').value;
+            if (!deck || deck === 'Geral' || deck === 'novo') {
+                alert("Por favor, selecione um baralho válido (diferente de 'Geral') para sincronizar.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-atualizar-baralho-gaveta');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "<span>⏳ Escaneando...</span>";
+            btn.disabled = true;
+            
+            try {
+                const query = `"deck:${deck}"`;
+                const cardsInfo = await ankiConnectApi('findCards', { query });
+                if (cardsInfo.length === 0) {
+                    alert(`Nenhum cartão encontrado no baralho "${deck}".`);
+                    return;
+                }
+                
+                const cardsDetails = await ankiConnectApi('cardsInfo', { cards: cardsInfo });
+                
+                const recemAprendidos = [];
+                
+                cardsDetails.forEach(c => {
+                    if (c.queue > 0) { // Aprendido no Anki
+                        const fieldNames = Object.keys(c.fields);
+                        const frontNames = ['front', 'vocabulary', 'vocabulario', 'word', 'palavra', 'express', 'item', 'termo', 'frente'];
+                        let frontHtml = '';
+                        const isName = (name, list) => list.some(l => name.toLowerCase().includes(l));
+                        for (const f of fieldNames) {
+                            if (!frontHtml && isName(f, frontNames)) frontHtml = c.fields[f].value;
+                        }
+                        if (!frontHtml && fieldNames.length > 0) frontHtml = c.fields[fieldNames[0]].value;
+                        
+                        const temp = document.createElement('div');
+                        temp.innerHTML = frontHtml;
+                        const itemAnki = temp.textContent || temp.innerText || "";
+                        
+                        if (itemAnki) {
+                            const cardLocal = dadosCombinados.find(d => d.item === itemAnki);
+                            if (cardLocal) {
+                                const temProgressoLocal = !!srsProgressData[cardLocal.item];
+                                if (!temProgressoLocal) {
+                                    if (!recemAprendidos.some(r => r.item === cardLocal.item)) {
+                                        recemAprendidos.push(cardLocal);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                if (recemAprendidos.length === 0) {
+                    alert(`Varredura completa! Todos os cartões de "${deck}" já estão com o progresso sincronizado.`);
+                    return;
+                }
+
+                abrirModalAtualizarProgresso(recemAprendidos);
+                
+            } catch (err) {
+                alert("Erro ao escanear progresso do Anki. Certifique-se de que o Anki Desktop esteja aberto com o AnkiConnect rodando.\nDetalhes: " + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
     </script>
     <script src="tutor-ia.js"></script>
 </body>

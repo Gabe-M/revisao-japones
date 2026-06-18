@@ -100,7 +100,7 @@ export default async function handler(req, res) {
   // AÇÃO: Listar cartões já sincronizados
   if (acao === 'listar' && req.method === 'GET') {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/anki_cards?select=deck_name,synced_at&user_id=eq.${userId}&order=synced_at.desc`,
+      `${SUPABASE_URL}/rest/v1/anki_cards?user_id=eq.${userId}&order=synced_at.desc`,
       {
         headers: { apikey: SUPABASE_KEY, Authorization: tokenUsuario },
       }

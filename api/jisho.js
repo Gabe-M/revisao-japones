@@ -132,6 +132,11 @@ export default async function handler(req, res) {
 
                     const novasNotas = formatarNotasComConjuntosInterno(notasFinaisLimpa, conjuntosFundidos);
 
+                    // Mescla os baralhos
+                    const baralhosExistentes = Array.isArray(cardExistente.baralhos) ? cardExistente.baralhos : [];
+                    const baralhosNovos = Array.isArray(itemNovo.baralhos) ? itemNovo.baralhos : [];
+                    const baralhosFundidos = Array.from(new Set([...baralhosExistentes, ...baralhosNovos]));
+
                     payloadFinal.push({
                         id: cardExistente.id, // Usa o mesmo ID para disparar a atualização na restrição unique
                         item: cardExistente.item,
@@ -140,12 +145,15 @@ export default async function handler(req, res) {
                         categoria: itemNovo.categoria || cardExistente.categoria,
                         jlpt: itemNovo.jlpt || cardExistente.jlpt,
                         notas: novasNotas,
+                        baralhos: baralhosFundidos,
+                        campos_anki: { ...(cardExistente.campos_anki || {}), ...(itemNovo.campos_anki || {}) },
                         user_id: userId || cardExistente.user_id
                     });
                 } else {
                     if (userId) {
                         itemNovo.user_id = userId;
                     }
+                    if (!itemNovo.baralhos) itemNovo.baralhos = [];
                     payloadFinal.push(itemNovo);
                 }
             }
@@ -402,6 +410,123 @@ export default async function handler(req, res) {
             });
         } catch (error) {
             return res.status(500).json({ error: 'Falha no servidor ao processar exclusão do conjunto', mensagem: error.message });
+        }
+    }
+
+    // AÇÃO 7: Deletar baralho inteiro
+    if (acao === 'deletar_baralho' && req.method === 'POST') {
+        try {
+            const corpo = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+            const { baralho, modoExclusao } = corpo;
+
+            if (!baralho) {
+                return res.status(400).json({ error: 'Baralho ausente para exclusão' });
+            }
+
+            const responseListar = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario?select=*`, {
+                headers: {
+                    "apikey": SUPABASE_KEY,
+                    "Authorization": tokenUsuario
+                }
+            });
+            const todosCards = await responseListar.json();
+
+            if (!responseListar.ok) {
+                return res.status(responseListar.status).json({
+                    error: 'Erro ao listar termos para exclusão de baralho',
+                    detalhes: todosCards
+                });
+            }
+
+            const idsParaDeletar = [];
+            const itensParaDeletar = [];
+            const cardsParaAtualizar = [];
+
+            for (const card of todosCards) {
+                const baralhos = Array.isArray(card.baralhos) ? card.baralhos : [];
+                if (baralhos.includes(baralho)) {
+                    const outrosBaralhos = baralhos.filter(b => b !== baralho);
+                    
+                    if (modoExclusao === 'todos_associados' || outrosBaralhos.length === 0) {
+                        idsParaDeletar.push(card.id);
+                        if (card.item) {
+                            itensParaDeletar.push(card.item);
+                        }
+                    } else {
+                        // Apenas remove o baralho do array
+                        cardsParaAtualizar.push({
+                            id: card.id,
+                            item: card.item,
+                            leitura: card.leitura,
+                            significado: card.significado,
+                            categoria: card.categoria,
+                            notas: card.notas,
+                            baralhos: outrosBaralhos,
+                            user_id: userId || card.user_id
+                        });
+                    }
+                }
+            }
+
+            // Executa as deleções
+            if (idsParaDeletar.length > 0) {
+                const responseDelete = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario?id=in.(${idsParaDeletar.join(',')})`, {
+                    method: 'DELETE',
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": tokenUsuario,
+                        "Prefer": "return=representation"
+                    }
+                });
+                
+                if (!responseDelete.ok) {
+                    const errDelete = await responseDelete.json();
+                    return res.status(responseDelete.status).json({
+                        error: 'Erro ao deletar cards do baralho',
+                        detalhes: errDelete
+                    });
+                }
+
+                if (itensParaDeletar.length > 0) {
+                    const listaItens = itensParaDeletar.map(i => `"${i.replace(/"/g, '\\"')}"`).join(',');
+                    await fetch(`${SUPABASE_URL}/rest/v1/srs_progresso?item=in.(${encodeURIComponent(listaItens)})`, {
+                        method: 'DELETE',
+                        headers: {
+                            "apikey": SUPABASE_KEY,
+                            "Authorization": tokenUsuario
+                        }
+                    });
+                }
+            }
+
+            // Executa as atualizações
+            if (cardsParaAtualizar.length > 0) {
+                const responseUpdate = await fetch(`${SUPABASE_URL}/rest/v1/vocabulario`, {
+                    method: 'POST', // UPSERT
+                    headers: {
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": tokenUsuario,
+                        "Content-Type": "application/json",
+                        "Prefer": "resolution=merge-duplicates,return=representation"
+                    },
+                    body: JSON.stringify(cardsParaAtualizar)
+                });
+
+                if (!responseUpdate.ok) {
+                    const errUpdate = await responseUpdate.json();
+                    return res.status(responseUpdate.status).json({
+                        error: 'Erro ao atualizar baralhos dos cards',
+                        detalhes: errUpdate
+                    });
+                }
+            }
+
+            return res.status(200).json({
+                deletados: idsParaDeletar.length,
+                atualizados: cardsParaAtualizar.length
+            });
+        } catch (error) {
+            return res.status(500).json({ error: 'Falha no servidor ao processar exclusão do baralho', mensagem: error.message });
         }
     }
 
