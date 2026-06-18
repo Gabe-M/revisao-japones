@@ -1,9 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./anki.html",
-    "./src/AnkiApp.tsx",
-    "./src/anki/**/*.{tsx,ts}",
+    "./*.html",
+    "./src/**/*.{html,js,ts,jsx,tsx}",
   ],
   theme: { extend: {} },
   plugins: [],
