@@ -144,6 +144,31 @@
         .nota-label { font-weight: bold; color: var(--highlight-color); margin-right: 6px; }
         .nota-particula { color: #3498db; font-weight: bold; }
         .nota-verbo { color: #e74c3c; font-weight: bold; }
+
+        /* Filtros e Gaveta */
+        .toggle-segmented { display: flex; background: rgba(0, 0, 0, 0.05); padding: 4px; border-radius: 20px; gap: 4px; border: 1px solid var(--border-color); }
+        [data-theme="dark"] .toggle-segmented { background: rgba(255, 255, 255, 0.04); }
+        .toggle-segmented button { padding: 6px 16px; font-size: 0.9em; font-weight: 600; border: none; border-radius: 17px; cursor: pointer; background: transparent; color: var(--text-color); opacity: 0.65; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; gap: 6px; }
+        .toggle-segmented button:hover { opacity: 0.9; }
+        .toggle-segmented button.active { background: var(--card-bg); color: var(--text-color); opacity: 1; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+        [data-theme="dark"] .toggle-segmented button.active { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+
+        .filtros-header { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .btn-toggle-filtros { background-color: var(--card-bg); color: var(--text-color); border: 2px solid var(--border-color); padding: 10px 20px; border-radius: 12px; font-weight: bold; font-size: 1em; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .btn-toggle-filtros:hover { border-color: var(--highlight-color); transform: translateY(-2px); }
+        .filtros-badges-container { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .filtro-badge { background: rgba(39, 174, 96, 0.1); color: #27ae60; border: 1px solid rgba(39, 174, 96, 0.3); padding: 4px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+        [data-theme="dark"] .filtro-badge { background: rgba(39, 174, 96, 0.2); border: 1px solid rgba(39, 174, 96, 0.5); color: #2ecc71; }
+        
+        .painel-filtros-gaveta { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, margin 0.4s ease; margin-bottom: 0; }
+        .painel-filtros-gaveta.expandido { max-height: 800px; opacity: 1; margin-bottom: 20px; }
+        .painel-filtros-inner { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; align-items: center; gap: 15px; }
+
+        .srs-badge { font-size: 0.8em; padding: 4px 8px; border-radius: 6px; margin-left: 10px; vertical-align: middle; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; }
+        .srs-badge.aprendido { background: rgba(39, 174, 96, 0.15); color: #27ae60; border: 1px solid rgba(39, 174, 96, 0.3); }
+        .srs-badge.novo { background: rgba(128, 128, 128, 0.15); color: gray; border: 1px solid rgba(128, 128, 128, 0.3); }
+        [data-theme="dark"] .srs-badge.aprendido { background: rgba(39, 174, 96, 0.2); color: #2ecc71; border-color: rgba(39, 174, 96, 0.5); }
+        [data-theme="dark"] .srs-badge.novo { background: rgba(255, 255, 255, 0.1); color: #ccc; border-color: rgba(255, 255, 255, 0.2); }
     </style>
 </head>
 <body>
@@ -167,16 +192,47 @@
         <a href="perfil.html">👤 Perfil</a>
     </div>
 
-    <div class="tools-panel" style="gap: 15px; flex-wrap: wrap;">
+    <div class="tools-panel" style="gap: 15px; flex-wrap: wrap; margin-bottom: 20px;">
         <button class="tool-btn" id="btnLacunas" onclick="toggleLacunas()">Ativar Teste de Partículas</button>
         <button class="tool-btn danger" onclick="toggleRomaji()">Ocultar/Mostrar Romaji</button>
         <button class="tool-btn" onclick="abrirModoPratica()" style="background-color: #8e44ad;">🎯 Modo Prática</button>
-        <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
-            <label style="font-weight: bold; font-size: 0.9em; color: var(--text-color);">Conjunto:</label>
-            <select id="filtro-conjunto" onchange="mudarConjunto()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-color); color: var(--text-color); font-weight: bold; cursor: pointer; outline: none;">
-                <option value="Todos">Todos</option>
-                <option value="Frase">Frase (Padrão)</option>
-            </select>
+    </div>
+
+    <!-- Filtros Avançados -->
+    <div class="filtros-header" id="container-filtros-avancados" style="max-width: 1000px; margin: 0 auto 20px; justify-content: flex-start; display: none;">
+        <button id="btn-toggle-filtros" class="btn-toggle-filtros" onclick="toggleFiltrosGaveta()">
+            <span>⚙️ Filtros Avançados</span>
+            <span id="icone-toggle-filtros" style="transition: transform 0.3s; display: inline-block;">▼</span>
+        </button>
+        <div id="filtros-badges-container" class="filtros-badges-container"></div>
+    </div>
+
+    <div id="painel-filtros-gaveta" class="painel-filtros-gaveta" style="max-width: 1000px; margin: 0 auto;">
+        <div class="painel-filtros-inner">
+            <div class="controls" id="botoes-filtro-srs" style="margin-bottom: 0; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="mudarSRS('Todos')" class="tool-btn active" style="background: var(--secondary-color);">SRS: Ambos</button>
+                <button onclick="mudarSRS('Aprendidos')" class="tool-btn" style="background: transparent; border: 1px solid var(--secondary-color); color: var(--text-color);">Já Aprendidos</button>
+                <button onclick="mudarSRS('Novos')" class="tool-btn" style="background: transparent; border: 1px solid var(--secondary-color); color: var(--text-color);">Não Aprendidos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegação Conjuntos/Baralhos -->
+    <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; margin: 0 auto 30px; max-width: 1000px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box;">
+        
+        <div class="toggle-segmented">
+            <button id="btn-view-conjuntos" class="active" onclick="mudarVisao('conjuntos')">📁 Conjuntos</button>
+            <button id="btn-view-baralhos" onclick="mudarVisao('baralhos')">🎴 Baralhos</button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="font-weight: bold; font-size: 1.1em; color: var(--text-color); display: flex; align-items: center; gap: 8px; justify-content: center; user-select: none;">
+                <span id="icone-visao-atual">📁</span>
+                <select id="ia-conjunto-select" onchange="mudarConjuntoAssociacao()" style="background: var(--bg-color); border: 2px solid var(--border-color); color: var(--text-color); font-weight: bold; font-size: 1em; cursor: pointer; outline: none; text-align: center; text-align-last: center; padding: 6px 12px; border-radius: 8px; transition: 0.2s; min-width: 150px;">
+                    <option value="Todos">Todos</option>
+                    <option value="Frase">Frase (Padrão)</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -314,6 +370,98 @@
         let conjuntosDeVocabulario = [];
         let conjuntosSelecionadosParaGeracao = [];
 
+        // SRS e Anki
+        let srsProgressData = {};
+        let ankiDecks = [];
+        let baralhosDisponiveis = [];
+        let visaoAtual = 'conjuntos'; // pode ser 'conjuntos' ou 'baralhos'
+        let filtroSRS = 'Todos'; // pode ser 'Todos', 'Aprendidos' ou 'Novos'
+
+        function toggleFiltrosGaveta() {
+            const painel = document.getElementById('painel-filtros-gaveta');
+            const icone = document.getElementById('icone-toggle-filtros');
+            const expandido = painel.classList.contains('expandido');
+            if (expandido) {
+                painel.classList.remove('expandido');
+                icone.style.transform = 'rotate(0deg)';
+            } else {
+                painel.classList.add('expandido');
+                icone.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        function mudarSRS(valor) {
+            filtroSRS = valor;
+            const botoes = document.getElementById('botoes-filtro-srs').querySelectorAll('button');
+            botoes.forEach(b => {
+                if(b.innerText.includes(valor) || (valor === 'Todos' && b.innerText.includes('Ambos'))) {
+                    b.classList.add('active');
+                    b.style.background = 'var(--secondary-color)';
+                    b.style.border = 'none';
+                    b.style.color = 'white';
+                } else {
+                    b.classList.remove('active');
+                    b.style.background = 'transparent';
+                    b.style.border = '1px solid var(--secondary-color)';
+                    b.style.color = 'var(--text-color)';
+                }
+            });
+            atualizarBadgesFiltro();
+            aplicarFiltros();
+        }
+
+        function mudarVisao(visao) {
+            visaoAtual = visao;
+            document.getElementById('btn-view-conjuntos').classList.toggle('active', visao === 'conjuntos');
+            document.getElementById('btn-view-baralhos').classList.toggle('active', visao === 'baralhos');
+            document.getElementById('icone-visao-atual').textContent = visao === 'conjuntos' ? '📁' : '🎴';
+            
+            const containerFiltros = document.getElementById('container-filtros-avancados');
+            if (containerFiltros) {
+                containerFiltros.style.display = visao === 'baralhos' ? 'flex' : 'none';
+            }
+            if (visao !== 'baralhos') {
+                const painel = document.getElementById('painel-filtros-gaveta');
+                if (painel) {
+                    painel.classList.remove('expandido');
+                    const icone = document.getElementById('icone-toggle-filtros');
+                    if (icone) icone.style.transform = 'rotate(0deg)';
+                }
+                mudarSRS('Todos');
+            }
+            
+            atualizarSeletoresDeCategoria(); // atualiza as options do select
+            aplicarFiltros();
+        }
+
+        function mudarConjuntoAssociacao() {
+            aplicarFiltros();
+        }
+
+        function atualizarBadgesFiltro() {
+            const container = document.getElementById('filtros-badges-container');
+            container.innerHTML = '';
+            if (filtroSRS !== 'Todos') {
+                container.innerHTML += `<div class="filtro-badge">SRS: ${filtroSRS}</div>`;
+            }
+        }
+
+        async function ankiConnectApi(action, params = {}) {
+            try {
+                const response = await fetch('http://127.0.0.1:8765', {
+                    method: 'POST',
+                    body: JSON.stringify({ action, version: 6, params })
+                });
+                if (!response.ok) throw new Error('AnkiConnect indisponível');
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                return data.result;
+            } catch (error) {
+                console.error("AnkiConnect Error:", error);
+                throw error;
+            }
+        }
+
         function extrairConjuntosDeTermo(notas) {
             let conjuntos = [];
             if (notas) {
@@ -405,6 +553,21 @@
                     dadosDb = resultado;
                 }
 
+                // Buscar dados do SRS para filtrar as frases
+                try {
+                    const resSrs = await fetch('/api/srs?acao=listar', {
+                        headers: { "Authorization": tokenDeAcesso }
+                    });
+                    const srsList = await resSrs.json();
+                    if (Array.isArray(srsList)) {
+                        srsList.forEach(item => {
+                            srsProgressData[item.item] = item;
+                        });
+                    }
+                } catch (err) {
+                    console.error("Erro ao buscar progresso do SRS", err);
+                }
+
                 // Filtrar os dados dinâmicos: apenas categorias que começam com "Frase"
                 const frasesDb = dadosDb.filter(d => d && d.item && (d.categoria === 'Frase' || (d.categoria && d.categoria.startsWith('Frase:'))));
 
@@ -414,14 +577,28 @@
 
                 frasesCombinadas = [...frasesPraticas, ...frasesDbFiltradas];
                 
-                // Atualizar lista de categorias disponíveis
+                // Atualizar lista de categorias disponíveis e baralhos
                 const sets = new Set(['Todos', 'Frase']);
+                const baralhosSet = new Set(['Todos']);
+                
                 frasesCombinadas.forEach(f => {
                     if (f.categoria && f.categoria.startsWith('Frase:')) {
                         sets.add(f.categoria);
                     }
+                    if (Array.isArray(f.baralhos)) {
+                        f.baralhos.forEach(b => baralhosSet.add(b));
+                    }
                 });
                 categoriasDeFrases = Array.from(sets);
+
+                try {
+                    const decks = await carregarBaralhosAnkiConnect();
+                    if (decks && decks.length > 0) {
+                        decks.forEach(d => baralhosSet.add(d));
+                    }
+                } catch(e) {}
+                
+                baralhosDisponiveis = Array.from(baralhosSet);
 
                 // Preencher a lista de termos de vocabulário para seleção (unindo banco de dados e dadosRevisao local)
                 const termosDb = dadosDb.filter(d => d && d.item && d.categoria !== 'Texto' && !(d.categoria && d.categoria.startsWith('Frase')));
@@ -448,51 +625,86 @@
                 frasesCombinadas = [...frasesPraticas];
             }
 
-            aplicarFiltroConjunto();
+            aplicarFiltros();
         }
 
         function atualizarSeletoresDeCategoria() {
-            const filtroSelect = document.getElementById('filtro-conjunto');
-            const currentFiltroVal = filtroSelect.value;
+            const select = document.getElementById('ia-conjunto-select');
+            const currentVal = select ? select.value : 'Todos';
             
-            // Preenche o filtro principal
-            filtroSelect.innerHTML = categoriasDeFrases.map(cat => {
-                const label = cat === 'Todos' ? 'Todos' : (cat === 'Frase' ? 'Frase (Padrão)' : cat.replace('Frase: ', ''));
-                return `<option value="${cat}">${label}</option>`;
-            }).join('');
-            
-            // Tenta manter o valor selecionado se ainda existir
-            if (categoriasDeFrases.includes(currentFiltroVal)) {
-                filtroSelect.value = currentFiltroVal;
-            } else {
-                filtroSelect.value = 'Todos';
+            let listaAtiva = visaoAtual === 'baralhos' ? baralhosDisponiveis : categoriasDeFrases;
+
+            // Preenche o filtro principal (Baralhos ou Conjuntos)
+            if (select) {
+                select.innerHTML = listaAtiva.map(cat => {
+                    let label = cat;
+                    if (visaoAtual === 'conjuntos') {
+                        label = cat === 'Todos' ? 'Todos' : (cat === 'Frase' ? 'Frase (Padrão)' : cat.replace('Frase: ', ''));
+                    }
+                    return `<option value="${cat}">${label}</option>`;
+                }).join('');
+                
+                // Tenta manter o valor selecionado se ainda existir
+                if (currentVal && listaAtiva.includes(currentVal)) {
+                    select.value = currentVal;
+                } else {
+                    select.value = 'Todos';
+                }
             }
 
             // Preenche o select do painel de IA
             const iaSelect = document.getElementById('ia-categoria-select');
-            const options = categoriasDeFrases
-                .filter(cat => cat !== 'Todos')
-                .map(cat => {
-                    const label = cat === 'Frase' ? 'Frase (Padrão)' : cat.replace('Frase: ', '');
-                    return `<option value="${cat}">${label}</option>`;
-                });
-            options.push(`<option value="novo">Criar Novo Conjunto...</option>`);
-            iaSelect.innerHTML = options.join('');
+            if (iaSelect) {
+                const options = categoriasDeFrases
+                    .filter(cat => cat !== 'Todos')
+                    .map(cat => {
+                        const label = cat === 'Frase' ? 'Frase (Padrão)' : cat.replace('Frase: ', '');
+                        return `<option value="${cat}">${label}</option>`;
+                    });
+                options.push(`<option value="novo">Criar Novo Conjunto...</option>`);
+                iaSelect.innerHTML = options.join('');
+            }
         }
 
-        function aplicarFiltroConjunto() {
-            const filtroVal = document.getElementById('filtro-conjunto').value;
-            if (filtroVal === 'Todos') {
-                frasesFiltradas = frasesCombinadas;
-            } else {
-                frasesFiltradas = frasesCombinadas.filter(f => f.categoria === filtroVal);
-            }
+        function aplicarFiltros() {
+            const filtroConjunto = document.getElementById('ia-conjunto-select')?.value || 'Todos';
+            
+            frasesFiltradas = frasesCombinadas.filter(f => {
+                // Filtro por Visão (Baralho vs Conjunto)
+                let matchVisao = false;
+                if (visaoAtual === 'conjuntos') {
+                    if (filtroConjunto === 'Todos') {
+                        matchVisao = true;
+                    } else {
+                        matchVisao = (f.categoria === filtroConjunto);
+                    }
+                } else {
+                    // Visão Baralhos
+                    if (filtroConjunto === 'Todos') {
+                        matchVisao = true;
+                    } else {
+                        matchVisao = (Array.isArray(f.baralhos) && f.baralhos.includes(filtroConjunto));
+                    }
+                }
+
+                // Se não passou no filtro de visão, já descarta
+                if (!matchVisao) return false;
+
+                // Filtro por SRS
+                let matchSrs = true;
+                const estaNoSrs = !!srsProgressData[f.item];
+                
+                if (filtroSRS === 'Aprendidos') {
+                    matchSrs = estaNoSrs;
+                } else if (filtroSRS === 'Novos') {
+                    matchSrs = !estaNoSrs;
+                }
+
+                return matchSrs;
+            });
+
             currentPage = 1;
             renderizarPagina();
-        }
-
-        function mudarConjunto() {
-            aplicarFiltroConjunto();
         }
 
         function togglePanelIA() {
@@ -799,13 +1011,20 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
 
             const container = document.getElementById('frases-container');
             if (frasesPagina.length === 0) {
-                container.innerHTML = `<p style="text-align:center;">Nenhuma frase encontrada neste conjunto.</p>`;
+                container.innerHTML = `<p style="text-align:center;">Nenhuma frase encontrada neste conjunto ou com esse filtro.</p>`;
                 return;
             }
 
-            container.innerHTML = frasesPagina.map(d => `
+            container.innerHTML = frasesPagina.map(d => {
+                const estaNoSrs = !!srsProgressData[d.item];
+                const srsBadge = estaNoSrs ? `<span class="srs-badge aprendido">✓ Já Aprendido</span>` : `<span class="srs-badge novo">⏳ Novo / A Aprender</span>`;
+
+                return `
                 <div class="frase-card" onclick="if(event.shiftKey){ event.stopPropagation(); if('${d.id}' && '${d.id}' !== 'undefined') { excluirFraseDoCard('${d.id}'); } else { alert('Esta frase padrão não pode ser excluída permanentemente.'); } } else { const det = this.querySelector('details'); det.open = !det.open; }" style="cursor: pointer;">
-                    <p class="frase-texto">${processarTextoComBlocos(d.item, d.notas)}</p>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px;">
+                        <p class="frase-texto" style="margin: 0;">${processarTextoComBlocos(d.item, d.notas)}</p>
+                        ${srsBadge}
+                    </div>
                     <p class="frase-romaji" style="display: ${romajiOculto ? 'none' : 'block'}; pointer-events: none;">${d.leitura}</p>
                     <details onclick="event.stopPropagation();">
                         <summary>Significado e Análise</summary>
@@ -814,7 +1033,8 @@ Cada objeto da array deve conter exatamente estas 4 chaves:
                         ${d.id ? `<button style="margin-top: 8px; width: 100%; font-size: 0.9em; background-color: #c0392b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;" onclick="event.stopPropagation(); excluirFraseDoCard('${d.id}')">🗑️ Excluir Frase</button>` : ''}
                     </details>
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             renderizarControlesPaginacao();
         }

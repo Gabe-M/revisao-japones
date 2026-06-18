@@ -496,7 +496,7 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
                 <button onclick="mudarJLPT('N1')" style="border-bottom: 2px solid #c0392b;">N1</button>
             </div>
 
-            <div class="controls" id="botoes-filtro-srs" style="margin-bottom: 0;">
+            <div class="controls" id="botoes-filtro-srs" style="margin-bottom: 0; display: none;">
                 <button onclick="mudarSRS('Todos')" class="active">SRS: Ambos</button>
                 <button onclick="mudarSRS('Aprendidos')">Já Aprendidos</button>
                 <button onclick="mudarSRS('Novos')">Não Aprendidos</button>
@@ -932,6 +932,14 @@ Não adicione nenhuma explicação antes ou depois do JSON. Retorne apenas o arr
             }
             
             document.getElementById('icone-visao-atual').textContent = visao === 'conjuntos' ? '📁' : '🎴';
+
+            const srsFilterRow = document.getElementById('botoes-filtro-srs');
+            if (srsFilterRow) {
+                srsFilterRow.style.display = visao === 'baralhos' ? 'flex' : 'none';
+            }
+            if (visao !== 'baralhos') {
+                mudarSRS('Todos');
+            }
 
             atualizarSeletoresDeConjunto();
             aplicarFiltros();

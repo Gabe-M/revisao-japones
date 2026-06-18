@@ -76,6 +76,14 @@
         .correct-answer { color: var(--green); font-size: 0.9em; font-weight: bold; }
 
         .btn-restart { padding: 12px 24px; font-size: 1em; font-weight: bold; background: var(--primary-color); color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+
+        /* Filtros e Visão */
+        .toggle-segmented { display: flex; background: rgba(0, 0, 0, 0.05); padding: 4px; border-radius: 20px; gap: 4px; border: 1px solid var(--border-color); justify-content: center; margin-bottom: 10px; }
+        [data-theme="dark"] .toggle-segmented { background: rgba(255, 255, 255, 0.04); }
+        .toggle-segmented button { padding: 6px 16px; font-size: 0.9em; font-weight: 600; border: none; border-radius: 17px; cursor: pointer; background: transparent; color: var(--text-color); opacity: 0.65; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; gap: 6px; }
+        .toggle-segmented button:hover { opacity: 0.9; }
+        .toggle-segmented button.active { background: var(--card-bg); color: var(--text-color); opacity: 1; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+        [data-theme="dark"] .toggle-segmented button.active { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
     </style>
 </head>
 <body>
@@ -112,10 +120,24 @@
             <h2>Configuração do Quiz</h2>
             <p>Selecione um conjunto e a quantidade de perguntas para iniciar o treino rápido.</p>
             
+            <div class="toggle-segmented" style="margin-top: 10px;">
+                <button id="btn-view-conjuntos" class="active" onclick="mudarVisaoQuiz('conjuntos')">📁 Conjuntos</button>
+                <button id="btn-view-baralhos" onclick="mudarVisaoQuiz('baralhos')">🎴 Baralhos</button>
+            </div>
+
             <div class="form-group">
-                <label>Conjunto de Estudo:</label>
+                <label id="label-selecao">Conjunto de Estudo:</label>
                 <select id="select-conjunto">
-                    <option value="todos">Todos os termos</option>
+                    <option value="todos">Todos</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="filtro-srs-group" style="display: none;">
+                <label>Filtro SRS (Progresso):</label>
+                <select id="select-srs">
+                    <option value="Todos">Ambos (Todos)</option>
+                    <option value="Aprendidos">Apenas Já Aprendidos</option>
+                    <option value="Novos">Apenas Não Aprendidos</option>
                 </select>
             </div>
             
@@ -221,6 +243,46 @@
         let segundosDecorridos = 0;
         let respondido = false;
 
+        // SRS e Anki
+        let srsProgressData = {};
+        let ankiDecks = [];
+        let baralhosDisponiveis = [];
+        let visaoQuiz = 'conjuntos'; // 'conjuntos' ou 'baralhos'
+
+        async function ankiConnectApi(action, params = {}) {
+            try {
+                const response = await fetch('http://127.0.0.1:8765', {
+                    method: 'POST',
+                    body: JSON.stringify({ action, version: 6, params })
+                });
+                if (!response.ok) throw new Error('AnkiConnect indisponível');
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                return data.result;
+            } catch (error) {
+                console.error("AnkiConnect Error:", error);
+                throw error;
+            }
+        }
+
+        function mudarVisaoQuiz(visao) {
+            visaoQuiz = visao;
+            document.getElementById('btn-view-conjuntos').classList.toggle('active', visao === 'conjuntos');
+            document.getElementById('btn-view-baralhos').classList.toggle('active', visao === 'baralhos');
+            document.getElementById('label-selecao').textContent = visao === 'conjuntos' ? 'Conjunto de Estudo:' : 'Baralho do Anki:';
+            
+            const srsGroup = document.getElementById('filtro-srs-group');
+            if (srsGroup) {
+                srsGroup.style.display = visao === 'baralhos' ? 'flex' : 'none';
+            }
+            if (visao !== 'baralhos') {
+                const selectSrs = document.getElementById('select-srs');
+                if (selectSrs) selectSrs.value = 'Todos';
+            }
+            
+            popularSeletores();
+        }
+
         // --- Inicialização e Fetch de Dados ---
         window.addEventListener('DOMContentLoaded', carregarDadosIniciais);
 
@@ -236,6 +298,21 @@
                     window.location.href = "login.html"; return;
                 }
 
+                // Carregar SRS
+                try {
+                    const resSrs = await fetch('/api/srs?acao=listar', {
+                        headers: { "Authorization": tokenDeAcesso }
+                    });
+                    const srsList = await resSrs.json();
+                    if (Array.isArray(srsList)) {
+                        srsList.forEach(item => {
+                            srsProgressData[item.item] = item;
+                        });
+                    }
+                } catch (err) {
+                    console.error("Erro ao buscar progresso do SRS", err);
+                }
+
                 if (Array.isArray(resultado)) {
                     const itensExistentes = new Set(dadosRevisao.map(d => d.item));
                     const dbFiltrados = resultado.filter(d => d && d.item && !itensExistentes.has(d.item) && d.categoria !== 'Texto');
@@ -246,55 +323,86 @@
             }
             
             baseDeDados = dadosRevisao.filter(d => d.categoria !== 'Texto');
+            
+            // Carregar Anki Decks
+            const baralhosSet = new Set();
+            baseDeDados.forEach(d => {
+                if (Array.isArray(d.baralhos)) d.baralhos.forEach(b => baralhosSet.add(b));
+            });
+            try {
+                const decks = await ankiConnectApi('deckNames');
+                if (decks && decks.length > 0) decks.forEach(d => baralhosSet.add(d));
+            } catch(e) {}
+            baralhosDisponiveis = Array.from(baralhosSet).sort();
+
             document.getElementById('loading-msg').style.display = 'none';
-            popularConjuntos();
+            popularSeletores();
         }
 
-        function popularConjuntos() {
+        function popularSeletores() {
             const select = document.getElementById('select-conjunto');
-            const conjuntosUnicos = new Set();
+            select.innerHTML = '<option value="todos">Todos</option>';
             
-            baseDeDados.forEach(card => {
-                if(card.notas) {
-                    const matches = card.notas.match(/\[Conjuntos:\s*(.*?)\]/);
-                    if(matches && matches[1]) {
-                        matches[1].split(',').map(c => c.trim()).filter(c => c).forEach(c => conjuntosUnicos.add(c));
+            if (visaoQuiz === 'baralhos') {
+                baralhosDisponiveis.forEach(baralho => {
+                    const opt = document.createElement('option');
+                    opt.value = baralho;
+                    opt.textContent = baralho;
+                    select.appendChild(opt);
+                });
+            } else {
+                const conjuntosUnicos = new Set();
+                baseDeDados.forEach(card => {
+                    if(card.notas) {
+                        const matches = card.notas.match(/\[Conjuntos:\s*(.*?)\]/);
+                        if(matches && matches[1]) {
+                            matches[1].split(',').map(c => c.trim()).filter(c => c).forEach(c => conjuntosUnicos.add(c));
+                        }
                     }
-                }
-            });
-
-            Array.from(conjuntosUnicos).sort().forEach(conj => {
-                const opt = document.createElement('option');
-                opt.value = conj;
-                opt.textContent = conj;
-                select.appendChild(opt);
-            });
+                });
+                Array.from(conjuntosUnicos).sort().forEach(conj => {
+                    const opt = document.createElement('option');
+                    opt.value = conj;
+                    opt.textContent = conj;
+                    select.appendChild(opt);
+                });
+            }
         }
 
         // --- Setup do Quiz ---
         function iniciarQuiz() {
-            const conjuntoNome = document.getElementById('select-conjunto').value;
+            const filtroConjunto = document.getElementById('select-conjunto').value;
             const jlptNome = document.getElementById('select-jlpt').value;
             const qtd = document.getElementById('select-quantidade').value;
+            const filtroSrs = document.getElementById('select-srs').value;
             
-            // Filtrar conjunto e JLPT
+            // Filtrar conjunto e JLPT e SRS
             conjuntoSelecionado = baseDeDados.filter(c => {
-                let passaConjunto = true;
-                if (conjuntoNome !== 'todos') {
-                    if (!c.notas) passaConjunto = false;
-                    else passaConjunto = c.notas.includes(`[Conjuntos:`) && c.notas.includes(conjuntoNome);
+                let matchVisao = true;
+                if (filtroConjunto !== 'todos') {
+                    if (visaoQuiz === 'conjuntos') {
+                        if (!c.notas) matchVisao = false;
+                        else matchVisao = c.notas.includes(`[Conjuntos:`) && c.notas.includes(filtroConjunto);
+                    } else {
+                        matchVisao = (Array.isArray(c.baralhos) && c.baralhos.includes(filtroConjunto));
+                    }
                 }
                 
                 let passaJLPT = true;
                 if (jlptNome !== 'todos') {
                     passaJLPT = c.jlpt === jlptNome;
                 }
+
+                let matchSrs = true;
+                const estaNoSrs = !!srsProgressData[c.item];
+                if (filtroSrs === 'Aprendidos') matchSrs = estaNoSrs;
+                else if (filtroSrs === 'Novos') matchSrs = !estaNoSrs;
                 
-                return passaConjunto && passaJLPT;
+                return matchVisao && passaJLPT && matchSrs;
             });
 
             if(conjuntoSelecionado.length < 4) {
-                alert("O conjunto selecionado precisa ter pelo menos 4 itens para gerar as opções!");
+                alert(`Combinação muito restrita! O Quiz encontrou apenas ${conjuntoSelecionado.length} termos. São necessários pelo menos 4 termos para gerar as opções (distratores). Tente um filtro menos restrito.`);
                 return;
             }
 
