@@ -1,18 +1,29 @@
 import React from 'react';
 
 interface AiLoaderProps {
-    provider: 'gemini' | 'openai';
+    provider: 'gemini' | 'openai' | 'groq' | 'pollinations';
     message: string;
 }
 
 export default function AiLoader({ provider, message }: AiLoaderProps) {
-    const isGemini = provider === 'gemini';
+    const isGemini = provider === 'gemini' || provider === 'pollinations';
     
     // Direct GIF URLs extracted from IconScout pages
     const geminiGif = "https://cdnl.iconscout.com/lottie/premium/thumb/gemini-logo-animation-gif-download-10900314.gif";
     const openAiGif = "https://cdnl.iconscout.com/lottie/premium/thumb/chatgpt-animation-gif-download-6633794.gif";
     
     const logoSrc = isGemini ? geminiGif : openAiGif;
+
+    let bg = isGemini ? 'rgba(10, 110, 240, 0.05)' : 'rgba(16, 163, 127, 0.05)';
+    let border = `${isGemini ? 'rgba(10, 110, 240, 0.1)' : 'rgba(16, 163, 127, 0.1)'}`;
+    
+    if (provider === 'pollinations') {
+        bg = 'rgba(142, 68, 173, 0.05)';
+        border = 'rgba(142, 68, 173, 0.1)';
+    } else if (provider === 'groq') {
+        bg = 'rgba(230, 126, 34, 0.05)';
+        border = 'rgba(230, 126, 34, 0.1)';
+    }
 
     return (
         <div style={{
@@ -40,8 +51,8 @@ export default function AiLoader({ provider, message }: AiLoaderProps) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: '50%',
-                background: isGemini ? 'rgba(10, 110, 240, 0.05)' : 'rgba(16, 163, 127, 0.05)',
-                border: `1px solid ${isGemini ? 'rgba(10, 110, 240, 0.1)' : 'rgba(16, 163, 127, 0.1)'}`
+                background: bg,
+                border: `1px solid ${border}`
             }}>
                 <img 
                     src={logoSrc} 
@@ -76,7 +87,10 @@ export default function AiLoader({ provider, message }: AiLoaderProps) {
                 color: 'gray',
                 margin: '5px 0 25px 0'
             }}>
-                {isGemini ? "O Gemini está processando a requisição..." : "A OpenAI está respondendo..."}
+                {provider === 'gemini' && "O Gemini está processando a requisição..."}
+                {provider === 'openai' && "A OpenAI está respondendo..."}
+                {provider === 'groq' && "A Groq LPU está processando em alta velocidade..."}
+                {provider === 'pollinations' && "O Pollinations.ai (Llama 3.1) está respondendo de graça..."}
             </p>
 
             {/* Attribution Link (IconScout requirements) */}
@@ -89,9 +103,9 @@ export default function AiLoader({ provider, message }: AiLoaderProps) {
                 lineHeight: '1.4'
             }}>
                 {isGemini ? (
-                    <span dangerouslySetInnerHTML={{ __html: `gif do gemini <a href="https://iconscout.com/lottie-animations/gemini-logo" class="text-underline font-size-sm" target="_blank" style="color: var(--highlight-color); text-decoration: underline;">Gemini Logo</a> by <a href="https://iconscout.com/contributors/cevriemann" class="text-underline font-size-sm" style="color: var(--text-color); text-decoration: underline;">CevRiemann</a> on <a href="https://iconscout.com" class="text-underline font-size-sm" style="color: var(--text-color); text-decoration: underline;">IconScout</a>` }} />
+                    <span dangerouslySetInnerHTML={{ __html: `gif do gemini/pollinations: <a href="https://iconscout.com/lottie-animations/gemini-logo" class="text-underline font-size-sm" target="_blank" style="color: var(--highlight-color); text-decoration: underline;">Gemini Logo</a> by <a href="https://iconscout.com/contributors/cevriemann" class="text-underline font-size-sm" style="color: var(--text-color); text-decoration: underline;">CevRiemann</a> on <a href="https://iconscout.com" class="text-underline font-size-sm" style="color: var(--text-color); text-decoration: underline;">IconScout</a>` }} />
                 ) : (
-                    <span dangerouslySetInnerHTML={{ __html: `gif da openAI: <a href="https://iconscout.com/lottie-animations/chatgpt" class="text-underline font-size-sm" target="_blank" style="color: var(--highlight-color); text-decoration: underline;">Chatgpt</a> by <a href="https://iconscout.com/contributors/alamin" class="text-underline font-size-sm" style="color: var(--text-color); text-decoration: underline;">Al Amin</a> on <a href="https://iconscout.com" class="text-underline font-size-sm" style="color: var(--text-color); text-decoration: underline;">IconScout</a>` }} />
+                    <span dangerouslySetInnerHTML={{ __html: `gif da openAI/groq: <a href="https://iconscout.com/lottie-animations/chatgpt" class="text-underline font-size-sm" target="_blank" style="color: var(--highlight-color); text-decoration: underline;">Chatgpt</a> by <a href="https://iconscout.com/contributors/alamin" class="text-underline font-size-sm" style="color: var(--text-color); text-decoration: underline;">Al Amin</a> on <a href="https://iconscout.com" class="text-underline font-size-sm" style="color: var(--text-color); text-decoration: underline;">IconScout</a>` }} />
                 )}
             </div>
 

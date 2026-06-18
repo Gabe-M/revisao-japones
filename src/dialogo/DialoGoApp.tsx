@@ -12,6 +12,7 @@ export interface DialogoContextData {
     jlpt: string;
     conjuntos: string[];
     vocabularioBanco: any[];
+    provider: 'gemini' | 'openai' | 'groq' | 'pollinations';
 }
 
 export default function DialoGoApp() {
@@ -20,39 +21,140 @@ export default function DialoGoApp() {
         tema: '',
         jlpt: 'N5',
         conjuntos: [],
-        vocabularioBanco: []
+        vocabularioBanco: [],
+        provider: 'gemini'
     });
 
     const [session, setSession] = useState<any>(null);
 
     useEffect(() => {
-        const sessaoSalva = localStorage.getItem('supabase_session');
-        if (sessaoSalva) {
-            setSession(JSON.parse(sessaoSalva));
-        } else {
-            // Check Se tem sessão supabase auth
-            supabase.auth.getSession().then(({ data }) => {
-                if (data.session) {
-                    setSession(data.session);
-                    localStorage.setItem('supabase_session', JSON.stringify(data.session));
-                }
-            });
-        }
+        supabase.auth.getSession().then(({ data }) => {
+            if (data.session) {
+                setSession(data.session);
+            }
+        });
+
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
+            if (newSession) {
+                setSession(newSession);
+            }
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
     }, []);
 
-    const fetchVocabulario = async (conjuntos: string[]) => {
+    const fetchVocabulario = async (config: any) => {
         if (!session) return;
         try {
-            let query = supabase.from('vocabulario').select('item,leitura,significado,jlpt,conjuntos').eq('user_id', session.user.id);
-            // We'll just fetch all or filter by conjuntos in the client for simplicity if it's small, 
-            // or use contains if supported. Let's just fetch all and filter to ensure we can highlight "Already in DB".
-            const { data, error } = await query;
-            if (error) throw error;
+            // Fetch de vocabulario
+            const resJisho = await fetch('/api/jisho?acao=listar', {
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`
+                }
+            });
+            if (!resJisho.ok) throw new Error(`HTTP error ${resJisho.status} loading jisho`);
+            const vocabData = await resJisho.json();
+
+            // Fetch de baralhos do Anki
+            let ankiData = [];
+            try {
+                const resAnki = await fetch('/api/anki?acao=listar', {
+                    headers: {
+                        "Authorization": `Bearer ${session.access_token}`
+                    }
+                });
+                if (resAnki.ok) {
+                    ankiData = await resAnki.json();
+                }
+            } catch (ankiErr) {
+                console.error("Erro ao buscar cartões do Anki no DialoGo", ankiErr);
+            }
+
+            // Normaliza dados do Anki para o formato do Vocabulário
+            const normalizedAnki = (ankiData || []).map((card: any) => ({
+                item: card.vocabulary,
+                leitura: card.reading,
+                significado: card.meaning,
+                jlpt: null,
+                conjuntos: ['Geral'],
+                baralhos: card.deck_name ? [card.deck_name] : ['Geral'],
+                campos_anki: { queue: card.card_status === 'review' ? 2 : 0 },
+                notas: card.sentence || ''
+            }));
+
+            const allItems = [...(vocabData || []), ...normalizedAnki];
+
+            const srsItems = new Set<string>();
+            if (config.srsFiltro !== 'Todos') {
+                const resSrs = await fetch('/api/srs?acao=listar', {
+                    headers: {
+                        "Authorization": `Bearer ${session.access_token}`
+                    }
+                });
+                if (resSrs.ok) {
+                    const srsData = await resSrs.json();
+                    if (Array.isArray(srsData)) {
+                        srsData.forEach((s: any) => srsItems.add(s.item));
+                    }
+                }
+            }
             
-            // update context
+            const filtered = allItems.filter(item => {
+                // a. Filtro de Conjunto
+                let matchesConjunto = true;
+                if (config.bancoTipo === 'conjuntos' || config.bancoTipo === 'ambos') {
+                    if (config.conjuntoSelecionado) {
+                        const itemConjuntos = new Set<string>(['Geral']);
+                        if (item.conjuntos && Array.isArray(item.conjuntos)) {
+                            item.conjuntos.forEach((c: string) => itemConjuntos.add(c));
+                        }
+                        if (item.notas) {
+                            const match = item.notas.match(/\[Conjuntos:\s*([^\]]+)\]/);
+                            if (match) {
+                                match[1].split(',').map((s: string) => s.trim()).filter(Boolean).forEach((c: string) => itemConjuntos.add(c));
+                            }
+                        }
+                        matchesConjunto = itemConjuntos.has(config.conjuntoSelecionado);
+                    }
+                }
+                
+                // b. Filtro de Baralho
+                let matchesBaralho = true;
+                if (config.bancoTipo === 'baralhos' || config.bancoTipo === 'ambos') {
+                    if (config.baralhoSelecionado) {
+                        const itemBaralhos = Array.isArray(item.baralhos) ? item.baralhos : [];
+                        if (config.baralhoSelecionado === 'Geral') {
+                            matchesBaralho = true; // Geral inclui tudo
+                        } else {
+                            matchesBaralho = itemBaralhos.includes(config.baralhoSelecionado);
+                        }
+                    }
+                }
+                
+                // c. Filtro SRS
+                let matchesSRS = true;
+                if (config.srsFiltro !== 'Todos') {
+                    let temProgresso = srsItems.has(item.item);
+                    if (!temProgresso && item.campos_anki && item.campos_anki.queue !== undefined) {
+                        const q = parseInt(item.campos_anki.queue);
+                        if (!isNaN(q) && q > 0) temProgresso = true;
+                    }
+                    
+                    if (config.srsFiltro === 'Aprendidos') {
+                        matchesSRS = temProgresso;
+                    } else if (config.srsFiltro === 'Novos') {
+                        matchesSRS = !temProgresso;
+                    }
+                }
+                
+                return matchesConjunto && matchesBaralho && matchesSRS;
+            });
+            
             setContextData(prev => ({
                 ...prev,
-                vocabularioBanco: data || []
+                vocabularioBanco: filtered
             }));
         } catch (e) {
             console.error('Erro ao buscar vocabulário', e);
@@ -64,9 +166,17 @@ export default function DialoGoApp() {
             ...prev,
             tema: config.tema,
             jlpt: config.jlpt,
-            conjuntos: config.conjuntos
+            provider: config.provider || 'gemini',
+            conjuntos: config.useBanco ? (config.bancoTipo === 'conjuntos' || config.bancoTipo === 'ambos' ? [config.conjuntoSelecionado] : []) : []
         }));
-        await fetchVocabulario(config.conjuntos);
+        if (config.useBanco) {
+            await fetchVocabulario(config);
+        } else {
+            setContextData(prev => ({
+                ...prev,
+                vocabularioBanco: []
+            }));
+        }
         setMode('guia');
     };
 

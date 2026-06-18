@@ -5,10 +5,11 @@ interface AiFallbackPopupProps {
     errorMessage: string;
     onRetryGemini: () => void;
     onFallbackOpenAI: () => void;
+    onFallbackPollinations: () => void;
     onCancel: () => void;
 }
 
-export default function AiFallbackPopup({ isOpen, errorMessage, onRetryGemini, onFallbackOpenAI, onCancel }: AiFallbackPopupProps) {
+export default function AiFallbackPopup({ isOpen, errorMessage, onRetryGemini, onFallbackOpenAI, onFallbackPollinations, onCancel }: AiFallbackPopupProps) {
     if (!isOpen) return null;
 
     return (
@@ -22,7 +23,7 @@ export default function AiFallbackPopup({ isOpen, errorMessage, onRetryGemini, o
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 10000, // Make sure it sits on top of everything including draggable cards
+            zIndex: 10000,
             backdropFilter: 'blur(4px)',
             animation: 'fadeInBg 0.2s ease-out'
         }}>
@@ -59,7 +60,7 @@ export default function AiFallbackPopup({ isOpen, errorMessage, onRetryGemini, o
                     margin: '0 0 20px 0',
                     lineHeight: '1.5'
                 }}>
-                    Ocorreu um erro ao gerar o conteúdo usando o Gemini. Deseja tentar novamente com o Gemini ou alternar para a OpenAI (ChatGPT)?
+                    Ocorreu um erro ao gerar o conteúdo usando o Gemini. Escolha outra opção ou tente novamente:
                 </p>
 
                 {errorMessage && (
@@ -84,12 +85,30 @@ export default function AiFallbackPopup({ isOpen, errorMessage, onRetryGemini, o
                     gap: '10px'
                 }}>
                     <button 
+                        onClick={onFallbackPollinations}
+                        style={{
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: '#8e44ad',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            fontSize: '1em',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s',
+                            boxShadow: '0 4px 6px rgba(142, 68, 173, 0.15)'
+                        }}
+                    >
+                        🪐 Usar Pollinations (Llama 3.1 Grátis)
+                    </button>
+
+                    <button 
                         onClick={onFallbackOpenAI}
                         style={{
                             padding: '12px',
                             borderRadius: '8px',
                             border: 'none',
-                            background: '#10a37f', // OpenAI Brand Color
+                            background: '#10a37f',
                             color: 'white',
                             fontWeight: 'bold',
                             fontSize: '1em',
@@ -98,7 +117,7 @@ export default function AiFallbackPopup({ isOpen, errorMessage, onRetryGemini, o
                             boxShadow: '0 4px 6px rgba(16, 163, 127, 0.15)'
                         }}
                     >
-                        ⚡ Sim, usar OpenAI (ChatGPT)
+                        ⚡ Usar OpenAI (ChatGPT - Paga)
                     </button>
                     
                     <button 

@@ -16,16 +16,16 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
     const [resposta, setResposta] = useState('');
     const [analise, setAnalise] = useState<any>(null);
     const [analisando, setAnalisando] = useState(false);
-    const [provider, setProvider] = useState<'gemini' | 'openai'>('gemini');
+    const [provider, setProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(context.provider || 'gemini');
     const [fallbackOpen, setFallbackOpen] = useState(false);
     const [fallbackError, setFallbackError] = useState('');
     const [pendingAction, setPendingAction] = useState<'carregar' | 'analisar' | null>(null);
 
     useEffect(() => {
-        carregarFrase();
+        carregarFrase(context.provider);
     }, []);
 
-    const carregarFrase = async (targetProvider: 'gemini' | 'openai' = 'gemini') => {
+    const carregarFrase = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini') => {
         setLoading(true);
         setProvider(targetProvider);
         setAnalise(null);
@@ -44,7 +44,8 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                     provider: targetProvider,
                     acao: 'gerar_traducao',
                     tema: context.tema,
-                    jlpt: context.jlpt
+                    jlpt: context.jlpt,
+                    vocabulario: context.vocabularioBanco?.map((v: any) => v.item) || []
                 })
             });
 
@@ -62,13 +63,13 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                 setFallbackError(e.message || String(e));
                 setFallbackOpen(true);
             } else {
-                alert(`Erro ao buscar frase para tradução com OpenAI: ${e.message || e}`);
+                alert(`Erro ao buscar frase para tradução com ${targetProvider}: ${e.message || e}`);
             }
         }
         setLoading(false);
     };
 
-    const verificarTraducao = async (targetProvider: 'gemini' | 'openai' = 'gemini') => {
+    const verificarTraducao = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini') => {
         if (!resposta.trim()) return;
         setAnalisando(true);
         setProvider(targetProvider);
@@ -104,7 +105,7 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                 setFallbackError(e.message || String(e));
                 setFallbackOpen(true);
             } else {
-                alert(`Erro ao analisar a tradução com OpenAI: ${e.message || e}`);
+                alert(`Erro ao analisar a tradução com ${targetProvider}: ${e.message || e}`);
             }
         }
         setAnalisando(false);
@@ -120,6 +121,19 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
         utterance.lang = 'ja-JP';
         utterance.rate = 0.9;
         window.speechSynthesis.speak(utterance);
+    };
+
+    const revelarResposta = () => {
+        if (!frase) return;
+        setAnalise({
+            revelado: true,
+            correto: false,
+            score: 0,
+            traducao_correta: frase.frase_pt,
+            explicacao: frase.explicacao || 'Nenhuma explicação detalhada disponível.',
+            dica: frase.dica,
+            erros: []
+        });
     };
 
     if (loading) {
@@ -195,27 +209,60 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                             <AiLoader provider={provider} message={provider === 'gemini' ? "O Gemini está analisando sua tradução" : "A OpenAI está analisando sua tradução"} />
                         </div>
                     ) : (
-                        <button 
-                            onClick={() => verificarTraducao('gemini')} 
-                            disabled={!resposta.trim()}
-                            style={{ padding: '12px 30px', fontSize: '1.1em', borderRadius: '8px', background: 'var(--primary-color)', color: 'white', border: 'none', cursor: 'pointer' }}
-                        >
-                            Verificar Tradução
-                        </button>
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap' }}>
+                            <button 
+                                onClick={() => verificarTraducao(provider)} 
+                                disabled={!resposta.trim()}
+                                style={{ padding: '12px 30px', fontSize: '1.1em', borderRadius: '8px', background: 'var(--primary-color)', color: 'white', border: 'none', cursor: resposta.trim() ? 'pointer' : 'not-allowed', opacity: resposta.trim() ? 1 : 0.6, fontWeight: 'bold' }}
+                            >
+                                Verificar Tradução
+                            </button>
+                            <button 
+                                onClick={revelarResposta}
+                                style={{ padding: '12px 20px', fontSize: '1.1em', borderRadius: '8px', background: 'transparent', color: 'var(--secondary-color)', border: '1px solid var(--border-color)', cursor: 'pointer', transition: 'background 0.2s', fontWeight: 'bold' }}
+                                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
+                                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                            >
+                                🤷 Revelar Resposta & Explicação
+                            </button>
+                        </div>
                     )
                 ) : (
-                    <div style={{ background: analise.correto ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)', padding: '20px', borderRadius: '12px', border: `2px solid ${analise.correto ? '#2ecc71' : '#e74c3c'}`, textAlign: 'left', marginTop: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '15px' }}>
-                            <ScoreBadge score={analise.score} />
+                    <div style={{ 
+                        background: analise.revelado ? 'rgba(52, 152, 219, 0.08)' : (analise.correto ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)'), 
+                        padding: '20px', 
+                        borderRadius: '12px', 
+                        border: `2px solid ${analise.revelado ? '#3498db' : (analise.correto ? '#2ecc71' : '#e74c3c')}`, 
+                        textAlign: 'left', 
+                        marginTop: '20px' 
+                    }}>
+                        {analise.revelado ? (
                             <div>
-                                <h3 style={{ margin: 0, color: analise.correto ? '#27ae60' : '#c0392b' }}>
-                                    {analise.correto ? 'Muito bem!' : 'Precisa melhorar'}
+                                <h3 style={{ margin: 0, color: '#2980b9', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    💡 Resposta Revelada
                                 </h3>
-                                <p style={{ margin: '5px 0 0 0', fontWeight: 'bold' }}>Correção ideal: {analise.traducao_correta}</p>
+                                <p style={{ margin: '5px 0 15px 0', fontSize: '1.1em', fontWeight: 'bold' }}>Tradução correta: <span style={{ color: 'var(--text-color)', fontWeight: 600 }}><FuriganaText text={analise.traducao_correta} /></span></p>
+                                
+                                {analise.explicacao && (
+                                    <div style={{ marginBottom: '15px', background: 'rgba(0,0,0,0.02)', padding: '15px', borderRadius: '8px', borderLeft: '3px solid #3498db' }}>
+                                        <strong>📖 Explicação Estrutural:</strong>
+                                        <p style={{ margin: '8px 0 0 0', lineHeight: '1.5em', fontSize: '0.95em', whiteSpace: 'pre-line' }}><FuriganaText text={analise.explicacao} /></p>
+                                    </div>
+                                )}
                             </div>
-                        </div>
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '15px' }}>
+                                <ScoreBadge score={analise.score} />
+                                <div>
+                                    <h3 style={{ margin: 0, color: analise.correto ? '#27ae60' : '#c0392b' }}>
+                                        {analise.correto ? 'Muito bem!' : 'Precisa melhorar'}
+                                    </h3>
+                                    <p style={{ margin: '5px 0 0 0', fontWeight: 'bold' }}>Correção ideal: <FuriganaText text={analise.traducao_correta} /></p>
+                                </div>
+                            </div>
+                        )}
 
-                        {analise.erros && analise.erros.length > 0 && (
+                        {!analise.revelado && analise.erros && analise.erros.length > 0 && (
                             <div style={{ marginBottom: '10px' }}>
                                 <strong>Pontos de atenção:</strong>
                                 <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
@@ -224,12 +271,12 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                             </div>
                         )}
                         
-                        <div style={{ background: 'rgba(0,0,0,0.05)', padding: '10px', borderRadius: '8px', fontSize: '0.9em' }}>
-                            <strong>💡 Dica:</strong> {analise.dica || frase.dica}
+                        <div style={{ background: 'rgba(0,0,0,0.05)', padding: '10px', borderRadius: '8px', fontSize: '0.9em', marginBottom: '15px' }}>
+                            <strong>💡 Dica Rápida:</strong> <FuriganaText text={analise.dica || frase.dica} />
                         </div>
 
                         <div style={{ marginTop: '20px', textAlign: 'center' }}>
-                            <button onClick={() => carregarFrase('gemini')} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer' }}>Nova Frase</button>
+                            <button onClick={() => carregarFrase(provider)} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Nova Frase</button>
                         </div>
                     </div>
                 )}
@@ -247,6 +294,11 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                     setFallbackOpen(false);
                     if (pendingAction === 'carregar') carregarFrase('openai');
                     else if (pendingAction === 'analisar') verificarTraducao('openai');
+                }}
+                onFallbackPollinations={() => {
+                    setFallbackOpen(false);
+                    if (pendingAction === 'carregar') carregarFrase('pollinations');
+                    else if (pendingAction === 'analisar') verificarTraducao('pollinations');
                 }}
                 onCancel={() => setFallbackOpen(false)}
             />

@@ -16,7 +16,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
     const [historico, setHistorico] = useState<any[]>([]);
     const [inputUser, setInputUser] = useState('');
     const [enviando, setEnviando] = useState(false);
-    const [provider, setProvider] = useState<'gemini' | 'openai'>('gemini');
+    const [provider, setProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(context.provider || 'gemini');
     const [fallbackOpen, setFallbackOpen] = useState(false);
     const [fallbackError, setFallbackError] = useState('');
     const [pendingAction, setPendingAction] = useState<'iniciar' | 'continuar' | null>(null);
@@ -26,7 +26,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
     const chatEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        iniciarDialogo();
+        iniciarDialogo(context.provider);
         
         // Ativar wanakana se o input existir
         if (inputRef.current) {
@@ -42,7 +42,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [historico, enviando]);
 
-    const iniciarDialogo = async (targetProvider: 'gemini' | 'openai' = 'gemini') => {
+    const iniciarDialogo = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini') => {
         setLoading(true);
         setProvider(targetProvider);
         try {
@@ -87,13 +87,13 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                 setFallbackError(e.message || String(e));
                 setFallbackOpen(true);
             } else {
-                alert(`Erro ao iniciar diálogo com OpenAI: ${e.message || e}`);
+                alert(`Erro ao iniciar diálogo com ${targetProvider}: ${e.message || e}`);
             }
         }
         setLoading(false);
     };
 
-    const enviarMensagem = async (e?: React.FormEvent, targetProvider: 'gemini' | 'openai' = 'gemini', textToSend?: string) => {
+    const enviarMensagem = async (e?: React.FormEvent, targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini', textToSend?: string) => {
         if (e) e.preventDefault();
         const textoJp = textToSend !== undefined ? textToSend : inputUser.trim();
         if (!textoJp) return;
@@ -125,7 +125,10 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                     provider: targetProvider,
                     acao: 'continuar_dialogo',
                     historico: novoHistorico.map(m => ({ role: m.role, content: m.content })),
-                    resposta_usuario_jp: textoJp
+                    resposta_usuario_jp: textoJp,
+                    tema: context.tema,
+                    jlpt: context.jlpt,
+                    vocabulario: context.vocabularioBanco?.map((v:any) => v.item) || []
                 })
             });
 
@@ -158,7 +161,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                 setFallbackError(error.message || String(error));
                 setFallbackOpen(true);
             } else {
-                alert(`Erro ao enviar mensagem com OpenAI: ${error.message || error}`);
+                alert(`Erro ao enviar mensagem com ${targetProvider}: ${error.message || error}`);
                 setInputUser(textoJp); // restore input
             }
         }
@@ -223,7 +226,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                                 {isIA && msg.pt && (
                                     <details style={{ marginTop: '10px', fontSize: '0.9em', color: 'gray' }}>
                                         <summary style={{ cursor: 'pointer' }}>Tradução</summary>
-                                        <p style={{ margin: '5px 0 0 0' }}>{msg.pt}</p>
+                                        <p style={{ margin: '5px 0 0 0' }}><FuriganaText text={msg.pt} /></p>
                                     </details>
                                 )}
                             </div>
@@ -234,7 +237,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                                     <ScoreBadge score={msg.score || 0} />
                                     <div style={{ fontSize: '0.9em' }}>
                                         <strong>Feedback do Sensei:</strong>
-                                        <p style={{ margin: '5px 0 0 0' }}>{msg.analise}</p>
+                                        <p style={{ margin: '5px 0 0 0' }}><FuriganaText text={msg.analise} /></p>
                                     </div>
                                 </div>
                             )}
@@ -298,6 +301,11 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                     setFallbackOpen(false);
                     if (pendingAction === 'iniciar') iniciarDialogo('openai');
                     else if (pendingAction === 'continuar') enviarMensagem(undefined, 'openai', pendingMessage);
+                }}
+                onFallbackPollinations={() => {
+                    setFallbackOpen(false);
+                    if (pendingAction === 'iniciar') iniciarDialogo('pollinations');
+                    else if (pendingAction === 'continuar') enviarMensagem(undefined, 'pollinations', pendingMessage);
                 }}
                 onCancel={() => setFallbackOpen(false)}
             />
