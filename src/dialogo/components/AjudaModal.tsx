@@ -204,138 +204,109 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
     const renderLivePreview = () => {
         if (!praticaInput) return null;
 
-        const partes = praticaInput.split(/(\[.*?\])/g);
-
         return (
-            <div style={{
-                marginTop: '8px',
-                padding: '12px',
-                background: 'rgba(0, 0, 0, 0.03)',
-                borderRadius: '8px',
-                border: '1px dashed var(--border-color)',
-                fontSize: '1em',
-                lineHeight: '1.6',
-                minHeight: '44px',
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center'
-            }}>
-                <span style={{ fontSize: '0.8em', opacity: 0.6, marginRight: '8px', fontWeight: 600 }}>Visualização:</span>
-                {partes.map((parte, index) => {
-                    if (parte.startsWith('[') && parte.endsWith(']')) {
-                        const termo = parte.slice(1, -1);
+            <>
+                <div className="live-preview-container" style={{ marginTop: '15px', padding: '12px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '0.85em', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>Visualização:</span>
+                  
+                  <div style={{ fontSize: '1.1em', lineHeight: '1.6' }}>
+                    {praticaInput.split(/(\[.*?\])/g).map((parte, index) => {
+                      if (parte.startsWith('[') && parte.endsWith(']')) {
+                        const termoLimpo = parte.slice(1, -1);
                         return (
-                            <button
-                                key={`chip-${index}`}
-                                onClick={() => sugerirLacuna(termo, parte)}
-                                type="button"
-                                style={{
-                                    background: 'linear-gradient(135deg, #ff6b6b, #c0392b)',
-                                    color: '#ffffff',
-                                    padding: '2px 8px',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    border: 'none',
-                                    fontWeight: '600',
-                                    margin: '0 4px',
-                                    boxShadow: '0 2px 4px rgba(220, 53, 69, 0.3)',
-                                    outline: 'none'
-                                }}
-                                title="Clique para ver sugestões em japonês"
-                            >
-                                {termo}
-                            </button>
+                          <button
+                            key={index}
+                            type="button" /* CRÍTICO: Previne submit acidental da página */
+                            onClick={() => sugerirLacuna(termoLimpo, parte)}
+                            style={{
+                              background: 'linear-gradient(135deg, #ff6b6b, #c0392b)',
+                              color: '#ffffff',
+                              padding: '2px 10px',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              border: 'none',
+                              fontWeight: '600',
+                              margin: '0 4px',
+                              boxShadow: '0 2px 4px rgba(220, 53, 69, 0.3)',
+                              transform: lacunaAtiva?.raw === parte ? 'scale(1.05)' : 'scale(1)',
+                              transition: 'transform 0.2s ease'
+                            }}
+                          >
+                            {termoLimpo}
+                          </button>
                         );
-                    } else {
-                        return (
-                            <span key={`text-${index}`}>
-                                {parte}
-                            </span>
-                        );
-                    }
-                })}
-            </div>
-        );
-    };
-
-    const renderLacunaCard = () => {
-        if (!lacunaAtiva) return null;
-
-        return (
-            <div style={{
-                marginTop: '12px',
-                background: 'var(--card-bg)',
-                border: '1px solid var(--border-color)',
-                boxShadow: 'var(--shadow-subtle)',
-                borderRadius: '12px',
-                padding: '15px',
-                position: 'relative'
-            }}>
-                {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '0.85em', fontWeight: 700, opacity: 0.8 }}>
-                        Sugestões para "{lacunaAtiva.termoPt}"
-                    </span>
-                    <button 
-                        type="button"
-                        onClick={() => setLacunaAtiva(null)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'gray', padding: '2px' }}
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+                      }
+                      return <span key={index}>{parte}</span>;
+                    })}
+                  </div>
                 </div>
 
-                {/* Loading */}
-                {loadingLacuna && (
-                    <div style={{ padding: '20px 0', textAlign: 'center' }}>
-                        <AiLoader provider={context.provider || 'gemini'} message="Buscando traduções contextuais..." />
+                {lacunaAtiva && (
+                  <div className="lacuna-popover" style={{
+                    marginTop: '10px',
+                    padding: '15px',
+                    background: 'rgba(20, 20, 20, 0.95)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '10px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                    position: 'relative',
+                    animation: 'ajudaSlideUp 0.2s ease'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '0.85em', fontWeight: 600, color: 'var(--text-muted)' }}>
+                        Sugestões para "{lacunaAtiva.termoPt}"
+                      </span>
+                      <button 
+                        type="button"
+                        onClick={() => setLacunaAtiva(null)}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                )}
 
-                {/* Sugestoes */}
-                {!loadingLacuna && sugestoesLacuna.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {sugestoesLacuna.map((sug, i) => (
-                            <div 
-                                key={i}
-                                onClick={() => handleSelecionarSugestao(sug.texto_puro)}
-                                style={{
-                                    padding: '10px 12px',
-                                    borderRadius: '8px',
-                                    border: '1px solid var(--border-color)',
-                                    background: 'rgba(0, 0, 0, 0.01)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: '4px'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'rgba(52, 152, 219, 0.05)';
-                                    e.currentTarget.style.borderColor = 'var(--primary-color)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.01)';
-                                    e.currentTarget.style.borderColor = 'var(--border-color)';
-                                }}
-                            >
-                                <div style={{ fontSize: '1.1em', fontWeight: 600 }}>
-                                    <FuriganaText text={sug.termo_jp} />
-                                </div>
-                                <div style={{ fontSize: '0.85em', opacity: 0.7 }}>
-                                    {sug.explicacao_curta}
-                                </div>
+                    {loadingLacuna && (
+                      <div style={{ padding: '20px 0', textAlign: 'center' }}>
+                        <AiLoader provider={context.provider || 'gemini'} message="Buscando traduções..." />
+                      </div>
+                    )}
+
+                    {!loadingLacuna && sugestoesLacuna.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {sugestoesLacuna.map((sugestao, index) => (
+                          <div 
+                            key={index}
+                            onClick={() => handleSelecionarSugestao(sugestao.texto_puro)}
+                            style={{
+                              padding: '12px',
+                              borderRadius: '8px',
+                              background: 'rgba(0, 0, 0, 0.2)',
+                              cursor: 'pointer',
+                              border: '1px solid rgba(255, 255, 255, 0.05)',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = '#ff6b6b';
+                              e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.2)';
+                            }}
+                          >
+                            <div style={{ fontSize: '1.2em', marginBottom: '4px' }}>
+                              <FuriganaText text={sugestao.termo_jp}/>
                             </div>
+                            <p style={{ margin: 0, fontSize: '0.85em', color: 'var(--text-muted)' }}>
+                              {sugestao.explicacao_curta}
+                            </p>
+                          </div>
                         ))}
-                    </div>
+                      </div>
+                    )}
+                  </div>
                 )}
-
-                {!loadingLacuna && sugestoesLacuna.length === 0 && (
-                    <div style={{ textAlign: 'center', opacity: 0.6, padding: '15px 0', fontSize: '0.9em' }}>
-                        Nenhuma sugestão encontrada para o termo.
-                    </div>
-                )}
-            </div>
+            </>
         );
     };
 
@@ -890,7 +861,6 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                             </div>
 
                             {renderLivePreview()}
-                            {renderLacunaCard()}
 
                             <div style={{ marginTop: '8px' }}>
                                 {loadingPratica ? (
