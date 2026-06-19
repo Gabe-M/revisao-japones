@@ -179,7 +179,6 @@ export default function DraggableCard({ card, onClose, initialIndex, tema, provi
                             <option value="gemini">Gemini</option>
                             <option value="pollinations">Pollinations</option>
                             <option value="groq">Groq</option>
-                            <option value="openai">OpenAI</option>
                         </select>
                         <button 
                             onPointerDown={(e) => e.stopPropagation()} 

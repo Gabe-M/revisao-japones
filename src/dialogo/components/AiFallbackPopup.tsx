@@ -4,12 +4,11 @@ interface AiFallbackPopupProps {
     isOpen: boolean;
     errorMessage: string;
     onRetryGemini: () => void;
-    onFallbackOpenAI: () => void;
     onFallbackPollinations: () => void;
     onCancel: () => void;
 }
 
-export default function AiFallbackPopup({ isOpen, errorMessage, onRetryGemini, onFallbackOpenAI, onFallbackPollinations, onCancel }: AiFallbackPopupProps) {
+export default function AiFallbackPopup({ isOpen, errorMessage, onRetryGemini, onFallbackPollinations, onCancel }: AiFallbackPopupProps) {
     if (!isOpen) return null;
 
     return (
@@ -101,24 +100,7 @@ export default function AiFallbackPopup({ isOpen, errorMessage, onRetryGemini, o
                     >
                         🪐 Usar Pollinations (Llama 3.1 Grátis)
                     </button>
-
-                    <button 
-                        onClick={onFallbackOpenAI}
-                        style={{
-                            padding: '12px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            background: '#10a37f',
-                            color: 'white',
-                            fontWeight: 'bold',
-                            fontSize: '1em',
-                            cursor: 'pointer',
-                            transition: 'background 0.2s',
-                            boxShadow: '0 4px 6px rgba(16, 163, 127, 0.15)'
-                        }}
-                    >
-                        ⚡ Usar OpenAI (ChatGPT - Paga)
-                    </button>
+                    
                     
                     <button 
                         onClick={onRetryGemini}

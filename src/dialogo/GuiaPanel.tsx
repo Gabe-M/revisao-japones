@@ -192,10 +192,6 @@ export default function GuiaPanel({ context, onNext, onBack }: GuiaPanelProps) {
                             setFallbackOpen(false);
                             carregarGuia('gemini');
                         }}
-                        onFallbackOpenAI={() => {
-                            setFallbackOpen(false);
-                            carregarGuia('openai');
-                        }}
                         onFallbackPollinations={() => {
                             setFallbackOpen(false);
                             carregarGuia('pollinations');
@@ -359,10 +355,6 @@ export default function GuiaPanel({ context, onNext, onBack }: GuiaPanelProps) {
                 onRetryGemini={() => {
                     setFallbackOpen(false);
                     carregarGuia('gemini');
-                }}
-                onFallbackOpenAI={() => {
-                    setFallbackOpen(false);
-                    carregarGuia('openai');
                 }}
                 onFallbackPollinations={() => {
                     setFallbackOpen(false);

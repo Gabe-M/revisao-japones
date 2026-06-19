@@ -499,7 +499,7 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                                     </button>
                                     <button 
                                         type="button"
-                                        onClick={() => setSrsFiltro('Normal')} /* normal placeholder but let's use Aprendidos */
+                                        onClick={() => setSrsFiltro('Aprendidos')} /* normal placeholder but let's use Aprendidos */
                                         style={{
                                             display: 'none'
                                         }}
@@ -645,31 +645,6 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                     >
                         <span>⚡ Groq</span>
                         <span style={{ fontSize: '0.75em', fontWeight: 'normal', color: 'gray' }}>Llama 3.3 (Grátis)</span>
-                    </button>
-
-                    <button 
-                        type="button"
-                        onClick={() => setSelectedProvider('openai')}
-                        style={{
-                            padding: '10px 8px',
-                            fontSize: '0.82em',
-                            fontWeight: 700,
-                            border: 'none',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            background: selectedProvider === 'openai' ? 'var(--card-bg)' : 'transparent',
-                            color: 'var(--text-color)',
-                            opacity: selectedProvider === 'openai' ? 1 : 0.6,
-                            boxShadow: selectedProvider === 'openai' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                            transition: 'all 0.2s ease',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '4px'
-                        }}
-                    >
-                        <span>🟢 OpenAI</span>
-                        <span style={{ fontSize: '0.75em', fontWeight: 'normal', color: 'gray' }}>GPT-4o (Paga)</span>
                     </button>
                 </div>
             </div>

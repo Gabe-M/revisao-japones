@@ -4,6 +4,7 @@ import ScoreBadge from './components/ScoreBadge';
 import * as wanakana from 'wanakana';
 import AiLoader from './components/AiLoader';
 import AiFallbackPopup from './components/AiFallbackPopup';
+import AjudaModal from './components/AjudaModal';
 
 interface DialoGoPanelProps {
     context: any;
@@ -21,6 +22,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
     const [fallbackError, setFallbackError] = useState('');
     const [pendingAction, setPendingAction] = useState<'iniciar' | 'continuar' | null>(null);
     const [pendingMessage, setPendingMessage] = useState('');
+    const [ajudaModal, setAjudaModal] = useState<{isOpen: boolean, mensagem: string}>({isOpen: false, mensagem: ''});
     
     const inputRef = useRef<HTMLInputElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -217,10 +219,15 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                                 background: isIA ? 'rgba(0,0,0,0.05)' : 'var(--highlight-color)', 
                                 color: isIA ? 'var(--text-color)' : 'white' 
                             }}>
-                                <div style={{ fontSize: '1.2em', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ fontSize: '1.2em', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                                     <FuriganaText text={msg.jp} />
                                     {isIA && (
-                                        <button onClick={() => tocarAudio(msg.jp)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'gray' }}>🔊</button>
+                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                            <button onClick={() => tocarAudio(msg.jp)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'gray', padding: '5px' }} title="Ouvir">🔊</button>
+                                            <button onClick={() => setAjudaModal({isOpen: true, mensagem: msg.jp})} style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', cursor: 'pointer', color: 'var(--text-color)', borderRadius: '8px', padding: '4px 10px', fontSize: '0.75em', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                💬 Ajuda
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                                 {isIA && msg.pt && (
@@ -297,17 +304,20 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                     if (pendingAction === 'iniciar') iniciarDialogo('gemini');
                     else if (pendingAction === 'continuar') enviarMensagem(undefined, 'gemini', pendingMessage);
                 }}
-                onFallbackOpenAI={() => {
-                    setFallbackOpen(false);
-                    if (pendingAction === 'iniciar') iniciarDialogo('openai');
-                    else if (pendingAction === 'continuar') enviarMensagem(undefined, 'openai', pendingMessage);
-                }}
                 onFallbackPollinations={() => {
                     setFallbackOpen(false);
                     if (pendingAction === 'iniciar') iniciarDialogo('pollinations');
                     else if (pendingAction === 'continuar') enviarMensagem(undefined, 'pollinations', pendingMessage);
                 }}
                 onCancel={() => setFallbackOpen(false)}
+            />
+
+            <AjudaModal
+                isOpen={ajudaModal.isOpen}
+                onClose={() => setAjudaModal({isOpen: false, mensagem: ''})}
+                mensagem={ajudaModal.mensagem}
+                context={context}
+                onUsarResposta={(texto) => { setInputUser(texto); setAjudaModal({isOpen: false, mensagem: ''}); }}
             />
         </div>
     );

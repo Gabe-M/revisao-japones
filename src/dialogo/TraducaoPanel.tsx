@@ -158,10 +158,10 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                             if (pendingAction === 'carregar') carregarFrase('gemini');
                             else if (pendingAction === 'analisar') verificarTraducao('gemini');
                         }}
-                        onFallbackOpenAI={() => {
+                        onFallbackPollinations={() => {
                             setFallbackOpen(false);
-                            if (pendingAction === 'carregar') carregarFrase('openai');
-                            else if (pendingAction === 'analisar') verificarTraducao('openai');
+                            if (pendingAction === 'carregar') carregarFrase('pollinations');
+                            else if (pendingAction === 'analisar') verificarTraducao('pollinations');
                         }}
                         onCancel={() => setFallbackOpen(false)}
                     />
@@ -289,11 +289,6 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                     setFallbackOpen(false);
                     if (pendingAction === 'carregar') carregarFrase('gemini');
                     else if (pendingAction === 'analisar') verificarTraducao('gemini');
-                }}
-                onFallbackOpenAI={() => {
-                    setFallbackOpen(false);
-                    if (pendingAction === 'carregar') carregarFrase('openai');
-                    else if (pendingAction === 'analisar') verificarTraducao('openai');
                 }}
                 onFallbackPollinations={() => {
                     setFallbackOpen(false);

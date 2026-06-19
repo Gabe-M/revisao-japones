@@ -323,6 +323,76 @@ export default async function handler(req, res) {
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
                 return res.status(200).json(result);
 
+            case 'analisar_mensagem':
+                systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Identifique o vocabulário chave na mensagem.";
+                prompt = `Mensagem: "${body.mensagem_ia_jp}"
+                Tema: "${tema}"
+                ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
+                
+                Estrutura do JSON esperado:
+                {
+                    "vocabulario": [
+                        { "item": "Kanji ou palavra", "leitura": "furigana/leitura", "significado": "Significado em português", "tipo": "Substantivo/Verbo/etc" }
+                    ]
+                }
+                Retorne no máximo 10 itens importantes.`;
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                return res.status(200).json(result);
+
+            case 'sugerir_resposta':
+                let limitacoesVocabSugestao = '';
+                if (vocabulario && vocabulario.length > 0) {
+                    limitacoesVocabSugestao = `
+                    IMPORTANTE: O aluno está utilizando um filtro de palavras aprendidas. 
+                    Você DEVE obrigatoriamente criar a frase utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${vocabulario.slice(0, 40).join(', ')}]. 
+                    Para ligar os termos e formar a frase, use apenas partículas gramaticais básicas e flexões verbais elementares. 
+                    NÃO introduza de forma alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
+                }
+                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}" e também um professor ajudando o aluno. Retorne APENAS um JSON válido. Sugira uma boa resposta para o aluno usar na conversa. Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na sugestao_jp para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>, e não fora. O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji), e deve ser aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>.`;
+                prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
+                Tema do RPG: "${tema}"
+                ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
+                ${limitacoesVocabSugestao}
+                
+                Estrutura do JSON esperado:
+                {
+                    "sugestao_jp": "Sugestão de resposta do aluno em japonês (com ruby tags)",
+                    "sugestao_pt": "Tradução exata da sugestão",
+                    "dica": "Explicação curta do motivo dessa ser uma boa resposta"
+                }`;
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                return res.status(200).json(result);
+
+            case 'tirar_duvida':
+                systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Esclareça a dúvida do aluno de forma clara, didática e em português.";
+                prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
+                Dúvida do aluno: "${body.duvida_usuario}"
+                Tema do RPG: "${tema}"
+                
+                Estrutura do JSON esperado:
+                {
+                    "resposta": "Sua explicação detalhada esclarecendo a dúvida do aluno sobre a frase, o vocabulário, ou o contexto."
+                }`;
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                return res.status(200).json(result);
+
+            case 'analisar_pratica':
+                systemInstruction = "Você é um professor de japonês avaliando a resposta do aluno no contexto de um diálogo. Retorne APENAS um JSON válido. O feedback (dica e erro) DEVE estar em Português.";
+                prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
+                Resposta do aluno: "${body.resposta_usuario_jp}"
+                
+                Avalie se a resposta do aluno faz sentido no contexto da conversa e se a gramática/vocabulário estão corretos.
+                Estrutura do JSON esperado:
+                {
+                    "score": 85, // número de 0 a 100
+                    "correto": true, // true se for uma resposta aceitável e compreensível, false caso contrário
+                    "erros": ["O aluno usou a partícula errada em X"], // array de strings com erros identificados (vazio se não houver)
+                    "dica": "Dica de como soar mais natural ou corrigir o erro.",
+                    "traducao_correta": "Sugestão de como o aluno poderia ter formulado essa mesma ideia de forma correta e natural em japonês"
+                }`;
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                return res.status(200).json(result);
+
             default:
                 return res.status(400).json({ error: 'Ação inválida' });
         }
