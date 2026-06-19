@@ -62,35 +62,45 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
         const rawVal = e.target.value;
         const selectionStart = e.target.selectionStart || 0;
 
-        const regex = /(\[.*?\])/g;
-        const parts = rawVal.split(regex);
-
-        const convertedParts = parts.map(part => {
-            if (part.startsWith('[') && part.endsWith(']')) {
-                return part;
-            }
-            return wanakana.toHiragana(part, { IMEMode: true });
-        });
-
-        const convertedVal = convertedParts.join('');
-
         const prefix = rawVal.substring(0, selectionStart);
-        const prefixParts = prefix.split(regex);
-        const convertedPrefixParts = prefixParts.map(part => {
-            if (part.startsWith('[')) {
-                return part;
-            }
-            return wanakana.toHiragana(part, { IMEMode: true });
-        });
-        const newCursorPos = convertedPrefixParts.join('').length;
+        const lastOpenBracket = prefix.lastIndexOf('[');
+        const lastCloseBracket = prefix.lastIndexOf(']');
+        const isInsideBracket = lastOpenBracket > lastCloseBracket;
 
-        setPraticaInput(convertedVal);
+        if (isInsideBracket) {
+            // Usuário está digitando DENTRO da lacuna, não converte
+            setPraticaInput(rawVal);
+        } else {
+            // Usuário está FORA da lacuna, aplica conversão apenas nos trechos externos
+            const regex = /(\[.*?\])/g;
+            const parts = rawVal.split(regex);
 
-        setTimeout(() => {
-            if (inputRef.current) {
-                inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
-            }
-        }, 0);
+            const convertedParts = parts.map(part => {
+                if (part.startsWith('[') && part.endsWith(']')) {
+                    return part;
+                }
+                return wanakana.toHiragana(part, { IMEMode: true });
+            });
+
+            const convertedVal = convertedParts.join('');
+            setPraticaInput(convertedVal);
+
+            // Ajuste do cursor
+            const prefixParts = prefix.split(regex);
+            const convertedPrefix = prefixParts.map(part => {
+                if (part.startsWith('[') && part.endsWith(']')) {
+                    return part;
+                }
+                return wanakana.toHiragana(part, { IMEMode: true });
+            }).join('');
+            
+            const newCursorPos = convertedPrefix.length;
+            setTimeout(() => {
+                if (inputRef.current) {
+                    inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+                }
+            }, 0);
+        }
     };
 
     const handleOverlayClick = (e: React.MouseEvent) => {
