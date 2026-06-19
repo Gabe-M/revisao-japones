@@ -37,6 +37,11 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
     const [loadingPratica, setLoadingPratica] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // Lacuna Assistida
+    const [lacunaAtiva, setLacunaAtiva] = useState<{ termoPt: string, raw: string } | null>(null);
+    const [sugestoesLacuna, setSugestoesLacuna] = useState<any[]>([]);
+    const [loadingLacuna, setLoadingLacuna] = useState(false);
+
     useEffect(() => {
         if (isOpen) {
             setAbaAtiva('vocab');
@@ -46,18 +51,47 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
             setRespostaDuvida('');
             setPraticaInput('');
             setAnalisePratica(null);
+            setLacunaAtiva(null);
+            setSugestoesLacuna([]);
+            setLoadingLacuna(false);
             carregarVocabulario();
         }
     }, [isOpen, mensagem]);
 
-    useEffect(() => {
-        if (abaAtiva === 'praticar' && inputRef.current) {
-            wanakana.bind(inputRef.current, { IMEMode: true });
-            return () => {
-                if (inputRef.current) wanakana.unbind(inputRef.current);
-            };
-        }
-    }, [abaAtiva]);
+    const handlePraticaInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawVal = e.target.value;
+        const selectionStart = e.target.selectionStart || 0;
+
+        const regex = /(\[.*?\])/g;
+        const parts = rawVal.split(regex);
+
+        const convertedParts = parts.map(part => {
+            if (part.startsWith('[') && part.endsWith(']')) {
+                return part;
+            }
+            return wanakana.toHiragana(part, { IMEMode: true });
+        });
+
+        const convertedVal = convertedParts.join('');
+
+        const prefix = rawVal.substring(0, selectionStart);
+        const prefixParts = prefix.split(regex);
+        const convertedPrefixParts = prefixParts.map(part => {
+            if (part.startsWith('[')) {
+                return part;
+            }
+            return wanakana.toHiragana(part, { IMEMode: true });
+        });
+        const newCursorPos = convertedPrefixParts.join('').length;
+
+        setPraticaInput(convertedVal);
+
+        setTimeout(() => {
+            if (inputRef.current) {
+                inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+            }
+        }, 0);
+    };
 
     const handleOverlayClick = (e: React.MouseEvent) => {
         if (e.target === e.currentTarget) {
@@ -138,6 +172,171 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
         } finally {
             setLoadingPratica(false);
         }
+    };
+
+    const sugerirLacuna = async (termoPt: string, raw: string) => {
+        setLacunaAtiva({ termoPt, raw });
+        setSugestoesLacuna([]);
+        setLoadingLacuna(true);
+        try {
+            const data = await callEndpoint('sugerir_lacuna', {
+                frase_contexto: praticaInput,
+                termo_pt: termoPt
+            });
+            if (data && data.sugestoes) {
+                setSugestoesLacuna(data.sugestoes);
+            }
+        } catch (e) {
+            console.error("Erro ao sugerir lacuna:", e);
+        } finally {
+            setLoadingLacuna(false);
+        }
+    };
+
+    const handleSelecionarSugestao = (textoPuro: string) => {
+        if (!lacunaAtiva) return;
+        const novoTexto = praticaInput.replace(lacunaAtiva.raw, textoPuro);
+        setPraticaInput(novoTexto);
+        setLacunaAtiva(null);
+        setSugestoesLacuna([]);
+    };
+
+    const renderLivePreview = () => {
+        if (!praticaInput) return null;
+
+        const partes = praticaInput.split(/(\[.*?\])/g);
+
+        return (
+            <div style={{
+                marginTop: '8px',
+                padding: '12px',
+                background: 'rgba(0, 0, 0, 0.03)',
+                borderRadius: '8px',
+                border: '1px dashed var(--border-color)',
+                fontSize: '1em',
+                lineHeight: '1.6',
+                minHeight: '44px',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center'
+            }}>
+                <span style={{ fontSize: '0.8em', opacity: 0.6, marginRight: '8px', fontWeight: 600 }}>Visualização:</span>
+                {partes.map((parte, index) => {
+                    if (parte.startsWith('[') && parte.endsWith(']')) {
+                        const termo = parte.slice(1, -1);
+                        return (
+                            <button
+                                key={`chip-${index}`}
+                                onClick={() => sugerirLacuna(termo, parte)}
+                                type="button"
+                                style={{
+                                    background: 'linear-gradient(135deg, #ff6b6b, #c0392b)',
+                                    color: '#ffffff',
+                                    padding: '2px 8px',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    border: 'none',
+                                    fontWeight: '600',
+                                    margin: '0 4px',
+                                    boxShadow: '0 2px 4px rgba(220, 53, 69, 0.3)',
+                                    outline: 'none'
+                                }}
+                                title="Clique para ver sugestões em japonês"
+                            >
+                                {termo}
+                            </button>
+                        );
+                    } else {
+                        return (
+                            <span key={`text-${index}`}>
+                                {parte}
+                            </span>
+                        );
+                    }
+                })}
+            </div>
+        );
+    };
+
+    const renderLacunaCard = () => {
+        if (!lacunaAtiva) return null;
+
+        return (
+            <div style={{
+                marginTop: '12px',
+                background: 'var(--card-bg)',
+                border: '1px solid var(--border-color)',
+                boxShadow: 'var(--shadow-subtle)',
+                borderRadius: '12px',
+                padding: '15px',
+                position: 'relative'
+            }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '0.85em', fontWeight: 700, opacity: 0.8 }}>
+                        Sugestões para "{lacunaAtiva.termoPt}"
+                    </span>
+                    <button 
+                        type="button"
+                        onClick={() => setLacunaAtiva(null)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'gray', padding: '2px' }}
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {/* Loading */}
+                {loadingLacuna && (
+                    <div style={{ padding: '20px 0', textAlign: 'center' }}>
+                        <AiLoader provider={context.provider || 'gemini'} message="Buscando traduções contextuais..." />
+                    </div>
+                )}
+
+                {/* Sugestoes */}
+                {!loadingLacuna && sugestoesLacuna.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {sugestoesLacuna.map((sug, i) => (
+                            <div 
+                                key={i}
+                                onClick={() => handleSelecionarSugestao(sug.texto_puro)}
+                                style={{
+                                    padding: '10px 12px',
+                                    borderRadius: '8px',
+                                    border: '1px solid var(--border-color)',
+                                    background: 'rgba(0, 0, 0, 0.01)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '4px'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'rgba(52, 152, 219, 0.05)';
+                                    e.currentTarget.style.borderColor = 'var(--primary-color)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.01)';
+                                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                                }}
+                            >
+                                <div style={{ fontSize: '1.1em', fontWeight: 600 }}>
+                                    <FuriganaText text={sug.termo_jp} />
+                                </div>
+                                <div style={{ fontSize: '0.85em', opacity: 0.7 }}>
+                                    {sug.explicacao_curta}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {!loadingLacuna && sugestoesLacuna.length === 0 && (
+                    <div style={{ textAlign: 'center', opacity: 0.6, padding: '15px 0', fontSize: '0.9em' }}>
+                        Nenhuma sugestão encontrada para o termo.
+                    </div>
+                )}
+            </div>
+        );
     };
 
     if (!isOpen) return null;
@@ -674,7 +873,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                     ref={inputRef}
                                     type="text"
                                     value={praticaInput}
-                                    onChange={(e) => setPraticaInput(e.target.value)}
+                                    onChange={handlePraticaInputChange}
                                     onKeyDown={(e) => e.key === 'Enter' && enviarPratica()}
                                     placeholder="Digite sua resposta..."
                                     className="ajuda-input-text"
@@ -689,6 +888,9 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                     Analisar
                                 </button>
                             </div>
+
+                            {renderLivePreview()}
+                            {renderLacunaCard()}
 
                             <div style={{ marginTop: '8px' }}>
                                 {loadingPratica ? (

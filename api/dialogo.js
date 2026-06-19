@@ -117,6 +117,103 @@ async function callAI(systemInstruction, messages, geminiKey, openAIKey, groqKey
     throw new Error(`Provedor de IA inválido: ${provider}`);
 }
 
+function selectContextualVocab(vocabList, tema, historico, resposta_usuario_jp, limit = 50) {
+    if (!Array.isArray(vocabList) || vocabList.length === 0) {
+        return [];
+    }
+
+    const normalized = vocabList.map(v => {
+        if (!v) return { item: '', significado: '', leitura: '' };
+        if (typeof v === 'string') {
+            return { item: v, significado: '', leitura: '' };
+        }
+        return {
+            item: v.item || '',
+            significado: v.significado || '',
+            leitura: v.leitura || ''
+        };
+    });
+
+    const topicoStr = tema || '';
+    
+    let lastMsgPt = '';
+    let lastMsgJp = '';
+    
+    if (Array.isArray(historico) && historico.length > 0) {
+        const lastMsg = historico[historico.length - 1];
+        if (lastMsg) {
+            lastMsgPt = (lastMsg.pt || lastMsg.analise || '').toString();
+            lastMsgJp = (lastMsg.jp || lastMsg.content || '').toString();
+        }
+    }
+
+    const portugueseContext = `${topicoStr} ${lastMsgPt}`.trim();
+    const japaneseContext = `${resposta_usuario_jp || ''} ${lastMsgJp}`.trim();
+
+    const cleanText = (str) => {
+        if (!str) return '';
+        return str
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^\w\s\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf]/g, ' ');
+    };
+
+    const cleanPtContext = cleanText(portugueseContext);
+    const ptContextWords = cleanPtContext.split(/\s+/).filter(w => w.length > 1);
+
+    const cleanJpContext = cleanText(japaneseContext);
+
+    const scored = normalized.map((v, index) => {
+        let score = 0;
+
+        if (v.item && cleanJpContext.includes(v.item.toLowerCase())) {
+            score += 30;
+        } else if (v.item) {
+            // Check for kanji matching (handles verb conjugations like 食べる -> 食べます)
+            const kanjis = v.item.match(/[\u4e00-\u9faf]/g);
+            if (kanjis && kanjis.length > 0) {
+                const hasKanjiMatch = kanjis.some(k => cleanJpContext.includes(k));
+                if (hasKanjiMatch) {
+                    score += 20;
+                }
+            }
+        }
+        if (v.leitura && cleanJpContext.includes(v.leitura.toLowerCase())) {
+            score += 20;
+        }
+
+        if (v.significado) {
+            const cleanSig = cleanText(v.significado);
+            
+            if (cleanPtContext.includes(cleanSig)) {
+                score += 25;
+            }
+
+            const sigWords = cleanSig.split(/\s+/).filter(w => w.length > 1);
+            let overlaps = 0;
+            sigWords.forEach(w => {
+                if (ptContextWords.includes(w)) {
+                    overlaps++;
+                }
+            });
+            score += overlaps * 10;
+        }
+
+        score -= index * 0.0001;
+
+        return { item: v.item, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, limit).map(s => s.item).filter(Boolean);
+}
+
+function cleanFuriganaHtml(text) {
+    if (typeof text !== 'string') return '';
+    return text.replace(/<rt>.*?<\/rt>/g, '').replace(/<[^>]*>/g, '');
+}
+
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -179,7 +276,7 @@ export default async function handler(req, res) {
                 systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Use tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> nas frases (em 'exemplo_jp' e 'jp' de frases_uteis) sempre que usar Kanji. O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji) e deve ser colocado apenas sobre os Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>.";
                 prompt = `Gere um guia de estudos em japonês para o tema: "${tema}".
                 ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
-                ${vocabulario && vocabulario.length > 0 ? `Palavras que devem ser priorizadas ou incluídas se possível: ${vocabulario.slice(0, 20).join(', ')}` : ''}
+                ${vocabulario && vocabulario.length > 0 ? `Palavras que devem ser priorizadas ou incluídas se possível: ${selectContextualVocab(vocabulario, tema, null, null, 20).join(', ')}` : ''}
                 
                 Estrutura do JSON esperado:
                 {
@@ -205,7 +302,7 @@ export default async function handler(req, res) {
                 if (vocabulario && vocabulario.length > 0) {
                     limitacoesVocab = `
                     IMPORTANTE: O aluno está utilizando um filtro de palavras aprendidas. 
-                    Você DEVE obrigatoriamente criar a frase utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${vocabulario.slice(0, 40).join(', ')}]. 
+                    Você DEVE obrigatoriamente criar a frase utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${selectContextualVocab(vocabulario, tema, null, null, 40).join(', ')}]. 
                     Para ligar os termos e formar a frase, use apenas partículas gramaticais básicas (は, が, に, を, で, の, と, も, へ, から, まで, ね, よ) e flexões verbais elementares (lesse/verbos como です, ます, だ, する, いる, ある, った, ない). 
                     NÃO introduza de forma alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
                 }
@@ -247,7 +344,7 @@ export default async function handler(req, res) {
                 if (vocabulario && vocabulario.length > 0) {
                     limitacoesVocabIni = `
                     ATENÇÃO CRÍTICA: O aluno está filtrando a conversa apenas para palavras que ele já aprendeu.
-                    Você DEVE obrigatoriamente construir a sua fala em japonês (mensagem_ia_jp) utilizando APENAS Kanjis e palavras presentes nesta lista de vocabulário: [${vocabulario.slice(0, 40).join(', ')}]. 
+                    Você DEVE obrigatoriamente construir a sua fala em japonês (mensagem_ia_jp) utilizando APENAS Kanjis e palavras presentes nesta lista de vocabulário: [${selectContextualVocab(vocabulario, tema, null, null, 50).join(', ')}]. 
                     Para formar a frase, use apenas partículas gramaticais básicas (ha, ga, ni, wo, de, no, etc.) e flexões verbais elementares.
                     NÃO utilize em hipótese alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
                 }
@@ -268,25 +365,32 @@ export default async function handler(req, res) {
                 return res.status(200).json(result);
 
             case 'continuar_dialogo':
+                const hasTruncated = historico && historico.length > 6;
+                const historicoFiltrado = hasTruncated ? historico.slice(-6) : (historico || []);
+                const memoriaPrevia = hasTruncated ? `Contexto do RPG: A conversa atual é uma continuação do cenário definido pelo tópico '${tema}'. Mantenha a coerência com as interações anteriores.` : '';
+
                 let limitacoesVocabCont = '';
                 if (vocabulario && vocabulario.length > 0) {
                     limitacoesVocabCont = `
                     ATENÇÃO CRÍTICA: O aluno está filtrando a conversa apenas para palavras que ele já aprendeu.
-                    Você DEVE obrigatoriamente construir a sua resposta em japonês (mensagem_ia_jp) utilizando APENAS Kanjis e palavras presentes nesta lista de vocabulário: [${vocabulario.slice(0, 40).join(', ')}]. 
+                    Você DEVE obrigatoriamente construir a sua resposta em japonês (mensagem_ia_jp) utilizando APENAS Kanjis e palavras presentes nesta lista de vocabulário: [${selectContextualVocab(vocabulario, tema, historicoFiltrado, resposta_usuario_jp, 50).join(', ')}]. 
                     Para formar a frase, use apenas partículas gramaticais básicas e flexões verbais básicas.
                     NÃO utilize em hipótese alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
                 }
 
                 systemInstruction = `Você é um personagem de RPG conversando em japonês e um professor que avalia. Avalie a última fala do aluno em português, e responda no personagem em japonês. Retorne APENAS um JSON. Importante: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na mensagem_ia_jp para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>, e não fora (ou seja, nunca faça <ruby>Kanji</ruby><rt>furigana</rt>). O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji), e deve ser aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>.`;
+                if (memoriaPrevia) {
+                    systemInstruction += `\n\n${memoriaPrevia}`;
+                }
                 
-                const msgs = historico.map(m => ({
-                    role: m.role, // 'user' ou 'assistant'
-                    content: m.content
+                const msgs = historicoFiltrado.map(m => ({
+                    role: m.role === 'assistant' ? 'assistant' : 'user',
+                    content: cleanFuriganaHtml(m.content || m.jp || '')
                 }));
                 // A última mensagem deve ser a do usuário:
                 msgs.push({
                     role: 'user',
-                    content: `Minha resposta é: "${resposta_usuario_jp}". Analise e responda no personagem.
+                    content: `Minha resposta é: "${cleanFuriganaHtml(resposta_usuario_jp)}". Analise e responda no personagem.
                     ${limitacoesVocabCont}`
                 });
                 
@@ -344,11 +448,11 @@ export default async function handler(req, res) {
                 if (vocabulario && vocabulario.length > 0) {
                     limitacoesVocabSugestao = `
                     IMPORTANTE: O aluno está utilizando um filtro de palavras aprendidas. 
-                    Você DEVE obrigatoriamente criar a frase utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${vocabulario.slice(0, 40).join(', ')}]. 
+                    Você DEVE obrigatoriamente criar a frase utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${selectContextualVocab(vocabulario, tema, null, body.mensagem_ia_jp, 40).join(', ')}]. 
                     Para ligar os termos e formar a frase, use apenas partículas gramaticais básicas e flexões verbais elementares. 
                     NÃO introduza de forma alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
                 }
-                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}" e também um professor ajudando o aluno. Retorne APENAS um JSON válido. Sugira uma boa resposta para o aluno usar na conversa. Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na sugestao_jp para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>, e não fora. O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji), e deve ser aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>.`;
+                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}" e também um professor ajudando o aluno. Retorne APENAS um JSON válido. IMPORTANTE: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na propriedade 'sugestao_jp' para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>. O furigana deve ser escrito exclusivamente em Hiragana e aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. Não utilize nenhuma outra tag além de <ruby> e <rt>.`;
                 prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
                 Tema do RPG: "${tema}"
                 ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
@@ -377,7 +481,7 @@ export default async function handler(req, res) {
                 return res.status(200).json(result);
 
             case 'analisar_pratica':
-                systemInstruction = "Você é um professor de japonês avaliando a resposta do aluno no contexto de um diálogo. Retorne APENAS um JSON válido. O feedback (dica e erro) DEVE estar em Português.";
+                systemInstruction = "Você é um professor de japonês avaliando a resposta do aluno no contexto de um diálogo. Retorne APENAS um JSON válido. O feedback (dica e erro) DEVE estar em Português. IMPORTANTE: Na propriedade 'traducao_correta', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes na frase (sem exceção). O furigana deve ser escrito exclusivamente em Hiragana e deve ser colocado apenas sobre os Kanjis, nunca sobre hiragana ou katakana puro. Não utilize nenhuma outra tag além de <ruby> e <rt>.";
                 prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
                 Resposta do aluno: "${body.resposta_usuario_jp}"
                 
@@ -389,6 +493,24 @@ export default async function handler(req, res) {
                     "erros": ["O aluno usou a partícula errada em X"], // array de strings com erros identificados (vazio se não houver)
                     "dica": "Dica de como soar mais natural ou corrigir o erro.",
                     "traducao_correta": "Sugestão de como o aluno poderia ter formulado essa mesma ideia de forma correta e natural em japonês"
+                }`;
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                return res.status(200).json(result);
+
+            case 'sugerir_lacuna':
+                systemInstruction = "Você é um assistente de japonês. Retorne APENAS um JSON válido. O utilizador está tentando escrever uma frase em japonês mas não sabe uma palavra. Analise a 'frase_contexto' e sugira até 3 opções em japonês que traduzam o 'termo_pt' e se encaixem perfeitamente na gramática daquela frase específica. IMPORTANTE: Na propriedade 'termo_jp', use obrigatoriamente tags HTML no formato <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes (sem exceção). O furigana deve estar em Hiragana.";
+                prompt = `Frase de contexto: "${body.frase_contexto}"
+                Termo em português a traduzir/preencher: "${body.termo_pt}"
+                
+                Estrutura do JSON esperado:
+                {
+                    "sugestoes": [
+                        {
+                            "termo_jp": "<ruby>林檎<rt>りんご</rt></ruby>",
+                            "texto_puro": "りんご",
+                            "explicacao_curta": "Termo geral para maçã."
+                        }
+                    ]
                 }`;
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
                 return res.status(200).json(result);

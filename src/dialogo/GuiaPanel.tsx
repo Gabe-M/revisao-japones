@@ -130,7 +130,7 @@ export default function GuiaPanel({ context, onNext, onBack }: GuiaPanelProps) {
                     acao: 'gerar_guia',
                     tema: context.tema,
                     jlpt: context.jlpt,
-                    vocabulario: context.vocabularioBanco?.map((v:any) => v.item) || []
+                    vocabulario: context.vocabularioBanco || []
                 })
             });
 

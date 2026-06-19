@@ -62,7 +62,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                     acao: 'iniciar_dialogo',
                     tema: context.tema,
                     jlpt: context.jlpt,
-                    vocabulario: context.vocabularioBanco?.map((v:any) => v.item) || []
+                    vocabulario: context.vocabularioBanco || []
                 })
             });
 
@@ -130,7 +130,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                     resposta_usuario_jp: textoJp,
                     tema: context.tema,
                     jlpt: context.jlpt,
-                    vocabulario: context.vocabularioBanco?.map((v:any) => v.item) || []
+                    vocabulario: context.vocabularioBanco || []
                 })
             });
 

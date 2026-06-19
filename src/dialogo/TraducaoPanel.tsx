@@ -45,7 +45,7 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                     acao: 'gerar_traducao',
                     tema: context.tema,
                     jlpt: context.jlpt,
-                    vocabulario: context.vocabularioBanco?.map((v: any) => v.item) || []
+                    vocabulario: context.vocabularioBanco || []
                 })
             });
 

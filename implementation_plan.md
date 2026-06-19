@@ -1,151 +1,67 @@
-# Ferramenta de Apoio ao Diálogo (Modal Contextual)
+# Preenchimento de Lacunas Assistido (Contextual Placeholder)
 
-Adicionar um modal de assistência contextual à tela de Diálogo. O modal é acionado por botões discretos em cada mensagem da IA no chat. Ele contém 4 abas que ajudam o usuário a entender a mensagem recebida, formular uma resposta e praticar — sem quebrar o fluxo do diálogo real.
-
-## Decisões de Design Confirmadas
-
-| Ponto | Decisão |
-|---|---|
-| Formato | Modal flutuante sobre o chat |
-| Gatilho | Botões contextuais por mensagem (💬 Ajuda) |
-| Organização | 4 abas dentro do modal |
-| Aba inicial | Usuário escolhe |
-| Sugestão | Copia para o input do chat |
-| Prática | Feedback isolado; pode ser promovido a resposta real |
-
----
-
-## Proposed Changes
-
-### Novo componente
-
-#### [NEW] AjudaModal.tsx
-`src/dialogo/components/AjudaModal.tsx`
-
-Modal com 4 abas acionado pela mensagem da IA atual. Recebe como props:
-- `mensagem` — a frase em japonês da IA (com tags ruby)
-- `context` — dados de tema, jlpt e vocabularioBanco
-- `provider` — provedor de IA atual
-- `isOpen / onClose` — controle de visibilidade
-- `onUsarResposta(texto)` — callback para copiar texto para o input do chat
-
-**Aba 1 — 📖 Vocabulário**
-- Carrega automaticamente ao abrir (novo endpoint de análise da IA)
-- Exibe lista de palavras-chave extraídas da mensagem da IA: kanji + furigana + leitura + significado
-- Cada word chip usa `FuriganaText` com hover expandido
-- Exibe `AiLoader` enquanto busca
-
-**Aba 2 — 💡 Sugestão**
-- Botão "Gerar Sugestão" chama a IA ao clicar
-- A IA retorna uma frase sugerida de resposta para a mensagem atual
-- Exibida com `FuriganaText` + tradução + dica gramatical
-- Botão "✅ Usar esta resposta" chama `onUsarResposta(frase_jp_limpa)`
-
-**Aba 3 — ❓ Dúvida**
-- Campo de texto livre para o usuário digitar uma dúvida sobre a fala da IA
-- Botão "Perguntar" chama a IA com contexto da mensagem + dúvida
-- Resposta exibida com suporte a furigana
-
-**Aba 4 — 🎯 Praticar**
-- Campo de input com wanakana binding (romaji → hiragana automático)
-- Botão "Analisar" → IA analisa sem adicionar ao histórico real
-- Exibe score + feedback + pontos de melhoria
-- Botão "▶ Usar como resposta real" chama `onUsarResposta(texto_praticado)` e fecha o modal
-
----
-
-### Backend
-
-#### [MODIFY] api/dialogo.js
-Novas ações no `switch (acao)`:
-
-- **`analisar_mensagem`**: Recebe `mensagem_ia_jp` + contexto. Retorna `{ vocabulario: [{item, leitura, significado, tipo}] }` com as palavras-chave da mensagem.
-- **`sugerir_resposta`**: Recebe `mensagem_ia_jp` + contexto + vocabulario. Retorna `{ sugestao_jp, sugestao_pt, dica }` — frase sugerida de resposta ao personagem com furigana.
-- **`tirar_duvida`**: Recebe `mensagem_ia_jp` + `duvida_usuario` + contexto. Retorna `{ resposta }` — resposta da IA à dúvida do usuário sobre a fala.
-- **`analisar_pratica`**: Recebe `mensagem_ia_jp` + `resposta_usuario_jp`. Retorna `{ score, correto, erros, dica, traducao_correta }` — mesmo schema de `analisar_traducao`.
-
----
-
-### Tela do Diálogo
-
-#### [MODIFY] DialoGoPanel.tsx
-- Adicionar estado `ajudaModal: { isOpen: boolean, mensagem: string }`
-- Em cada balão de mensagem da IA, adicionar botão **💬 Ajuda** abaixo do texto
-- Ao clicar, seta `ajudaModal` com a mensagem daquele balão específico
-- Renderizar `AjudaModal` no final do componente com os props necessários
-- `onUsarResposta(texto)` seta `inputUser = texto` e fecha o modal
-
----
-
-## Verification Plan
-
-### Automated Tests
-- `npm run build` sem erros
-
-### Manual Verification
-- Clicar em "Ajuda" em uma mensagem da IA e verificar que o modal abre
-- Testar as 4 abas individualmente
-- Verificar que "Usar esta resposta" preenche o input corretamente
-- Verificar furigana correto nas palavras do vocabulário
-- Verificar que a prática não afeta o histórico real do diálogo
-
-
-Este plano estende o visual do diálogo adicionando a flexibilidade de selecionar Baralhos, Conjuntos ou ambos (com filtros de SRS como "Aprendidos" ou "Novos") a partir do "Meu Banco de Palavras".
+Implementar um sistema interativo na aba "Praticar" do modal de ajuda, permitindo que o usuário escreva palavras em português entre colchetes (ex: "私は [maçã] を食べます") e receba sugestões contextuais de japonês adequadas para preencher o espaço.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Quando o usuário selecionar "Meu Banco de Palavras", ele agora terá as seguintes opções:
-> - **Tipo de Filtro**: Conjuntos, Baralhos ou Ambos.
-> - **Filtro SRS** (disponível quando Baralhos ou Ambos estiver selecionado): Ambos (Todos), Já Aprendidos ou Não Aprendidos.
-> - O vocabulário carregado no diálogo respeitará essa combinação exata de filtros, buscando o progresso do SRS no banco do Supabase e as informações de baralho do Anki.
+> **Nova Ação de Backend (`sugerir_lacuna`)**:
+> Adição de um novo endpoint no backend (`api/dialogo.js`) que recebe a frase e o termo em português e gera até 3 sugestões apropriadas com tags ruby/furigana e texto puro.
+> 
+> **Visual Live Preview**:
+> Como não é possível interagir com elementos HTML dentro de uma caixa de texto padrão (`<input>`/`<textarea>`), criamos uma área de pré-visualização em tempo real (Live Preview) logo abaixo do campo, onde as lacunas entre colchetes viram chips interativos clicáveis.
 
 ## Proposed Changes
 
-### React Component: Configuração do Diálogo
+---
 
-#### [MODIFY] [ConfiguracaoPanel.tsx](file:///c:/Users/Fabiano/Downloads/sites/japones/src/dialogo/ConfiguracaoPanel.tsx)
-- **Estados Adicionais**:
-  - `bancoTipo`: `'conjuntos' | 'baralhos' | 'ambos'` (valor inicial `'conjuntos'`).
-  - `baralhosDisp`: lista de baralhos únicos encontrados no banco de dados.
-  - `baralhoSelecionado`: baralho atualmente selecionado.
-  - `srsFiltro`: `'Todos' | 'Aprendidos' | 'Novos'` (valor inicial `'Todos'`).
-- **Função `carregarConjuntos` (rebatizada para `carregarDadosBanco`)**:
-  - Buscar `conjuntos`, `notas` e `baralhos` da tabela `vocabulario`.
-  - Extrair conjuntos das notas (via regex) e do campo `conjuntos`.
-  - Extrair baralhos do campo `baralhos`.
-  - Atualizar os estados `conjuntosDisp` e `baralhosDisp`.
-- **UI do Banco de Palavras**:
-  - Exibir controle segmentado para selecionar o tipo de filtro (Conjuntos / Baralhos / Ambos).
-  - Exibir os seletores suspensos (selects) de acordo com a seleção ativa.
-  - Se "Baralhos" ou "Ambos" estiver selecionado, exibir o seletor segmentado do Filtro SRS.
-- **Retorno do `handleStart`**:
-  - Enviar objeto de configuração estruturado contendo: `tema`, `useBanco`, `bancoTipo`, `conjuntoSelecionado`, `baralhoSelecionado`, `srsFiltro`, e `jlpt`.
+### Backend (API)
+
+#### [MODIFY] [dialogo.js](file:///c:/Users/Fabiano/Downloads/sites/japones/api/dialogo.js)
+- **Adicionar caso `sugerir_lacuna`**:
+  - Parâmetros: `frase_contexto` (a frase com colchetes) e `termo_pt` (termo interno).
+  - Configurar `systemInstruction` para agir como assistente de tradução de japonês focado no preenchimento de termos adequados para a frase e gramática fornecidas. Exigir tags `<ruby>` e `<rt>` com furigana em Hiragana na propriedade `termo_jp` da resposta.
+  - Estrutura de retorno:
+    ```json
+    {
+      "sugestoes": [
+        {
+          "termo_jp": "<ruby>林檎<rt>りんご</rt></ruby>",
+          "texto_puro": "りんご",
+          "explicacao_curta": "Termo geral para maçã."
+        }
+      ]
+    }
+    ```
 
 ---
 
-### React Component: Orquestrador do Diálogo
+### Frontend
 
-#### [MODIFY] [DialoGoApp.tsx](file:///c:/Users/Fabiano/Downloads/sites/japones/src/dialogo/DialoGoApp.tsx)
-- **Atualização de Tipos**:
-  - Atualizar a assinatura de início e o fluxo para suportar o novo objeto de configuração.
-- **Função `fetchVocabulario`**:
-  - Buscar os termos da tabela `vocabulario` incluindo as colunas: `item, leitura, significado, jlpt, conjuntos, baralhos, campos_anki, notas`.
-  - Buscar o progresso do SRS na tabela `srs_progresso` para cruzar dados de memorização (caso `srsFiltro` não seja `'Todos'`).
-  - Filtrar o vocabulário carregado em memória combinando:
-    - Filtro de Conjunto (se aplicável).
-    - Filtro de Baralho (se aplicável).
-    - Filtro de SRS (se aplicável, classificando como aprendido se possuir registro no SRS ou se `campos_anki.queue > 0`).
+#### [MODIFY] [AjudaModal.tsx](file:///c:/Users/Fabiano/Downloads/sites/japones/src/dialogo/components/AjudaModal.tsx)
+- **Novos Estados**:
+  - `lacunaAtiva`: Armazena o termo clicado e seu correspondente bruto (ex: `{ termoPt: 'maçã', raw: '[maçã]' }`).
+  - `sugestoesLacuna`: Array de sugestões retornadas pela API.
+  - `loadingLacuna`: Flag boolean de carregamento da chamada de lacuna.
+- **Função `sugerirLacuna(termoPt, raw)`**:
+  - Disparar requisição `POST` para `/api/dialogo` com `acao: 'sugerir_lacuna'`, passando `frase_contexto` (`praticaInput`) e `termo_pt` (`termoPt`).
+  - Atualizar os estados de carregamento e o array de sugestões.
+- **Renderização do Live Preview (aba Praticar)**:
+  - Adicionar expressão regular `\[(.*?)\]` para dividir `praticaInput` e renderizar as partes estáticas em `<span>` e as partes dinâmicas em `<button>` (estilizado como chip).
+- **Popover de Sugestões**:
+  - Exibir card flutuante posicionado abaixo do Live Preview se houver carregamento ativo ou sugestões disponíveis.
+  - Exibir sugestões usando `<FuriganaText />` e explicação curta.
+  - Ao selecionar uma sugestão, substituir o termo original entre colchetes pela propriedade `texto_puro` e fechar o popover.
+
+---
 
 ## Verification Plan
 
 ### Automated Tests
-- N/A
+- Executar `npm run build` para garantir conformidade de tipo e compilação do TypeScript.
 
 ### Manual Verification
-- Acessar a página de diálogo.
-- Selecionar "Meu Banco de Palavras".
-- Testar a alternância entre Conjuntos, Baralhos e Ambos:
-  - Verificar se os dropdowns e filtros SRS surgem e somem de acordo.
-  - Selecionar um baralho e o filtro "Já Aprendidos" e iniciar para conferir se apenas termos no SRS/revisados são carregados no diálogo.
-  - Selecionar "Ambos" e cruzar um conjunto específico e um baralho.
+- Na aba "Praticar", digitar a frase `"私は [maçã] を食べます"`.
+- Verificar se a pré-visualização exibe o botão `"maçã"` estilizado.
+- Clicar no botão, esperar o carregamento e checar se o card flutuante exibe `"りんご"` ou `"林檎"`.
+- Clicar na sugestão desejada e verificar se o input é substituído para `"私はりんごを食べます"` e o card é fechado.

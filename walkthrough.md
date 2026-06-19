@@ -1,0 +1,57 @@
+# Seleção Contextual de Vocabulário - Walkthrough
+
+Fomos contratados para substituir o corte estático `.slice(0, 40)` por um algoritmo dinâmico de ranqueamento de vocabulário para evitar repetições em baralhos grandes.
+
+## Alterações Realizadas
+
+### Backend
+
+#### 1. [dialogo.js](file:///c:/Users/Fabiano/Downloads/sites/japones/api/dialogo.js)
+- Adicionada a função `selectContextualVocab(vocabList, tema, historico, resposta_usuario_jp, limit = 50)`:
+  - Normaliza o vocabulário suportando tanto objetos de banco `{ item, significado, leitura }` quanto strings legadas.
+  - Reconstrói os contextos em português e japonês a partir dos campos do histórico e tópico da conversa.
+  - Implementa um algoritmo de correspondência que avalia:
+    - **Correspondência de Japonês (Kanji/Kana)**: Se o termo ou sua leitura existem no contexto japonês (atribui pontuação máxima +30/+20).
+    - **Correspondência de Sub-Kanji**: Para verbos e adjetivos conjugados (ex: `食べます` versus a definição `食べる`), o algoritmo busca a raiz do kanji e recompensa correspondências parciais com +20.
+    - **Sobreposição de Significado (Português)**: Confere se o significado em português do termo coincide com o tema selecionado ou os feedbacks traduzidos na conversa (+25 para correspondência exata, +10 para cada palavra em comum).
+    - Mantém a estabilidade da ordenação como fator secundário.
+- Substituição de todos os cortes estáticos `.slice(0, 40)` e `.slice(0, 20)` por chamadas à nova função nos seguintes fluxos do switch principal:
+  - `gerar_guia` (limite 20)
+  - `gerar_traducao` (limite 40)
+  - `iniciar_dialogo` (limite 50)
+  - `continuar_dialogo` (limite 50)
+  - `sugerir_resposta` (limite 40)
+
+---
+
+### Frontend
+
+Foram atualizados os painéis para passar o array de objetos completo (`context.vocabularioBanco`) no payload do request, em vez de filtrar apenas pelas strings dos itens:
+1. [DialoGoPanel.tsx](file:///c:/Users/Fabiano/Downloads/sites/japones/src/dialogo/DialoGoPanel.tsx) - Fluxos de início e envio de mensagem.
+2. [TraducaoPanel.tsx](file:///c:/Users/Fabiano/Downloads/sites/japones/src/dialogo/TraducaoPanel.tsx) - Fluxo de geração de tradução.
+3. [GuiaPanel.tsx](file:///c:/Users/Fabiano/Downloads/sites/japones/src/dialogo/GuiaPanel.tsx) - Fluxo de geração de guia de estudos.
+
+---
+
+## Resultados da Verificação
+
+### 1. Testes Automatizados (Build)
+- Executado `npm run build` com sucesso completo. Sem erros de tipagem do TypeScript ou empacotamento do Vite.
+
+### 2. Testes de Unidade Isolados
+Executamos o script de testes `test_vocab_select.js` que demonstrou a eficiência do ranqueamento:
+```
+=== TEST 1: Topic match only ===
+Topic: 'Gostaria de comprar algumas frutas'
+Result (limit 3): [ '買う', 'りんご', '学生' ]
+
+=== TEST 2: History & User JP match ===
+Topic: 'comida'
+User JP: 'りんごを食べます'
+Result (limit 4): [ 'りんご', '食べる', '買う', '学生' ]
+
+=== TEST 3: Mix of strings and objects ===
+Topic: 'Eu vi um gato perto do estudante'
+Result (limit 3): [ '猫', '本', '学生' ]
+```
+Conforme demonstrado no TEST 2, a palavra `食べる` (comer/comerá) foi pontuada e trazida para a frente porque a raiz do seu Kanji (`食`) coincidiu perfeitamente com a resposta conjugada do usuário (`食べます`).
