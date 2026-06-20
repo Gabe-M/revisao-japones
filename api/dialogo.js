@@ -1157,6 +1157,22 @@ export default async function handler(req, res) {
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
                 return res.status(200).json(result);
 
+            case 'analisar_selecao_livre':
+                systemInstruction = "You are a strict Japanese pedagogical validator. The user selected a substring from a Japanese sentence. Evaluate if the selection makes pedagogical or semantic sense (even if it's a full sentence or a logical block). If the selection cuts a word in half, isolates a particle without its context, or is semantically dead, set 'valido' to false. Otherwise, set 'valido' to true. All text output fields (explicacao, erro, traducao) MUST be written in Portuguese (PT-BR). Retorne APENAS JSON.";
+                prompt = `Texto selecionado: "${body.texto_selecionado}"
+                Frase de Contexto: "${body.frase_contexto}"
+                
+                Estrutura do JSON esperado:
+                {
+                    "valido": true,
+                    "erro": "Explicação em português do porquê a seleção é inválida (only if valido is false)",
+                    "leitura": "Leitura em hiragana/leitura fonética se aplicável",
+                    "traducao": "Tradução do trecho em PT-BR",
+                    "explicacao": "Explicação contextual do trecho em PT-BR"
+                }`;
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                return res.status(200).json(result);
+
             default:
                 return res.status(400).json({ error: 'Ação inválida' });
         }

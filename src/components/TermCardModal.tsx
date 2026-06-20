@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import AiLoader from '../dialogo/components/AiLoader';
 
 export default function TermCardModal() {
-  const { isOpen, termo, fraseContexto, posicao, closeCard } = useTermCard();
+  const { isOpen, termo, fraseContexto, posicao, tipo, closeCard } = useTermCard();
   
   const [translation, setTranslation] = useState<string>('');
   const [reading, setReading] = useState<string>('');
@@ -74,7 +74,7 @@ export default function TermCardModal() {
     };
   }, [isDragging]);
 
-  // Fetch logic for translation + reading (No AI)
+  // Fetch logic for translation + reading (No AI, or free selection analysis)
   useEffect(() => {
     if (!isOpen || !termo) return;
 
@@ -88,6 +88,39 @@ export default function TermCardModal() {
 
     const loadData = async () => {
       try {
+        if (tipo === 'SelecaoLivre') {
+          const userKey = localStorage.getItem('gemini_api_key') || '';
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (userKey) {
+            headers['X-Gemini-Key'] = userKey;
+          }
+
+          const res = await fetch('/api/dialogo', {
+            method: 'POST',
+            headers: headers,
+            signal: controller.signal,
+            body: JSON.stringify({
+              acao: 'analisar_selecao_livre',
+              texto_selecionado: termo,
+              frase_contexto: fraseContexto,
+              provider: selectedProvider
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (!controller.signal.aborted) {
+              setExplicacaoIA(data);
+            }
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            if (!controller.signal.aborted) {
+              setExplicacaoIA({ error: errData.error || 'Erro ao analisar a seleção livre.' });
+            }
+          }
+          return;
+        }
+
         // 1. Fetch translation via Google Translate (Free, client-side, non-AI)
         let ptTranslation = '';
         try {
@@ -152,7 +185,7 @@ export default function TermCardModal() {
     return () => {
       controller.abort();
     };
-  }, [isOpen, termo]);
+  }, [isOpen, termo, tipo]);
 
   const handleFetchContextoIA = async () => {
     setIsLoadingIA(true);
@@ -167,12 +200,21 @@ export default function TermCardModal() {
       const res = await fetch('/api/dialogo', {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({
-          acao: 'explicar_termo_contextual',
-          termo,
-          fraseContexto,
-          provider: selectedProvider
-        })
+        body: JSON.stringify(
+          tipo === 'SelecaoLivre'
+            ? {
+                acao: 'analisar_selecao_livre',
+                texto_selecionado: termo,
+                frase_contexto: fraseContexto,
+                provider: selectedProvider
+              }
+            : {
+                acao: 'explicar_termo_contextual',
+                termo,
+                fraseContexto,
+                provider: selectedProvider
+              }
+        )
       });
       
       if (res.ok) {
@@ -180,7 +222,7 @@ export default function TermCardModal() {
         setExplicacaoIA(data);
       } else {
         const errData = await res.json().catch(() => ({}));
-        setExplicacaoIA({ error: errData.error || 'Erro ao carregar o contexto da IA.' });
+        setExplicacaoIA({ error: errData.error || 'Erro ao processar requisição da IA.' });
       }
     } catch (e: any) {
       console.error(e);
@@ -245,148 +287,261 @@ export default function TermCardModal() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {isTranslating ? (
           <div style={{ padding: '20px 0', textAlign: 'center' }}>
-            <AiLoader provider="gemini" message="Buscando dicionário..." />
+            <AiLoader provider={selectedProvider} message={tipo === 'SelecaoLivre' ? "Analisando seleção..." : "Buscando dicionário..."} />
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {reading && (
-              <div style={{ fontSize: '0.9em', opacity: 0.9 }}>
-                <strong>Leitura:</strong> {reading}
-              </div>
-            )}
-            {pos && (
-              <div style={{ fontSize: '0.85em', opacity: 0.7 }}>
-                <strong>Classe:</strong> {pos}
-              </div>
-            )}
-            <div style={{ fontSize: '0.9em', fontWeight: 'bold' }}>Tradução (PT/BR):</div>
-            <div style={{ 
-              lineHeight: '1.4', 
-              fontSize: '0.95em', 
-              background: 'rgba(255,255,255,0.03)', 
-              padding: '10px', 
-              borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.05)'
-            }}>
-              {translation}
-            </div>
-
-            {/* IA Context Section */}
-            {isLoadingIA ? (
-              <div style={{ padding: '15px 0', textAlign: 'center' }}>
-                <AiLoader provider={selectedProvider} message="Obtendo contexto com IA..." />
-              </div>
-            ) : explicacaoIA ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {explicacaoIA.error ? (
-                  <div style={{ color: '#e74c3c', fontSize: '0.9em', marginTop: '4px' }}>
+            {tipo === 'SelecaoLivre' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {explicacaoIA?.error ? (
+                  <div style={{ color: '#e74c3c', fontSize: '0.9em', padding: '10px', background: 'rgba(231, 76, 60, 0.1)', borderRadius: '8px', borderLeft: '3px solid #e74c3c' }}>
                     {explicacaoIA.error}
                   </div>
-                ) : (
+                ) : explicacaoIA?.valido === false ? (
                   <div style={{ 
-                    marginTop: '8px', 
-                    padding: '10px', 
-                    background: 'rgba(255,255,255,0.05)', 
+                    color: '#ff6b6b', 
+                    fontSize: '0.92em', 
+                    padding: '12px', 
+                    background: 'rgba(231, 76, 60, 0.15)', 
                     borderRadius: '8px', 
-                    fontSize: '0.9em', 
-                    borderLeft: '3px solid var(--highlight-color, #ff6b6b)' 
+                    border: '1px solid rgba(255, 107, 107, 0.25)',
+                    borderLeft: '4px solid #ff6b6b',
+                    lineHeight: '1.4'
                   }}>
-                    <strong style={{ display: 'block', color: 'var(--highlight-color, #ff6b6b)', marginBottom: '6px' }}>
-                      Contexto ({selectedProvider.toUpperCase()}):
-                    </strong>
-                    {typeof explicacaoIA === 'string' ? (
-                      <div style={{ lineHeight: '1.4' }}>{explicacaoIA}</div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', lineHeight: '1.4' }}>
-                        {explicacaoIA.leitura && (
-                          <div><strong>Leitura (IA):</strong> {explicacaoIA.leitura}</div>
-                        )}
-                        {explicacaoIA.classe_gramatical && (
-                          <div><strong>Gramática:</strong> {explicacaoIA.classe_gramatical}</div>
-                        )}
-                        {explicacaoIA.significado && (
-                          <div><strong>Significado:</strong> {explicacaoIA.significado}</div>
-                        )}
-                        {explicacaoIA.funcao_no_contexto && (
-                          <div style={{ marginTop: '4px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '4px' }}>
-                            <strong>Função no Contexto:</strong>
-                            <p style={{ margin: '2px 0 0 0', opacity: 0.9 }}>{explicacaoIA.funcao_no_contexto}</p>
-                          </div>
-                        )}
+                    <strong style={{ display: 'block', marginBottom: '4px', color: '#ff6b6b' }}>⚠️ Seleção Inválida:</strong>
+                    {explicacaoIA?.erro || 'Esta seleção não forma um bloco pedagógico ou semântico válido.'}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {explicacaoIA?.leitura && (
+                      <div style={{ fontSize: '0.9em', opacity: 0.9 }}>
+                        <strong>Leitura:</strong> {explicacaoIA.leitura}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '0.9em', fontWeight: 'bold' }}>Tradução (PT/BR):</div>
+                    <div style={{ 
+                      lineHeight: '1.4', 
+                      fontSize: '0.95em', 
+                      background: 'rgba(255,255,255,0.03)', 
+                      padding: '10px', 
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.05)'
+                    }}>
+                      {explicacaoIA?.traducao || 'Nenhuma tradução disponível.'}
+                    </div>
+                    {explicacaoIA?.explicacao && (
+                      <div style={{ 
+                        marginTop: '4px', 
+                        padding: '10px', 
+                        background: 'rgba(255,255,255,0.05)', 
+                        borderRadius: '8px', 
+                        fontSize: '0.9em', 
+                        borderLeft: '3px solid var(--highlight-color, #ff6b6b)',
+                        lineHeight: '1.4'
+                      }}>
+                        <strong>Explicação Contextual:</strong>
+                        <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>{explicacaoIA.explicacao}</p>
                       </div>
                     )}
                   </div>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setExplicacaoIA(null)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--highlight-color, #ff6b6b)',
-                    fontSize: '0.8em',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    alignSelf: 'flex-start',
-                    padding: 0
-                  }}
-                >
-                  Refazer consulta ou trocar Provedor
-                </button>
+                
+                <div style={{ 
+                  marginTop: '10px', 
+                  borderTop: '1px solid rgba(255,255,255,0.1)', 
+                  paddingTop: '10px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  <label style={{ fontSize: '0.82em', opacity: 0.8, fontWeight: 'bold' }}>
+                    🧠 Analisar com outro Provedor:
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <select
+                      value={selectedProvider}
+                      onChange={e => setSelectedProvider(e.target.value as any)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        background: 'rgba(0,0,0,0.3)',
+                        color: 'var(--text-color, #ffffff)',
+                        border: '1px solid var(--border-color, #333)',
+                        fontSize: '0.85em',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="gemini">✨ Gemini</option>
+                      <option value="openai">🟢 OpenAI</option>
+                      <option value="groq">⚡ Groq</option>
+                      <option value="pollinations">🪐 Pollinations</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleFetchContextoIA}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: 'var(--highlight-color, #ff6b6b)',
+                        color: 'white',
+                        fontSize: '0.85em',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s'
+                      }}
+                      onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
+                      onMouseOut={e => e.currentTarget.style.opacity = '1'}
+                    >
+                      Analisar
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : (
-              <div style={{ 
-                marginTop: '10px', 
-                borderTop: '1px solid rgba(255,255,255,0.1)', 
-                paddingTop: '10px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
-              }}>
-                <label style={{ fontSize: '0.82em', opacity: 0.8, fontWeight: 'bold' }}>
-                  🧠 Obter contexto detalhado via IA:
-                </label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <select
-                    value={selectedProvider}
-                    onChange={e => setSelectedProvider(e.target.value as any)}
-                    style={{
-                      flex: 1,
-                      padding: '8px 10px',
-                      borderRadius: '6px',
-                      background: 'rgba(0,0,0,0.3)',
-                      color: 'var(--text-color, #ffffff)',
-                      border: '1px solid var(--border-color, #333)',
-                      fontSize: '0.85em',
-                      outline: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="gemini">✨ Gemini</option>
-                    <option value="openai">🟢 OpenAI</option>
-                    <option value="groq">⚡ Groq</option>
-                    <option value="pollinations">🪐 Pollinations</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={handleFetchContextoIA}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: 'var(--highlight-color, #ff6b6b)',
-                      color: 'white',
-                      fontSize: '0.85em',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      transition: 'opacity 0.2s'
-                    }}
-                    onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
-                    onMouseOut={e => e.currentTarget.style.opacity = '1'}
-                  >
-                    Pedir Contexto
-                  </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {reading && (
+                  <div style={{ fontSize: '0.9em', opacity: 0.9 }}>
+                    <strong>Leitura:</strong> {reading}
+                  </div>
+                )}
+                {pos && (
+                  <div style={{ fontSize: '0.85em', opacity: 0.7 }}>
+                    <strong>Classe:</strong> {pos}
+                  </div>
+                )}
+                <div style={{ fontSize: '0.9em', fontWeight: 'bold' }}>Tradução (PT/BR):</div>
+                <div style={{ 
+                  lineHeight: '1.4', 
+                  fontSize: '0.95em', 
+                  background: 'rgba(255,255,255,0.03)', 
+                  padding: '10px', 
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.05)'
+                }}>
+                  {translation}
                 </div>
+
+                {/* IA Context Section */}
+                {isLoadingIA ? (
+                  <div style={{ padding: '15px 0', textAlign: 'center' }}>
+                    <AiLoader provider={selectedProvider} message="Obtendo contexto com IA..." />
+                  </div>
+                ) : explicacaoIA ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {explicacaoIA.error ? (
+                      <div style={{ color: '#e74c3c', fontSize: '0.9em', marginTop: '4px' }}>
+                        {explicacaoIA.error}
+                      </div>
+                    ) : (
+                      <div style={{ 
+                        marginTop: '8px', 
+                        padding: '10px', 
+                        background: 'rgba(255,255,255,0.05)', 
+                        borderRadius: '8px', 
+                        fontSize: '0.9em', 
+                        borderLeft: '3px solid var(--highlight-color, #ff6b6b)' 
+                      }}>
+                        <strong style={{ display: 'block', color: 'var(--highlight-color, #ff6b6b)', marginBottom: '6px' }}>
+                          Contexto ({selectedProvider.toUpperCase()}):
+                        </strong>
+                        {typeof explicacaoIA === 'string' ? (
+                          <div style={{ lineHeight: '1.4' }}>{explicacaoIA}</div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', lineHeight: '1.4' }}>
+                            {explicacaoIA.leitura && (
+                              <div><strong>Leitura (IA):</strong> {explicacaoIA.leitura}</div>
+                            )}
+                            {explicacaoIA.classe_gramatical && (
+                              <div><strong>Gramática:</strong> {explicacaoIA.classe_gramatical}</div>
+                            )}
+                            {explicacaoIA.significado && (
+                              <div><strong>Significado:</strong> {explicacaoIA.significado}</div>
+                            )}
+                            {explicacaoIA.funcao_no_contexto && (
+                              <div style={{ marginTop: '4px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '4px' }}>
+                                <strong>Função no Contexto:</strong>
+                                <p style={{ margin: '2px 0 0 0', opacity: 0.9 }}>{explicacaoIA.funcao_no_contexto}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setExplicacaoIA(null)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--highlight-color, #ff6b6b)',
+                        fontSize: '0.8em',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        alignSelf: 'flex-start',
+                        padding: 0
+                      }}
+                    >
+                      Refazer consulta ou trocar Provedor
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ 
+                    marginTop: '10px', 
+                    borderTop: '1px solid rgba(255,255,255,0.1)', 
+                    paddingTop: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <label style={{ fontSize: '0.82em', opacity: 0.8, fontWeight: 'bold' }}>
+                      🧠 Obter contexto detalhado via IA:
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <select
+                        value={selectedProvider}
+                        onChange={e => setSelectedProvider(e.target.value as any)}
+                        style={{
+                          flex: 1,
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          background: 'rgba(0,0,0,0.3)',
+                          color: 'var(--text-color, #ffffff)',
+                          border: '1px solid var(--border-color, #333)',
+                          fontSize: '0.85em',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="gemini">✨ Gemini</option>
+                        <option value="openai">🟢 OpenAI</option>
+                        <option value="groq">⚡ Groq</option>
+                        <option value="pollinations">🪐 Pollinations</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleFetchContextoIA}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: 'var(--highlight-color, #ff6b6b)',
+                          color: 'white',
+                          fontSize: '0.85em',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          transition: 'opacity 0.2s'
+                        }}
+                        onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
+                        onMouseOut={e => e.currentTarget.style.opacity = '1'}
+                      >
+                        Pedir Contexto
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

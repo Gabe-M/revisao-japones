@@ -156,61 +156,96 @@ export default function DraggableCard({ card, onClose, initialIndex, tema, provi
                 </div>
             )}
             
-            <div style={{ background: 'rgba(0,0,0,0.03)', padding: '10px', borderRadius: '8px', borderLeft: '3px solid var(--highlight-color)', marginBottom: '15px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '5px' }}>
-                    <div style={{ fontSize: '0.75em', textTransform: 'uppercase', color: 'gray', fontWeight: 700 }}>Descrição / Significado:</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <select
-                            onPointerDown={(e) => e.stopPropagation()}
-                            value={cardProvider}
-                            onChange={(e) => setCardProvider(e.target.value as any)}
-                            disabled={isAdjusting}
-                            style={{
-                                background: 'var(--card-bg)',
-                                border: '1px solid var(--border-color)',
-                                color: 'var(--text-color)',
-                                fontSize: '0.7em',
-                                padding: '2px 4px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                outline: 'none'
-                            }}
-                        >
-                            <option value="gemini">Gemini</option>
-                            <option value="pollinations">Pollinations</option>
-                            <option value="groq">Groq</option>
-                        </select>
-                        <button 
-                            onPointerDown={(e) => e.stopPropagation()} 
-                            onClick={() => ajustarNotaComIA(cardProvider)}
-                            disabled={isAdjusting}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'var(--highlight-color)',
-                                fontSize: '0.75em',
-                                fontWeight: 'bold',
-                                cursor: isAdjusting ? 'not-allowed' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                transition: 'all 0.2s',
-                                opacity: isAdjusting ? 0.6 : 0.8
-                            }}
-                            onMouseEnter={(e) => !isAdjusting && (e.currentTarget.style.backgroundColor = 'rgba(230, 126, 34, 0.1)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                            title="Ajustar significado para o contexto do diálogo atual"
-                        >
-                            {isAdjusting ? '⌛...' : '🪄 Contexto'}
-                        </button>
+            {card.tipo === 'SelecaoLivre' ? (
+                <div style={{ marginBottom: '15px' }}>
+                    {card.valido === false ? (
+                        <div style={{
+                            color: '#ff6b6b',
+                            fontSize: '0.9em',
+                            padding: '12px',
+                            background: 'rgba(231, 76, 60, 0.15)',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(255, 107, 107, 0.3)',
+                            borderLeft: '4px solid #ff6b6b',
+                            lineHeight: '1.4'
+                        }}>
+                            <strong style={{ display: 'block', marginBottom: '4px' }}>⚠️ Seleção Inválida:</strong>
+                            {card.erro || 'Esta seleção não forma um bloco pedagógico ou semântico válido.'}
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ background: 'rgba(0,0,0,0.03)', padding: '10px', borderRadius: '8px', borderLeft: '3px solid var(--highlight-color)' }}>
+                                <div style={{ fontSize: '0.75em', textTransform: 'uppercase', color: 'gray', fontWeight: 700, marginBottom: '4px' }}>Tradução (PT/BR):</div>
+                                <div style={{ fontWeight: 600, fontSize: '1em', color: 'var(--text-color)' }}>
+                                    {card.traducao || significado}
+                                </div>
+                            </div>
+                            {card.explicacao && (
+                                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '8px', fontSize: '0.9em', borderLeft: '3px solid var(--highlight-color)' }}>
+                                    <strong>Explicação Contextual:</strong>
+                                    <p style={{ margin: '4px 0 0 0', opacity: 0.9, lineHeight: '1.4' }}>{card.explicacao}</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div style={{ background: 'rgba(0,0,0,0.03)', padding: '10px', borderRadius: '8px', borderLeft: '3px solid var(--highlight-color)', marginBottom: '15px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '5px' }}>
+                        <div style={{ fontSize: '0.75em', textTransform: 'uppercase', color: 'gray', fontWeight: 700 }}>Descrição / Significado:</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <select
+                                onPointerDown={(e) => e.stopPropagation()}
+                                value={cardProvider}
+                                onChange={(e) => setCardProvider(e.target.value as any)}
+                                disabled={isAdjusting}
+                                style={{
+                                    background: 'var(--card-bg)',
+                                    border: '1px solid var(--border-color)',
+                                    color: 'var(--text-color)',
+                                    fontSize: '0.7em',
+                                    padding: '2px 4px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    outline: 'none'
+                                }}
+                            >
+                                <option value="gemini">Gemini</option>
+                                <option value="pollinations">Pollinations</option>
+                                <option value="groq">Groq</option>
+                            </select>
+                            <button 
+                                onPointerDown={(e) => e.stopPropagation()} 
+                                onClick={() => ajustarNotaComIA(cardProvider)}
+                                disabled={isAdjusting}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--highlight-color)',
+                                    fontSize: '0.75em',
+                                    fontWeight: 'bold',
+                                    cursor: isAdjusting ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    transition: 'all 0.2s',
+                                    opacity: isAdjusting ? 0.6 : 0.8
+                                }}
+                                onMouseEnter={(e) => !isAdjusting && (e.currentTarget.style.backgroundColor = 'rgba(230, 126, 34, 0.1)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                title="Ajustar significado para o contexto do diálogo atual"
+                            >
+                                {isAdjusting ? '⌛...' : '🪄 Contexto'}
+                            </button>
+                        </div>
+                    </div>
+                    <div style={{ fontWeight: 600, fontSize: '1em', color: 'var(--text-color)' }}>
+                        <InteractiveText text={significado} />
                     </div>
                 </div>
-                <div style={{ fontWeight: 600, fontSize: '1em', color: 'var(--text-color)' }}>
-                    <InteractiveText text={significado} />
-                </div>
-            </div>
+            )}
             
             <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                 <span style={{ background: 'rgba(52, 73, 94, 0.1)', color: 'var(--secondary-color)', padding: '4px 8px', borderRadius: '8px', fontWeight: 700, fontSize: '0.7em', textTransform: 'uppercase' }}>

@@ -9,11 +9,63 @@ interface InteractiveTextProps {
   fallbackLeitura?: string;
 }
 
+// Module-level variable to persist selection state across React mount/unmount renders
+let lastSelectionTime = 0;
+
 export default function InteractiveText({ text, children, className, style, fallbackLeitura }: InteractiveTextProps) {
   const { openCard } = useTermCard();
   const containerRef = useRef<HTMLSpanElement>(null);
 
+  const mouseDownTime = useRef(0);
+  const startX = useRef(0);
+  const startY = useRef(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    mouseDownTime.current = Date.now();
+    startX.current = e.clientX;
+    startY.current = e.clientY;
+  };
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLSpanElement>) => {
+    const selection = window.getSelection();
+    if (!selection) return;
+    const selectedText = selection.toString().trim();
+    
+    if (!selectedText) return;
+
+    const dist = Math.hypot(e.clientX - startX.current, e.clientY - startY.current);
+    const duration = Date.now() - mouseDownTime.current;
+    
+    // Guard clause: if not a drag/select gesture, let onClick do word navigation
+    if (dist < 5 && duration < 300) {
+      return;
+    }
+
+    // Capture context: surrounding sentence context
+    const containerClone = e.currentTarget.cloneNode(true) as HTMLElement;
+    const containerRts = containerClone.querySelectorAll('rt');
+    containerRts.forEach(rt => rt.remove());
+    const fraseCompleta = containerClone.textContent?.trim() || '';
+
+    // Clear native visual highlight
+    selection.removeAllRanges();
+    
+    // Set last selection time to block the trailing click event
+    lastSelectionTime = Date.now();
+
+    // Capture coordinates
+    const x = e.clientX;
+    const y = e.clientY;
+
+    openCard(selectedText, fraseCompleta, x, y, 'SelecaoLivre');
+  };
+
   const handleClick = (e: React.MouseEvent<HTMLSpanElement>) => {
+    // If a text selection occurred recently (within 800ms), suppress word click event
+    if (Date.now() - lastSelectionTime < 800) {
+      e.stopPropagation();
+      return;
+    }
     e.stopPropagation();
     let target = (e.target as HTMLElement).closest('.interactive-word') as HTMLElement;
     if (!target) {
@@ -173,6 +225,8 @@ export default function InteractiveText({ text, children, className, style, fall
       ref={containerRef}
       className={`interactive-text-container ${className || ''}`}
       style={containerStyle}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
       onClick={handleClick}
     >
       {contentNode}

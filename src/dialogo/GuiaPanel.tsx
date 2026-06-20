@@ -54,7 +54,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
         setActiveCards(prev => prev.filter(c => c.item !== itemToRemove));
     };
 
-    const handleWordClick = (word: string, leitura: string, fraseOriginal?: string) => {
+    const handleWordClick = (word: string, leitura: string, fraseOriginal?: string, tipo: string = 'Dicionário') => {
         let item = word.trim();
         let reading = leitura.trim();
         if (!item) return;
@@ -82,7 +82,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
             foundVocab = context.vocabularioBanco.find((b: any) => b.item === item);
         }
         
-        if (foundVocab) {
+        if (foundVocab && tipo !== 'SelecaoLivre') {
             addCard({
                 item: foundVocab.item,
                 leitura: foundVocab.leitura || reading,
@@ -93,6 +93,60 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
             });
         } else {
             const tempCardId = item;
+            
+            if (tipo === 'SelecaoLivre') {
+                addCard({
+                    item: item,
+                    leitura: reading,
+                    significado: 'Analisando seleção...',
+                    tipo: 'SelecaoLivre',
+                    fraseOriginal: fraseOriginal || '',
+                    valido: undefined
+                });
+
+                const userKey = localStorage.getItem('gemini_api_key') || '';
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                if (userKey) {
+                    headers['X-Gemini-Key'] = userKey;
+                }
+
+                fetch('/api/dialogo', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        acao: 'analisar_selecao_livre',
+                        texto_selecionado: item,
+                        frase_contexto: fraseOriginal || '',
+                        provider: provider
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    setActiveCards(prev => prev.map(c => 
+                        c.item === tempCardId 
+                            ? { 
+                                ...c, 
+                                valido: data.valido, 
+                                erro: data.erro, 
+                                traducao: data.traducao, 
+                                explicacao: data.explicacao, 
+                                leitura: data.leitura || c.leitura,
+                                significado: data.valido ? data.traducao : (data.erro || 'Seleção inválida') 
+                              } 
+                            : c
+                    ));
+                })
+                .catch(err => {
+                    console.error(err);
+                    setActiveCards(prev => prev.map(c => 
+                        c.item === tempCardId 
+                            ? { ...c, significado: 'Erro ao analisar seleção.' } 
+                            : c
+                    ));
+                });
+                return;
+            }
+
             addCard({
                 item: item,
                 leitura: reading,

@@ -30,13 +30,25 @@ Foram atualizados os painéis para passar o array de objetos completo (`context.
 1. [DialoGoPanel.tsx](file:///c:/Users/Fabiano/Downloads/sites/japones/src/dialogo/DialoGoPanel.tsx) - Fluxos de início e envio de mensagem.
 2. [TraducaoPanel.tsx](file:///c:/Users/Fabiano/Downloads/sites/japones/src/dialogo/TraducaoPanel.tsx) - Fluxo de geração de tradução.
 3. [GuiaPanel.tsx](file:///c:/Users/Fabiano/Downloads/sites/japones/src/dialogo/GuiaPanel.tsx) - Fluxo de geração de guia de estudos.
+- **UI Enhancements**: Formatted the detailed response from the AI dictionary to clearly lay out the word's reading, grammar class, meaning, and contextual role. Refined style parameters to feature a gorgeous blur backdrop (`backdrop-filter`) and smooth, self-contained keyframe pop-in animations.
 
----
+### AI-Assisted Free Text Selection Feature
+
+- **Scoped Selection CSS Styling (`src/index.css`)**: Overrode the default OS blue selection highlight with a custom scoped pseudo-element selector `::selection` for `.interactive-text-container`, using the theme's highlight color (`--highlight-color`) and white text.
+- **Backend Validation and Explanation (`api/dialogo.js`)**: Added a case `analisar_selecao_livre` that routes user selections to LLM. The system instruction validates if the selection is a logical pedagogical segment (rejects cut words or isolated particles) and returns a structured JSON payload with PT-BR explanation/translation.
+- **Mouse Drag Interception (`src/components/InteractiveText.tsx`)**: Incorporated custom `onMouseDown` and `onMouseUp` handlers to compute click-drag distances and durations. It prevents default single-word click logic if a drag occurred, extracts the highlighted substring/surrounding context, clears native selection highlights immediately, and dispatches to the card system under type `SelecaoLivre`.
+  * **Trailing Click Fix**: Adjusted the click event suppression window in `handleClick` from 150ms to 800ms to guarantee that trailing click events do not trigger single-word cards when rendering lag occurs during state transition and card rendering.
+- **Adaptive Card Rendering (`src/components/TermCardModal.tsx` & `src/dialogo/GuiaPanel.tsx` / `DraggableCard.tsx`)**: 
+  * Bypasses the default Jisho and Google Translate client-side queries for selection cards.
+  * Dynamically queries `/api/dialogo` with `analisar_selecao_livre`.
+  * If the LLM marks the selection as invalid (`valido: false`), it shows the pedagogical `erro` inside a premium red error block. Otherwise, it presents the reading, translation, and context explanation.
 
 ## Resultados da Verificação
 
 ### 1. Testes Automatizados (Build)
 - Executado `npm run build` com sucesso completo. Sem erros de tipagem do TypeScript ou empacotamento do Vite.
+- Ran `npm run build` in the project root directory.
+- The project compiled cleanly, and all TypeScript checks and Vite build steps passed successfully.
 
 ### 2. Testes de Unidade Isolados
 Executamos o script de testes `test_vocab_select.js` que demonstrou a eficiência do ranqueamento:

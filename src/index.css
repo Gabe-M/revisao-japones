@@ -50,10 +50,20 @@
 }
 
 .interactive-text-container ::selection {
-  background-color: rgba(0, 120, 215, 0.4);
+  background-color: var(--highlight-color, #ff6b6b);
+  color: white;
+}
+.interactive-text-container *::selection {
+  background-color: var(--highlight-color, #ff6b6b);
+  color: white;
+}
+.interactive-text-container ::-moz-selection {
+  background-color: var(--highlight-color, #ff6b6b);
+  color: white;
 }
 .interactive-text-container *::-moz-selection {
-  background-color: rgba(0, 120, 215, 0.4);
+  background-color: var(--highlight-color, #ff6b6b);
+  color: white;
 }
 
 /* Sub-navegação do Diálogo */
