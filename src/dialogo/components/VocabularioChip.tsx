@@ -21,11 +21,11 @@ export default function VocabularioChip({ item, leitura, significado, jlpt, jaPo
     return (
         <div 
             onClick={onClickCard}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '8px', cursor: onClickCard ? 'pointer' : 'default', transition: 'background 0.2s' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '8px', cursor: onClickCard ? 'pointer' : 'default', transition: 'background 0.2s', minWidth: '0' }}
             onMouseOver={(e) => onClickCard && (e.currentTarget.style.background = 'rgba(0,0,0,0.05)')}
             onMouseOut={(e) => onClickCard && (e.currentTarget.style.background = 'rgba(0,0,0,0.02)')}
         >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '0' }}>
                 <button 
                     onClick={(e) => {
                         e.stopPropagation();
@@ -51,15 +51,15 @@ export default function VocabularioChip({ item, leitura, significado, jlpt, jaPo
                 >
                     🔊
                 </button>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '1.2em', fontWeight: 'bold', marginBottom: '4px' }}>
+                <div style={{ flex: 1, minWidth: '0' }}>
+                    <div style={{ fontSize: '1.2em', fontWeight: 'bold', marginBottom: '4px', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                         <InteractiveText text={item} fallbackLeitura={leitura} />
                     </div>
-                    <div style={{ fontSize: '0.9em', color: 'gray' }}>{significado}</div>
+                    <div style={{ fontSize: '0.9em', color: 'gray', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{significado}</div>
                 </div>
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 {jlpt && (
                     <span style={{ fontSize: '0.75em', padding: '2px 6px', background: 'var(--primary-color)', color: 'white', borderRadius: '4px' }}>
                         {jlpt}

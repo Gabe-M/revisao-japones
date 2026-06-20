@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface ConfiguracaoPanelProps {
     onStart: (config: any) => void;
@@ -27,6 +27,64 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
     const [sessoesExistentes, setSessoesExistentes] = useState<any[]>([]);
     const [sessaoSelecionadaId, setSessaoSelecionadaId] = useState('');
     const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean;
+        tipo: 'confirm' | 'alert';
+        mensagem: string;
+        onConfirm?: () => void;
+    }>({
+        isOpen: false,
+        tipo: 'alert',
+        mensagem: ''
+    });
+
+    const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+    const modalStart = useRef({ x: 0, y: 0 });
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (e.button !== 0) return;
+        const target = e.target as HTMLElement;
+        if (target.closest('button') || target.closest('input') || target.closest('select')) return;
+
+        setIsDragging(true);
+        dragStart.current = { x: e.clientX, y: e.clientY };
+        modalStart.current = { x: modalPosition.x, y: modalPosition.y };
+        e.preventDefault();
+    };
+
+    useEffect(() => {
+        if (modalConfig.isOpen) {
+            setModalPosition({ x: 0, y: 0 });
+        }
+    }, [modalConfig.isOpen]);
+
+    useEffect(() => {
+        if (!isDragging) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const dx = e.clientX - dragStart.current.x;
+            const dy = e.clientY - dragStart.current.y;
+            setModalPosition({
+                x: modalStart.current.x + dx,
+                y: modalStart.current.y + dy
+            });
+        };
+
+        const handleMouseUp = () => {
+            setIsDragging(false);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging]);
 
     const temasRapidos = ['Me apresentar', 'Fazer compras', 'Pedir direções', 'No restaurante', 'Em uma entrevista'];
 
@@ -66,6 +124,65 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
         } finally {
             setIsLoadingSessions(false);
         }
+    };
+
+    const handleDeletarSessao = async () => {
+        if (!sessaoSelecionadaId || !session) return;
+        
+        setModalConfig({
+            isOpen: true,
+            tipo: 'confirm',
+            mensagem: 'Tem certeza que deseja apagar esta sessão permanentemente?',
+            onConfirm: async () => {
+                setModalConfig(prev => ({ ...prev, isOpen: false }));
+                try {
+                    const res = await fetch('/api/dialogo', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`
+                        },
+                        body: JSON.stringify({
+                            acao: 'apagar_sessao',
+                            idParaApagar: sessaoSelecionadaId
+                        })
+                    });
+
+                    if (res.ok) {
+                        // Remove da lista local e atualiza seleção
+                        const novasSessoes = sessoesExistentes.filter(s => s.id !== sessaoSelecionadaId);
+                        setSessoesExistentes(novasSessoes);
+                        if (novasSessoes.length > 0) {
+                            setSessaoSelecionadaId(novasSessoes[0].id);
+                        } else {
+                            setSessaoSelecionadaId('');
+                            setTema('');
+                            setJlpt('N5');
+                            setUseConjuntos(false);
+                        }
+                        setModalConfig({
+                            isOpen: true,
+                            tipo: 'alert',
+                            mensagem: 'Sessão apagada com sucesso!'
+                        });
+                    } else {
+                        const errData = await res.json();
+                        setModalConfig({
+                            isOpen: true,
+                            tipo: 'alert',
+                            mensagem: `Erro ao apagar sessão: ${errData.error || 'Erro desconhecido'}`
+                        });
+                    }
+                } catch (e: any) {
+                    console.error("Erro ao apagar sessão:", e);
+                    setModalConfig({
+                        isOpen: true,
+                        tipo: 'alert',
+                        mensagem: `Erro ao apagar sessão: ${e.message}`
+                    });
+                }
+            }
+        });
     };
 
     useEffect(() => {
@@ -158,11 +275,19 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
 
     const handleStart = () => {
         if (tipoExibicaoSessao === 'nova' && !tema.trim()) {
-            alert('Por favor, digite ou selecione um tema.');
+            setModalConfig({
+                isOpen: true,
+                tipo: 'alert',
+                mensagem: 'Por favor, digite ou selecione um tema.'
+            });
             return;
         }
         if (tipoExibicaoSessao === 'existente' && !sessaoSelecionadaId) {
-            alert('Por favor, selecione uma sessão existente.');
+            setModalConfig({
+                isOpen: true,
+                tipo: 'alert',
+                mensagem: 'Por favor, selecione uma sessão existente.'
+            });
             return;
         }
 
@@ -284,37 +409,73 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                     <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-color)', fontSize: '0.95em' }}>
                         Selecione a Sessão:
                     </label>
-                    <select 
-                        value={sessaoSelecionadaId} 
-                        onChange={e => setSessaoSelecionadaId(e.target.value)}
-                        disabled={isLoadingSessions}
-                        style={{ 
-                            width: '100%', 
-                            padding: '14px 18px', 
-                            borderRadius: '12px', 
-                            background: 'var(--bg-color)', 
-                            color: 'var(--text-color)', 
-                            border: '2px solid var(--border-color)', 
-                            fontSize: '1.05em',
-                            fontWeight: '600',
-                            outline: 'none',
-                            cursor: isLoadingSessions ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.2s ease',
-                            boxShadow: 'var(--shadow-subtle)'
-                        }}
-                    >
-                        {isLoadingSessions ? (
-                            <option>Carregando sessões...</option>
-                        ) : sessoesExistentes.length === 0 ? (
-                            <option value="">Nenhuma sessão encontrada</option>
-                        ) : (
-                            sessoesExistentes.map(s => (
-                                <option key={s.id} value={s.id}>
-                                    {s.nome} ({s.config?.tema || s.tema}) - {new Date(s.created_at).toLocaleDateString()}
-                                </option>
-                            ))
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <select 
+                            value={sessaoSelecionadaId} 
+                            onChange={e => setSessaoSelecionadaId(e.target.value)}
+                            disabled={isLoadingSessions}
+                            style={{ 
+                                flex: 1, 
+                                padding: '14px 18px', 
+                                borderRadius: '12px', 
+                                background: 'var(--bg-color)', 
+                                color: 'var(--text-color)', 
+                                border: '2px solid var(--border-color)', 
+                                fontSize: '1.05em',
+                                fontWeight: '600',
+                                outline: 'none',
+                                cursor: isLoadingSessions ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s ease',
+                                boxShadow: 'var(--shadow-subtle)'
+                            }}
+                        >
+                            {isLoadingSessions ? (
+                                <option>Carregando sessões...</option>
+                            ) : sessoesExistentes.length === 0 ? (
+                                <option value="">Nenhuma sessão encontrada</option>
+                            ) : (
+                                sessoesExistentes.map(s => (
+                                    <option key={s.id} value={s.id}>
+                                        {s.nome} ({s.config?.tema || s.tema}) - {new Date(s.created_at).toLocaleDateString()}
+                                    </option>
+                                ))
+                            )}
+                        </select>
+                        {sessaoSelecionadaId && sessoesExistentes.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={handleDeletarSessao}
+                                style={{
+                                    background: '#e74c3c',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    padding: '0 20px',
+                                    fontSize: '1em',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: '0 4px 10px rgba(231, 76, 60, 0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.background = '#c0392b';
+                                    e.currentTarget.style.boxShadow = '0 6px 15px rgba(231, 76, 60, 0.4)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.background = '#e74c3c';
+                                    e.currentTarget.style.boxShadow = '0 4px 10px rgba(231, 76, 60, 0.2)';
+                                }}
+                            >
+                                🗑️ Apagar
+                            </button>
                         )}
-                    </select>
+                    </div>
                 </div>
             )}
 
@@ -891,6 +1052,164 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
             >
                 {isLoadingSessions && !!session ? '⏳ Carregando Sessões...' : '🚀 Iniciar Diálogo'}
             </button>
+
+            {modalConfig.isOpen && (
+                <div 
+                    onClick={() => {
+                        if (modalConfig.tipo === 'alert') {
+                            setModalConfig(prev => ({ ...prev, isOpen: false }));
+                        }
+                    }}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 11000,
+                        padding: '16px',
+                        animation: 'fadeIn 0.2s ease-out'
+                    }}
+                >
+                    <div
+                        style={{
+                            animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '100%',
+                            height: '100%',
+                            pointerEvents: 'none'
+                        }}
+                    >
+                        <div 
+                            onClick={e => e.stopPropagation()}
+                            onMouseDown={handleMouseDown}
+                            style={{
+                                pointerEvents: 'auto',
+                                background: 'var(--card-bg)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '16px',
+                                boxShadow: 'var(--shadow-hover)',
+                                width: '100%',
+                                maxWidth: '400px',
+                                padding: '24px',
+                                color: 'var(--text-color)',
+                                fontFamily: "'Inter', sans-serif",
+                                textAlign: 'center',
+                                cursor: isDragging ? 'grabbing' : 'grab',
+                                userSelect: 'none',
+                                transform: `translate(${modalPosition.x}px, ${modalPosition.y}px)`
+                            }}
+                        >
+                            <div style={{ fontSize: '2.5em', marginBottom: '15px' }}>
+                                {modalConfig.tipo === 'confirm' ? '🗑️' : '🔔'}
+                            </div>
+                            <h3 style={{ margin: '0 0 15px 0', fontSize: '1.2em', fontWeight: 700 }}>
+                                {modalConfig.tipo === 'confirm' ? 'Confirmar Ação' : 'Aviso'}
+                            </h3>
+                            <p style={{ margin: '0 0 24px 0', fontSize: '0.95em', lineHeight: 1.5, opacity: 0.9 }}>
+                                {modalConfig.mensagem}
+                            </p>
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                {modalConfig.tipo === 'confirm' ? (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+                                            style={{
+                                                flex: 1,
+                                                padding: '12px',
+                                                borderRadius: '10px',
+                                                border: '1px solid var(--border-color)',
+                                                background: 'transparent',
+                                                color: 'var(--text-color)',
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                transition: 'background 0.2s'
+                                            }}
+                                            onMouseOver={e => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
+                                            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={modalConfig.onConfirm}
+                                            style={{
+                                                flex: 1,
+                                                padding: '12px',
+                                                borderRadius: '10px',
+                                                border: 'none',
+                                                background: '#e74c3c',
+                                                color: 'white',
+                                                fontWeight: 700,
+                                                cursor: 'pointer',
+                                                boxShadow: '0 4px 10px rgba(231, 76, 60, 0.2)',
+                                                transition: 'transform 0.2s, background 0.2s'
+                                            }}
+                                            onMouseOver={e => {
+                                                e.currentTarget.style.background = '#c0392b';
+                                                e.currentTarget.style.transform = 'translateY(-1px)';
+                                            }}
+                                            onMouseOut={e => {
+                                                e.currentTarget.style.background = '#e74c3c';
+                                                e.currentTarget.style.transform = 'translateY(0)';
+                                            }}
+                                        >
+                                            Confirmar
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+                                        style={{
+                                            minWidth: '120px',
+                                            padding: '12px 24px',
+                                            borderRadius: '10px',
+                                            border: 'none',
+                                            background: 'var(--highlight-color)',
+                                            color: 'white',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            boxShadow: '0 4px 10px rgba(230, 126, 34, 0.2)',
+                                            transition: 'transform 0.2s, background 0.2s'
+                                        }}
+                                        onMouseOver={e => {
+                                            e.currentTarget.style.transform = 'translateY(-1px)';
+                                            e.currentTarget.style.filter = 'brightness(1.1)';
+                                        }}
+                                        onMouseOut={e => {
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.filter = 'none';
+                                        }}
+                                    >
+                                        OK
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <style dangerouslySetInnerHTML={{ __html: `
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        @keyframes slideUp {
+                            from { transform: translateY(15px); opacity: 0; }
+                            to { transform: translateY(0); opacity: 1; }
+                        }
+                    `}} />
+                </div>
+            )}
         </div>
     );
 }

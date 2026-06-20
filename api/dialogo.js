@@ -352,6 +352,32 @@ export default async function handler(req, res) {
                     return res.status(500).json({ error: "Erro ao criar sessão", message: err.message });
                 }
 
+            case 'apagar_sessao':
+                if (!userId) {
+                    return res.status(401).json({ error: 'Não autorizado. Token de autenticação ausente ou inválido.' });
+                }
+                try {
+                    const { idParaApagar } = body;
+                    if (!idParaApagar) {
+                        return res.status(400).json({ error: "ID da sessão para apagar é obrigatório." });
+                    }
+                    const responseDel = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${idParaApagar}&user_id=eq.${userId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            "apikey": SUPABASE_KEY,
+                            "Authorization": tokenUsuario
+                        }
+                    });
+                    if (!responseDel.ok) {
+                        const errData = await responseDel.json();
+                        throw new Error(errData.message || JSON.stringify(errData));
+                    }
+                    return res.status(200).json({ success: true });
+                } catch (err) {
+                    console.error("Erro ao apagar sessão:", err);
+                    return res.status(500).json({ error: "Erro ao apagar sessão", message: err.message });
+                }
+
             case 'gerar_guia': {
                 const { sugestoesPalavras } = body;
                 if (sessionId) {
@@ -371,7 +397,7 @@ export default async function handler(req, res) {
                     }
                 }
 
-                systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Use tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> nas frases (em 'exemplo_jp', 'jp' de frases_uteis, 'texto_jp' de breakdown, e 'termo' de termos de vocabulario_chave) sempre que usar Kanji. O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji) e deve ser colocado apenas sobre os Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>.";
+                systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Use tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> nas frases (em 'exemplo_jp', 'jp' de frases_uteis, 'texto_jp' de breakdown, e 'termo' de termos de vocabulario_chave) sempre que usar Kanji. O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji) e deve ser colocado apenas sobre os Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. Você DEVE separar os blocos lógicos/pedagógicos da frase japonesa usando a tag <w>. Agrupe partículas com seus substantivos se achar útil, ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>). Exemplo de formatação obrigatória: <w>私</w><w>は</w><w><ruby>見<rt>み</rt></ruby>てください</w>. Nunca use tags <span> ou qualquer outra tag HTML além de <ruby>, <rt> e <w>.";
                 prompt = `Gere um guia de estudos em japonês para o tema: "${tema}".
                 ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
                 ${vocabulario && vocabulario.length > 0 ? `Palavras que devem ser priorizadas ou incluídas se possível: ${selectContextualVocab(vocabulario, tema, null, null, 20).join(', ')}` : ''}
@@ -481,7 +507,7 @@ export default async function handler(req, res) {
                                 currentGuia.vocabulario_chave = vocabArray;
                             }
                             
-                            result.novos_termos.forEach(term => {
+                            [...result.novos_termos].reverse().forEach(term => {
                                 const catSugerida = term.categoria_sugerida || categoriaAlvo || 'Geral';
                                 const itemJp = term.termo || '';
                                 const leitura = term.leitura || '';
@@ -493,7 +519,7 @@ export default async function handler(req, res) {
                                         currentGuia.vocabulario = [];
                                     }
                                     if (!currentGuia.vocabulario.some(t => (t.termo || t.item) === itemJp)) {
-                                        currentGuia.vocabulario.push({
+                                        currentGuia.vocabulario.unshift({
                                             item: itemJp,
                                             termo: itemJp,
                                             leitura,
@@ -507,13 +533,19 @@ export default async function handler(req, res) {
                                     let catObj = vocabArray.find(c => c.categoria === catSugerida);
                                     if (!catObj) {
                                         catObj = { categoria: catSugerida, termos: [] };
-                                        vocabArray.push(catObj);
+                                        vocabArray.unshift(catObj);
+                                    } else {
+                                        const idx = vocabArray.indexOf(catObj);
+                                        if (idx > 0) {
+                                            vocabArray.splice(idx, 1);
+                                            vocabArray.unshift(catObj);
+                                        }
                                     }
                                     if (!catObj.termos) {
                                         catObj.termos = [];
                                     }
                                     if (!catObj.termos.some(t => (t.termo || t.item) === itemJp)) {
-                                        catObj.termos.push({
+                                        catObj.termos.unshift({
                                             termo: itemJp,
                                             item: itemJp,
                                             leitura,
@@ -607,7 +639,7 @@ export default async function handler(req, res) {
                                 currentGuia.vocabulario_chave = vocabArray;
                             }
                             
-                            result.novos_termos.forEach(term => {
+                            [...result.novos_termos].reverse().forEach(term => {
                                 const catSugerida = term.categoria_sugerida || 'Geral';
                                 const itemJp = term.termo || '';
                                 const leitura = term.leitura || '';
@@ -619,7 +651,7 @@ export default async function handler(req, res) {
                                         currentGuia.vocabulario = [];
                                     }
                                     if (!currentGuia.vocabulario.some(t => (t.termo || t.item) === itemJp)) {
-                                        currentGuia.vocabulario.push({
+                                        currentGuia.vocabulario.unshift({
                                             item: itemJp,
                                             termo: itemJp,
                                             leitura,
@@ -633,13 +665,19 @@ export default async function handler(req, res) {
                                     let catObj = vocabArray.find(c => c.categoria === catSugerida);
                                     if (!catObj) {
                                         catObj = { categoria: catSugerida, termos: [] };
-                                        vocabArray.push(catObj);
+                                        vocabArray.unshift(catObj);
+                                    } else {
+                                        const idx = vocabArray.indexOf(catObj);
+                                        if (idx > 0) {
+                                            vocabArray.splice(idx, 1);
+                                            vocabArray.unshift(catObj);
+                                        }
                                     }
                                     if (!catObj.termos) {
                                         catObj.termos = [];
                                     }
                                     if (!catObj.termos.some(t => (t.termo || t.item) === itemJp)) {
-                                        catObj.termos.push({
+                                        catObj.termos.unshift({
                                             termo: itemJp,
                                             item: itemJp,
                                             leitura,
@@ -692,7 +730,7 @@ export default async function handler(req, res) {
                     }
                 }
 
-                systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Em 'frase_jp', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes na frase (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby> (nunca faça <ruby>Kanji</ruby><rt>furigana</rt>). O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji) e deve ser colocado apenas sobre os Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>. Restrinja o vocabulário e Kanjis ao solicitado pelo aluno.";
+                systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Em 'frase_jp', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes na frase (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby> (nunca faça <ruby>Kanji</ruby><rt>furigana</rt>). O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji) e deve ser colocado apenas sobre os Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. Você DEVE separar os blocos lógicos/pedagógicos da frase japonesa usando a tag <w>. Agrupe partículas com seus substantivos se achar útil, ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>). Exemplo de formatação obrigatória: <w>私</w><w>は</w><w><ruby>見<rt>み</rt></ruby>てください</w>. Nunca use tags <span> ou qualquer outra tag HTML além de <ruby>, <rt> e <w>. Restrinja o vocabulário e Kanjis ao solicitado pelo aluno.";
                 
                 let limitacoesVocab = '';
                 if (vocabulario && vocabulario.length > 0) {
@@ -841,7 +879,7 @@ export default async function handler(req, res) {
                     NÃO utilize em hipótese alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
                 }
 
-                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}". Inicie a conversa. Retorne APENAS um JSON. Importante: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na mensagem_ia_jp para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>, e não fora (ou seja, nunca faça <ruby>Kanji</ruby><rt>furigana</rt>). O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji), e deve ser aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>.`;
+                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}". Inicie a conversa. Retorne APENAS um JSON. Importante: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na mensagem_ia_jp para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>, e não fora (ou seja, nunca faça <ruby>Kanji</ruby><rt>furigana</rt>). O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji), e deve ser aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. Você DEVE separar os blocos lógicos/pedagógicos da frase japonesa usando a tag <w>. Agrupe partículas com seus substantivos se achar útil, ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>). Exemplo de formatação obrigatória: <w>私</w><w>は</w><w><ruby>見<rt>み</rt></ruby>てください</w>. Nunca use tags <span> ou qualquer outra tag HTML além de <ruby>, <rt> e <w>.`;
                 prompt = `Inicie a conversa do RPG.
                 ${jlpt ? `Use gramática e vocabulário até o nível: ${jlpt}.` : ''}
                 ${limitacoesVocabIni}
@@ -921,7 +959,7 @@ export default async function handler(req, res) {
                     NÃO utilize em hipótese alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
                 }
 
-                systemInstruction = `Você é um personagem de RPG conversando em japonês e um professor que avalia. Avalie a última fala do aluno em português, e responda no personagem em japonês. Retorne APENAS um JSON. Importante: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na mensagem_ia_jp para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>, e não fora (ou seja, nunca faça <ruby>Kanji</ruby><rt>furigana</rt>). O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji), e deve ser aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>.`;
+                systemInstruction = `Você é um personagem de RPG conversando em japonês e um professor que avalia. Avalie a última fala do aluno em português, e responda no personagem em japonês. Retorne APENAS um JSON. Importante: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na mensagem_ia_jp para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>, e não fora (ou seja, nunca faça <ruby>Kanji</ruby><rt>furigana</rt>). O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji), e deve ser aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. Você DEVE separar os blocos lógicos/pedagógicos da frase japonesa usando a tag <w>. Agrupe partículas com seus substantivos se achar útil, ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>). Exemplo de formatação obrigatória: <w>私</w><w>は</w><w><ruby>見<rt>み</rt></ruby>てください</w>. Nunca use tags <span> ou qualquer outra tag HTML além de <ruby>, <rt> e <w>.`;
                 if (memoriaPrevia) {
                     systemInstruction += `\n\n${memoriaPrevia}`;
                 }
@@ -1042,7 +1080,7 @@ export default async function handler(req, res) {
                     Para ligar os termos e formar a frase, use apenas partículas gramaticais básicas e flexões verbais elementares. 
                     NÃO introduza de forma alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
                 }
-                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}" e também um professor ajudando o aluno. Retorne APENAS um JSON válido. IMPORTANTE: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na propriedade 'sugestao_jp' para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>. O furigana deve ser escrito exclusivamente em Hiragana e aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. Não utilize nenhuma outra tag além de <ruby> e <rt>.`;
+                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}" e também um professor ajudando o aluno. Retorne APENAS um JSON válido. IMPORTANTE: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na propriedade 'sugestao_jp' para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>. O furigana deve ser escrito exclusivamente em Hiragana e aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. Você DEVE separar os blocos lógicos/pedagógicos da frase japonesa usando a tag <w>. Agrupe partículas com seus substantivos se achar útil, ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>). Exemplo de formatação obrigatória: <w>私</w><w>は</w><w><ruby>見<rt>み</rt></ruby>てください</w>. Nunca use tags <span> ou qualquer outra tag HTML além de <ruby>, <rt> e <w>.`;
                 prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
                 Tema do RPG: "${tema}"
                 ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}

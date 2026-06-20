@@ -235,7 +235,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
                 newDados.vocabulario_chave = vocabArray;
             }
             
-            novosTermos.forEach((nt: any) => {
+            [...novosTermos].reverse().forEach((nt: any) => {
                 const itemJp = nt.termo || nt.item || '';
                 const leitura = nt.leitura || '';
                 const romaji = nt.romaji || '';
@@ -247,7 +247,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
                         newDados.vocabulario = [];
                     }
                     if (!newDados.vocabulario.some((x: any) => (x.item || x.termo) === itemJp)) {
-                        newDados.vocabulario.push({
+                        newDados.vocabulario.unshift({
                             item: itemJp,
                             termo: itemJp,
                             leitura,
@@ -261,13 +261,19 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
                     let catObj = vocabArray.find((c: any) => c.categoria === catSugerida);
                     if (!catObj) {
                         catObj = { categoria: catSugerida, termos: [] };
-                        vocabArray.push(catObj);
+                        vocabArray.unshift(catObj);
+                    } else {
+                        const idx = vocabArray.indexOf(catObj);
+                        if (idx > 0) {
+                            vocabArray.splice(idx, 1);
+                            vocabArray.unshift(catObj);
+                        }
                     }
                     if (!catObj.termos) {
                         catObj.termos = [];
                     }
                     if (!catObj.termos.some((t: any) => (t.termo || t.item) === itemJp)) {
-                        catObj.termos.push({
+                        catObj.termos.unshift({
                             termo: itemJp,
                             item: itemJp,
                             leitura,
@@ -286,6 +292,8 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
             
             return newDados;
         });
+
+        setCurrentPage(1);
 
         const normalizedNewTerms = novosTermos.map(nt => ({
             item: nt.termo || nt.item || '',
@@ -903,7 +911,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
                         style={{ marginBottom: '15px', paddingBottom: '15px', borderBottom: i < dados.regras.length - 1 ? '1px solid var(--border-color)' : 'none', borderRadius: '8px', padding: '10px' }}
                     >
                         <strong style={{ fontSize: '1.1em' }}><InteractiveText text={r.titulo} /></strong>
-                        <p style={{ margin: '8px 0' }}><InteractiveText text={r.explicacao} /></p>
+                        <div style={{ margin: '8px 0', lineHeight: '1.5' }}><InteractiveText text={r.explicacao} /></div>
                         <div style={{ background: 'rgba(0,0,0,0.03)', padding: '10px', borderRadius: '8px' }}>
                             <div style={{ fontSize: '1.2em' }}><InteractiveText text={r.exemplo_jp} /></div>
                             <div style={{ color: 'gray', fontSize: '0.9em' }}><InteractiveText text={r.exemplo_pt} /></div>

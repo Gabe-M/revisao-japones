@@ -9,6 +9,8 @@ interface AdvancedAddModalProps {
 export default function AdvancedAddModal({ isOpen, onClose, onGenerate }: AdvancedAddModalProps) {
     const [texto, setTexto] = useState('');
     const [quantidade, setQuantidade] = useState(3);
+    const [isCancelHovered, setIsCancelHovered] = useState(false);
+    const [isSubmitHovered, setIsSubmitHovered] = useState(false);
 
     if (!isOpen) return null;
 
@@ -22,17 +24,55 @@ export default function AdvancedAddModal({ isOpen, onClose, onGenerate }: Advanc
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10000] backdrop-blur-md animate-[fadeInBg_0.2s_ease-out]">
+        <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            backdropFilter: 'blur(5px)',
+            animation: 'fadeInBg 0.2s ease-out'
+        }}>
             <form 
                 onSubmit={handleSubmit} 
-                className="bg-[#181818] border border-[#2c2c2c] rounded-2xl p-7 max-w-[450px] w-[90%] shadow-[0_20px_25px_-5px_rgba(0,0,0,0.4),0_10px_10px_-5px_rgba(0,0,0,0.2)] animate-[slideUp_0.3s_cubic-bezier(0.16,1,0.3,1)] flex flex-col gap-5 text-gray-200"
+                style={{
+                    background: 'var(--card-bg)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    maxWidth: '450px',
+                    width: '90%',
+                    boxShadow: 'var(--shadow-hover)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '20px',
+                    color: 'var(--text-color)',
+                    animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                    boxSizing: 'border-box'
+                }}
             >
-                <h3 className="m-0 text-xl font-extrabold text-center bg-gradient-to-r from-white to-[#e67e22] bg-clip-text text-transparent">
+                <h3 style={{
+                    margin: 0,
+                    fontSize: '1.25rem',
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                    color: 'var(--highlight-color)'
+                }}>
                     ✨ Adição Avançada de Vocabulário
                 </h3>
 
-                <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-gray-300">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{
+                        fontSize: '0.9rem',
+                        fontWeight: 'bold',
+                        color: 'var(--text-color)',
+                        opacity: 0.85
+                    }}>
                         Palavras específicas (Português, Romaji ou Japonês):
                     </label>
                     <textarea
@@ -40,16 +80,42 @@ export default function AdvancedAddModal({ isOpen, onClose, onGenerate }: Advanc
                         onChange={e => setTexto(e.target.value)}
                         placeholder="Ex: carro, comer, aeroporto, 食べる (separadas por vírgula ou uma por linha)"
                         rows={4}
-                        className="w-full p-3 rounded-lg border border-[#2c2c2c] bg-[#121212] text-gray-100 text-sm outline-none focus:border-[#e67e22] transition-colors resize-none"
+                        style={{
+                            width: '100%',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            background: 'var(--bg-color)',
+                            color: 'var(--text-color)',
+                            fontSize: '0.9rem',
+                            outline: 'none',
+                            resize: 'none',
+                            boxSizing: 'border-box',
+                            transition: 'border-color 0.2s'
+                        }}
+                        onFocus={e => e.target.style.borderColor = 'var(--highlight-color)'}
+                        onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
                     />
                 </div>
 
-                <div className="flex flex-col gap-2">
-                    <div className="flex justify-between items-center">
-                        <label className="text-sm font-bold text-gray-300">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label style={{
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold',
+                            color: 'var(--text-color)',
+                            opacity: 0.85
+                        }}>
                             Quantidade Automática:
                         </label>
-                        <span className="text-sm font-extrabold text-[#e67e22] bg-[#e67e22]/10 px-2 py-0.5 rounded">
+                        <span style={{
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold',
+                            color: 'var(--highlight-color)',
+                            background: 'rgba(230, 126, 34, 0.1)',
+                            padding: '2px 8px',
+                            borderRadius: '4px'
+                        }}>
                             {quantidade}
                         </span>
                     </div>
@@ -59,25 +125,64 @@ export default function AdvancedAddModal({ isOpen, onClose, onGenerate }: Advanc
                         max="5"
                         value={quantidade}
                         onChange={e => setQuantidade(Number(e.target.value))}
-                        className="w-full accent-[#e67e22] cursor-pointer"
+                        style={{
+                            width: '100%',
+                            cursor: 'pointer',
+                            accentColor: 'var(--highlight-color)'
+                        }}
                     />
-                    <span className="text-xs text-gray-500 leading-normal">
+                    <span style={{
+                        fontSize: '0.75rem',
+                        color: 'gray',
+                        lineHeight: '1.4'
+                    }}>
                         Caso digite menos palavras que a quantidade selecionada, a IA complementará automaticamente com outros termos relevantes.
                     </span>
                 </div>
 
-                <div className="flex gap-3 justify-end mt-2">
+                <div style={{
+                    display: 'flex',
+                    gap: '12px',
+                    justifyContent: 'flex-end',
+                    marginTop: '8px'
+                }}>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-2 text-sm font-bold rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition-colors cursor-pointer"
+                        onMouseEnter={() => setIsCancelHovered(true)}
+                        onMouseLeave={() => setIsCancelHovered(false)}
+                        style={{
+                            padding: '8px 16px',
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            background: isCancelHovered ? 'rgba(255,255,255,0.05)' : 'transparent',
+                            color: 'var(--text-color)',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                        }}
                     >
                         Cancelar
                     </button>
                     
                     <button
                         type="submit"
-                        className="px-4 py-2 text-sm font-bold rounded-lg bg-[#e67e22] hover:bg-[#d35400] text-white shadow-md shadow-[#e67e22]/10 transition-colors cursor-pointer"
+                        onMouseEnter={() => setIsSubmitHovered(true)}
+                        onMouseLeave={() => setIsSubmitHovered(false)}
+                        style={{
+                            padding: '8px 16px',
+                            fontSize: '0.9rem',
+                            fontWeight: 'bold',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'var(--highlight-color)',
+                            filter: isSubmitHovered ? 'brightness(1.1)' : 'none',
+                            color: 'white',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 4px 10px rgba(230, 126, 34, 0.2)'
+                        }}
                     >
                         Gerar / Adicionar
                     </button>
