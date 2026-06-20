@@ -91,13 +91,6 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
         }
     }, [sessaoSelecionadaId, sessoesExistentes]);
 
-    useEffect(() => {
-        if (tipoExibicaoSessao === 'nova') {
-            setTema('');
-            setSugestoesPalavras('');
-        }
-    }, [tipoExibicaoSessao]);
-
     const carregarDadosBanco = async () => {
         if (!session) return;
         try {
