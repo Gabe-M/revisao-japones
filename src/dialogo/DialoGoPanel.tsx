@@ -19,7 +19,7 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
     const [historico, setHistorico] = useState<any[]>([]);
     const [inputUser, setInputUser] = useState('');
     const [enviando, setEnviando] = useState(false);
-    const [provider, setProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(context.provider || 'gemini');
+    const [provider, setProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(context.provider || (localStorage.getItem('selected_provider') as any) || 'groq');
     const [fallbackOpen, setFallbackOpen] = useState(false);
     const [fallbackError, setFallbackError] = useState('');
     const [pendingAction, setPendingAction] = useState<'iniciar' | 'continuar' | null>(null);
@@ -72,7 +72,7 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [historico, enviando]);
 
-    const iniciarDialogo = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini') => {
+    const iniciarDialogo = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = context.provider || 'groq') => {
         setLoading(true);
         setProvider(targetProvider);
         try {
@@ -131,7 +131,7 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
         setLoading(false);
     };
 
-    const enviarMensagem = async (e?: React.FormEvent, targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini', textToSend?: string) => {
+    const enviarMensagem = async (e?: React.FormEvent, targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = context.provider || 'groq', textToSend?: string) => {
         if (e) e.preventDefault();
         const textoJp = textToSend !== undefined ? textToSend : inputUser.trim();
         if (!textoJp) return;
@@ -229,7 +229,7 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
             <div style={{ padding: '20px' }}>
                 <AiLoader 
                     provider={provider} 
-                    message={provider === 'gemini' ? "O Gemini está preparando o Cenário" : "A OpenAI está preparando o Cenário"} 
+                    message={`${provider.charAt(0).toUpperCase() + provider.slice(1)} está preparando o Cenário`} 
                 />
             </div>
         );
@@ -314,14 +314,14 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                             style={{ width: '28px', height: '28px', objectFit: 'contain' }}
                         />
                         <span style={{ fontSize: '0.9em', fontStyle: 'italic', color: 'gray' }}>
-                            {provider === 'gemini' ? "Gemini está digitando..." : "ChatGPT está digitando..."}
+                            {`${provider.charAt(0).toUpperCase() + provider.slice(1)} está digitando...`}
                         </span>
                     </div>
                 )}
                 <div ref={chatEndRef} />
             </div>
 
-            <form onSubmit={(e) => enviarMensagem(e, 'gemini')} style={{ display: 'flex', gap: '10px' }}>
+            <form onSubmit={(e) => enviarMensagem(e, provider || context.provider || 'groq')} style={{ display: 'flex', gap: '10px' }}>
                 <input 
                     ref={inputRef}
                     type="text" 
@@ -345,8 +345,8 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                 errorMessage={fallbackError}
                 onRetryGemini={() => {
                     setFallbackOpen(false);
-                    if (pendingAction === 'iniciar') iniciarDialogo('gemini');
-                    else if (pendingAction === 'continuar') enviarMensagem(undefined, 'gemini', pendingMessage);
+                    if (pendingAction === 'iniciar') iniciarDialogo(provider || context.provider || 'groq');
+                    else if (pendingAction === 'continuar') enviarMensagem(undefined, provider || context.provider || 'groq', pendingMessage);
                 }}
                 onFallbackPollinations={() => {
                     setFallbackOpen(false);

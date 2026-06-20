@@ -34,7 +34,7 @@ export default function DialoGoApp() {
         jlpt: 'N5',
         conjuntos: [],
         vocabularioBanco: [],
-        provider: 'gemini',
+        provider: (localStorage.getItem('selected_provider') as any) || 'groq',
         sessionId: null,
 
         traducaoDados: null,
@@ -219,7 +219,7 @@ export default function DialoGoApp() {
             ...prev,
             tema: config.tema,
             jlpt: config.jlpt,
-            provider: config.provider || 'gemini',
+            provider: config.provider || (localStorage.getItem('selected_provider') as any) || 'groq',
             conjuntos: config.useBanco ? (config.bancoTipo === 'conjuntos' || config.bancoTipo === 'ambos' ? [config.conjuntoSelecionado] : []) : [],
             sessionId: activeSessionId,
 

@@ -13,7 +13,13 @@ export default function TermCardModal() {
   
   const [explicacaoIA, setExplicacaoIA] = useState<any>(null);
   const [isLoadingIA, setIsLoadingIA] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>('gemini');
+  const [selectedProvider, setSelectedProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(
+    () => (localStorage.getItem('selected_provider') as any) || 'groq'
+  );
+
+  useEffect(() => {
+    localStorage.setItem('selected_provider', selectedProvider);
+  }, [selectedProvider]);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const [adjustedPos, setAdjustedPos] = useState({ x: 0, y: 0 });
@@ -77,6 +83,11 @@ export default function TermCardModal() {
   // Fetch logic for translation + reading (No AI, or free selection analysis)
   useEffect(() => {
     if (!isOpen || !termo) return;
+
+    const storedProvider = localStorage.getItem('selected_provider') as any;
+    if (storedProvider && storedProvider !== selectedProvider) {
+      setSelectedProvider(storedProvider);
+    }
 
     setTranslation('');
     setReading('');

@@ -19,7 +19,13 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
     const [baralhosDisp, setBaralhosDisp] = useState<string[]>([]);
     const [baralhoSelecionado, setBaralhoSelecionado] = useState('');
     const [srsFiltro, setSrsFiltro] = useState<'Todos' | 'Aprendidos' | 'Novos'>('Todos');
-    const [selectedProvider, setSelectedProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>('gemini');
+    const [selectedProvider, setSelectedProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(
+        () => (localStorage.getItem('selected_provider') as any) || 'groq'
+    );
+
+    useEffect(() => {
+        localStorage.setItem('selected_provider', selectedProvider);
+    }, [selectedProvider]);
 
     // Estados de sessões
     const [tipoExibicaoSessao, setTipoExibicaoSessao] = useState<'nova' | 'existente'>('nova');

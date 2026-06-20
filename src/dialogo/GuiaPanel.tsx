@@ -25,7 +25,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
     const [loading, setLoading] = useState(true);
     const [dados, setDados] = useState<any>(null);
     const [activeCards, setActiveCards] = useState<any[]>([]);
-    const [provider, setProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(context.provider || 'gemini');
+    const [provider, setProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(context.provider || (localStorage.getItem('selected_provider') as any) || 'groq');
     const [fallbackOpen, setFallbackOpen] = useState(false);
     const [fallbackError, setFallbackError] = useState('');
     const [isVocabOpen, setIsVocabOpen] = useState(true);
@@ -206,7 +206,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
         carregarGuia(context.provider);
     }, []);
 
-    const carregarGuia = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini') => {
+    const carregarGuia = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = context.provider || 'groq') => {
         setLoading(true);
         setProvider(targetProvider);
         try {
@@ -457,7 +457,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
             <div style={{ padding: '20px' }}>
                 <AiLoader 
                     provider={provider} 
-                    message={provider === 'gemini' ? "O Gemini está gerando seu Guia de Estudos" : "A OpenAI está gerando seu Guia de Estudos"} 
+                    message={`${provider.charAt(0).toUpperCase() + provider.slice(1)} está gerando seu Guia de Estudos`} 
                 />
             </div>
         );
@@ -472,7 +472,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
                         errorMessage={fallbackError}
                         onRetryGemini={() => {
                             setFallbackOpen(false);
-                            carregarGuia('gemini');
+                            carregarGuia(provider || context.provider || 'groq');
                         }}
                         onFallbackPollinations={() => {
                             setFallbackOpen(false);
@@ -482,9 +482,9 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
                     />
                 ) : (
                     <div>
-                        <h2 style={{ color: 'var(--text-color)' }}>Ocorreu um erro ao gerar o Guia</h2>
+                        <h2 style={{ color: 'var(--text-color)' }}>Ocorreu um erro ao carregar o Guia</h2>
                         <button 
-                            onClick={() => carregarGuia('gemini')} 
+                            onClick={() => carregarGuia(provider || context.provider || 'groq')} 
                             style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer' }}
                         >
                             Tentar Novamente
@@ -1008,7 +1008,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
                 errorMessage={fallbackError}
                 onRetryGemini={() => {
                     setFallbackOpen(false);
-                    carregarGuia('gemini');
+                    carregarGuia(provider || context.provider || 'groq');
                 }}
                 onFallbackPollinations={() => {
                     setFallbackOpen(false);

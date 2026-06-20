@@ -18,7 +18,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
     const [resposta, setResposta] = useState('');
     const [analise, setAnalise] = useState<any>(null);
     const [analisando, setAnalisando] = useState(false);
-    const [provider, setProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(context.provider || 'gemini');
+    const [provider, setProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(context.provider || (localStorage.getItem('selected_provider') as any) || 'groq');
     const [fallbackOpen, setFallbackOpen] = useState(false);
     const [fallbackError, setFallbackError] = useState('');
     const [pendingAction, setPendingAction] = useState<'carregar' | 'analisar' | null>(null);
@@ -49,7 +49,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
         };
     }, []);
 
-    const carregarFrase = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini', isNew: boolean = false) => {
+    const carregarFrase = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = context.provider || 'groq', isNew: boolean = false) => {
         setLoading(true);
         setProvider(targetProvider);
         setAnalise(null);
@@ -104,7 +104,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
         setLoading(false);
     };
 
-    const verificarTraducao = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini') => {
+    const verificarTraducao = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = context.provider || 'groq') => {
         if (!resposta.trim()) return;
         setAnalisando(true);
         setProvider(targetProvider);
@@ -205,7 +205,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
             <div style={{ padding: '20px' }}>
                 <AiLoader 
                     provider={provider} 
-                    message={provider === 'gemini' ? "O Gemini está gerando sua Frase" : "A OpenAI está gerando sua Frase"} 
+                    message={`${provider.charAt(0).toUpperCase() + provider.slice(1)} está gerando sua Frase`} 
                 />
             </div>
         );
@@ -219,8 +219,8 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
                         errorMessage={fallbackError}
                         onRetryGemini={() => {
                             setFallbackOpen(false);
-                            if (pendingAction === 'carregar') carregarFrase('gemini');
-                            else if (pendingAction === 'analisar') verificarTraducao('gemini');
+                            if (pendingAction === 'carregar') carregarFrase(provider || context.provider || 'groq');
+                            else if (pendingAction === 'analisar') verificarTraducao(provider || context.provider || 'groq');
                         }}
                         onFallbackPollinations={() => {
                             setFallbackOpen(false);
@@ -233,7 +233,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
                     <div>
                         <h2 style={{ color: 'var(--text-color)' }}>Ocorreu um erro ao carregar a Frase</h2>
                         <button 
-                            onClick={() => carregarFrase('gemini')} 
+                            onClick={() => carregarFrase(provider || context.provider || 'groq')} 
                             style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer' }}
                         >
                             Tentar Novamente
@@ -270,7 +270,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
                 {!analise ? (
                     analisando ? (
                         <div style={{ marginTop: '20px' }}>
-                            <AiLoader provider={provider} message={provider === 'gemini' ? "O Gemini está analisando sua tradução" : "A OpenAI está analisando sua tradução"} />
+                            <AiLoader provider={provider} message={`${provider.charAt(0).toUpperCase() + provider.slice(1)} está analisando sua tradução`} />
                         </div>
                     ) : (
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap' }}>
@@ -340,7 +340,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
                         </div>
 
                         <div style={{ marginTop: '20px', textAlign: 'center' }}>
-                            <button onClick={() => carregarFrase(provider, true)} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Nova Frase</button>
+                            <button onClick={() => carregarFrase(provider || context.provider || 'groq', true)} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Nova Frase</button>
                         </div>
                     </div>
                 )}
@@ -351,8 +351,8 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
                 errorMessage={fallbackError}
                 onRetryGemini={() => {
                     setFallbackOpen(false);
-                    if (pendingAction === 'carregar') carregarFrase('gemini');
-                    else if (pendingAction === 'analisar') verificarTraducao('gemini');
+                    if (pendingAction === 'carregar') carregarFrase(provider || context.provider || 'groq');
+                    else if (pendingAction === 'analisar') verificarTraducao(provider || context.provider || 'groq');
                 }}
                 onFallbackPollinations={() => {
                     setFallbackOpen(false);
