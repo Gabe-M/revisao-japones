@@ -45,7 +45,8 @@ export default function InteractiveText({ text, children, className, style }: In
       const segmenter = new (Intl as any).Segmenter('ja', { granularity: 'word' });
       const segments = Array.from(segmenter.segment(content)) as any[];
       return segments.map((seg, idx) => {
-        if (seg.isWordLike) {
+        const isJp = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(seg.segment);
+        if (isJp) {
           return (
             <span key={idx} className="interactive-word">
               {seg.segment}
@@ -66,9 +67,13 @@ export default function InteractiveText({ text, children, className, style }: In
   };
 
   const parseHtmlToReact = (html: string): React.ReactNode[] => {
+    // Normalize empty rubies and strip non-ruby HTML tags to prevent segmenting HTML syntax
+    let cleanedHtml = html.replace(/<ruby>([^<]*?)<\/ruby>/g, '$1');
+    cleanedHtml = cleanedHtml.replace(/<(?!ruby\b|\/ruby\b|rt\b|\/rt\b|rp\b|\/rp\b)[^>]+>/gi, '');
+
     const parts: React.ReactNode[] = [];
     const regex = /(<ruby>.*?<\/ruby>)/g;
-    const splitParts = html.split(regex);
+    const splitParts = cleanedHtml.split(regex);
     
     splitParts.forEach((part, index) => {
       if (part.startsWith('<ruby>') && part.endsWith('</ruby>')) {
