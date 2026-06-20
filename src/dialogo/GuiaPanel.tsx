@@ -297,20 +297,12 @@ export default function GuiaPanel({ context, onNext, onBack }: GuiaPanelProps) {
                 {dados.regras?.map((r: any, i: number) => (
                     <div 
                         key={i} 
-                        style={{ marginBottom: '15px', paddingBottom: '15px', borderBottom: i < dados.regras.length - 1 ? '1px solid var(--border-color)' : 'none', cursor: 'pointer', transition: 'background 0.2s', borderRadius: '8px', padding: '10px' }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.03)'}
-                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                        onClick={(e) => handleTermClick(e, { 
-                            item: r.termo || r.exemplo_jp, 
-                            leitura: r.leitura || '', 
-                            significado: r.explicacao || r.exemplo_pt, 
-                            tipo: 'Regra Gramatical' 
-                        }, r.exemplo_jp)}
+                        style={{ marginBottom: '15px', paddingBottom: '15px', borderBottom: i < dados.regras.length - 1 ? '1px solid var(--border-color)' : 'none', borderRadius: '8px', padding: '10px' }}
                     >
                         <strong style={{ fontSize: '1.1em' }}><InteractiveText text={r.titulo} /></strong>
                         <p style={{ margin: '8px 0' }}><InteractiveText text={r.explicacao} /></p>
                         <div style={{ background: 'rgba(0,0,0,0.03)', padding: '10px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '1.2em' }}><InteractiveText text={r.exemplo_jp} onWordClick={handleWordClick} /></div>
+                            <div style={{ fontSize: '1.2em' }}><InteractiveText text={r.exemplo_jp} /></div>
                             <div style={{ color: 'gray', fontSize: '0.9em' }}><InteractiveText text={r.exemplo_pt} /></div>
                         </div>
                     </div>
@@ -322,12 +314,9 @@ export default function GuiaPanel({ context, onNext, onBack }: GuiaPanelProps) {
                 {dados.frases_uteis?.map((f: any, i: number) => (
                     <div 
                         key={i} 
-                        style={{ marginBottom: '10px', padding: '10px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }}
-                        onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.06)'}
-                        onMouseOut={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.02)'}
-                        onClick={(e) => handleTermClick(e, { item: f.jp, leitura: '', significado: f.pt, tipo: 'Frase Pronta' }, f.jp)}
+                        style={{ marginBottom: '10px', padding: '10px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px' }}
                     >
-                        <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}><InteractiveText text={f.jp} onWordClick={handleWordClick} /></div>
+                        <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}><InteractiveText text={f.jp} /></div>
                         <div style={{ color: 'gray' }}><InteractiveText text={f.pt} /></div>
                     </div>
                 ))}

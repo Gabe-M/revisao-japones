@@ -13,6 +13,7 @@ export default function InteractiveText({ text, children, className, style }: In
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     const target = (e.target as HTMLElement).closest('.interactive-word, ruby') as HTMLElement;
     if (!target) return;
 
