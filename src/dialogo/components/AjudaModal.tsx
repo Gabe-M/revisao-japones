@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import FuriganaText from './FuriganaText';
+import InteractiveText from '../../components/InteractiveText';
 import AiLoader from './AiLoader';
 import ScoreBadge from './ScoreBadge';
 import * as wanakana from 'wanakana';
@@ -305,7 +305,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                             }}
                           >
                             <div style={{ fontSize: '1.2em', marginBottom: '4px' }}>
-                              <FuriganaText text={sugestao.termo_jp}/>
+                              <InteractiveText text={sugestao.termo_jp}/>
                             </div>
                             <p style={{ margin: 0, fontSize: '0.85em', color: 'var(--text-muted)' }}>
                               {sugestao.explicacao_curta}
@@ -718,7 +718,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                     <div className="ajuda-context-banner">
                         <div className="banner-label">Mensagem atual</div>
                         <div className="banner-text">
-                            <FuriganaText text={mensagem} />
+                            <InteractiveText text={mensagem} />
                         </div>
                     </div>
 
@@ -733,7 +733,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                     {vocabulario.map((v, idx) => (
                                         <div key={idx} className="ajuda-vocab-card">
                                             <div className="vocab-kana">
-                                                <FuriganaText text={`<ruby>${v.item}<rt>${v.leitura}</rt></ruby>`} />
+                                                <InteractiveText text={`<ruby>${v.item}<rt>${v.leitura}</rt></ruby>`} />
                                             </div>
                                             <div className="vocab-meaning">{v.significado}</div>
                                             {v.tipo && <div className="vocab-tag">{v.tipo}</div>}
@@ -773,7 +773,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                     <div className="ajuda-sugestao-box">
                                         <div className="sugestao-label">Sugestão</div>
-                                        <div className="sugestao-jp"><FuriganaText text={sugestao.jp} /></div>
+                                        <div className="sugestao-jp"><InteractiveText text={sugestao.jp} /></div>
                                         <div className="sugestao-pt">{sugestao.pt}</div>
                                         <div className="sugestao-dica">
                                             <MessageCircle className="w-4 h-4" style={{ flexShrink: 0, marginTop: '2px' }} />
@@ -832,7 +832,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                             <Book className="w-5 h-5" />
                                         </div>
                                         <div style={{ flex: 1, lineHeight: '1.6' }}>
-                                            <FuriganaText text={respostaDuvida} />
+                                            <InteractiveText text={respostaDuvida} />
                                         </div>
                                     </div>
                                 ) : (
@@ -904,7 +904,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                                 {analisePratica.traducao_correta && (
                                                     <div className="ajuda-natural-box">
                                                         <div className="natural-label">Como soaria mais natural</div>
-                                                        <div className="natural-text"><FuriganaText text={analisePratica.traducao_correta} /></div>
+                                                        <div className="natural-text"><InteractiveText text={analisePratica.traducao_correta} /></div>
                                                     </div>
                                                 )}
                                             </div>

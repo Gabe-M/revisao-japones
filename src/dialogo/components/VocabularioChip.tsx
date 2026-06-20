@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import FuriganaText from './FuriganaText';
+import InteractiveText from '../../components/InteractiveText';
 
 interface VocabularioChipProps {
     item: string;
@@ -25,7 +25,7 @@ export default function VocabularioChip({ item, leitura, significado, jlpt, jaPo
         >
             <div>
                 <div style={{ fontSize: '1.2em', fontWeight: 'bold', marginBottom: '4px' }}>
-                    <FuriganaText text={item} fallbackLeitura={leitura} />
+                    <InteractiveText text={item} fallbackLeitura={leitura} />
                 </div>
                 <div style={{ fontSize: '0.9em', color: 'gray' }}>{significado}</div>
             </div>

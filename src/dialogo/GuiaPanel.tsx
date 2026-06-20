@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import FuriganaText from './components/FuriganaText';
+import InteractiveText from '../components/InteractiveText';
 import VocabularioChip from './components/VocabularioChip';
 import DraggableCard from './components/DraggableCard';
 import AiLoader from './components/AiLoader';
@@ -307,11 +307,11 @@ export default function GuiaPanel({ context, onNext, onBack }: GuiaPanelProps) {
                             tipo: 'Regra Gramatical' 
                         }, r.exemplo_jp)}
                     >
-                        <strong style={{ fontSize: '1.1em' }}><FuriganaText text={r.titulo} /></strong>
-                        <p style={{ margin: '8px 0' }}><FuriganaText text={r.explicacao} /></p>
+                        <strong style={{ fontSize: '1.1em' }}><InteractiveText text={r.titulo} /></strong>
+                        <p style={{ margin: '8px 0' }}><InteractiveText text={r.explicacao} /></p>
                         <div style={{ background: 'rgba(0,0,0,0.03)', padding: '10px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '1.2em' }}><FuriganaText text={r.exemplo_jp} onWordClick={handleWordClick} /></div>
-                            <div style={{ color: 'gray', fontSize: '0.9em' }}><FuriganaText text={r.exemplo_pt} /></div>
+                            <div style={{ fontSize: '1.2em' }}><InteractiveText text={r.exemplo_jp} onWordClick={handleWordClick} /></div>
+                            <div style={{ color: 'gray', fontSize: '0.9em' }}><InteractiveText text={r.exemplo_pt} /></div>
                         </div>
                     </div>
                 ))}
@@ -327,8 +327,8 @@ export default function GuiaPanel({ context, onNext, onBack }: GuiaPanelProps) {
                         onMouseOut={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.02)'}
                         onClick={(e) => handleTermClick(e, { item: f.jp, leitura: '', significado: f.pt, tipo: 'Frase Pronta' }, f.jp)}
                     >
-                        <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}><FuriganaText text={f.jp} onWordClick={handleWordClick} /></div>
-                        <div style={{ color: 'gray' }}><FuriganaText text={f.pt} /></div>
+                        <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}><InteractiveText text={f.jp} onWordClick={handleWordClick} /></div>
+                        <div style={{ color: 'gray' }}><InteractiveText text={f.pt} /></div>
                     </div>
                 ))}
             </div>

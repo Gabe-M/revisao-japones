@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import FuriganaText from './components/FuriganaText';
+import InteractiveText from '../components/InteractiveText';
 import ScoreBadge from './components/ScoreBadge';
 import * as wanakana from 'wanakana';
 import AiLoader from './components/AiLoader';
@@ -220,7 +220,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                                 color: isIA ? 'var(--text-color)' : 'white' 
                             }}>
                                 <div style={{ fontSize: '1.2em', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                    <FuriganaText text={msg.jp} />
+                                    <InteractiveText text={msg.jp} />
                                     {isIA && (
                                         <div style={{ display: 'flex', gap: '5px' }}>
                                             <button onClick={() => tocarAudio(msg.jp)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'gray', padding: '5px' }} title="Ouvir">🔊</button>
@@ -233,7 +233,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                                 {isIA && msg.pt && (
                                     <details style={{ marginTop: '10px', fontSize: '0.9em', color: 'gray' }}>
                                         <summary style={{ cursor: 'pointer' }}>Tradução</summary>
-                                        <p style={{ margin: '5px 0 0 0' }}><FuriganaText text={msg.pt} /></p>
+                                        <p style={{ margin: '5px 0 0 0' }}><InteractiveText text={msg.pt} /></p>
                                     </details>
                                 )}
                             </div>
@@ -244,7 +244,7 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                                     <ScoreBadge score={msg.score || 0} />
                                     <div style={{ fontSize: '0.9em' }}>
                                         <strong>Feedback do Sensei:</strong>
-                                        <p style={{ margin: '5px 0 0 0' }}><FuriganaText text={msg.analise} /></p>
+                                        <p style={{ margin: '5px 0 0 0' }}><InteractiveText text={msg.analise} /></p>
                                     </div>
                                 </div>
                             )}

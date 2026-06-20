@@ -1,0 +1,45 @@
+{
+  "name": "auto-wrap-japanese-text",
+  "description": "Background task to automatically detect raw Japanese text or <FuriganaText /> in TSX/JSX files and wrap/replace them with the <InteractiveText> component.",
+  "version": "1.0.0",
+  "triggers": [
+    "onFileCreate",
+    "onFileModify"
+  ],
+  "scope": {
+    "include": [
+      "src/**/*.tsx",
+      "src/**/*.jsx"
+    ],
+    "exclude": [
+      "src/components/InteractiveText.tsx"
+    ]
+  },
+  "action": {
+    "type": "script",
+    "executable": "node",
+    "scriptPath": "scripts/auto-wrap-japanese-text.js",
+    "arguments": [
+      "--file",
+      "$FILE_PATH"
+    ]
+  },
+  "rules": {
+    "detectUnicodeRanges": [
+      "\\u3040-\\u309F",
+      "\\u30A0-\\u30FF",
+      "\\u4E00-\\u9FFF"
+    ],
+    "excludeContexts": [
+      "comments",
+      "imports",
+      "consoleLogs",
+      "objectKeys"
+    ],
+    "replacementTargets": [
+      "<FuriganaText text={...} />",
+      "raw Japanese text in JSX nodes"
+    ],
+    "preventDoubleWrap": true
+  }
+}

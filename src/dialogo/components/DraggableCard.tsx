@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import FuriganaText from './FuriganaText';
+import InteractiveText from '../../components/InteractiveText';
 
 interface DraggableCardProps {
     card: any;
@@ -148,7 +148,7 @@ export default function DraggableCard({ card, onClose, initialIndex, tema, provi
                 &times;
             </button>
             <div style={{ fontFamily: '"Noto Sans JP", sans-serif', fontSize: '2em', textAlign: 'center', margin: '5px 0', fontWeight: 800, color: 'var(--text-color)' }}>
-                <FuriganaText text={card.item} fallbackLeitura={card.leitura} />
+                <InteractiveText text={card.item} fallbackLeitura={card.leitura} />
             </div>
             {card.leitura && (
                 <div style={{ textAlign: 'center', fontSize: '1em', color: 'gray', fontWeight: 600, letterSpacing: '1px', marginBottom: '10px' }}>
@@ -208,7 +208,7 @@ export default function DraggableCard({ card, onClose, initialIndex, tema, provi
                     </div>
                 </div>
                 <div style={{ fontWeight: 600, fontSize: '1em', color: 'var(--text-color)' }}>
-                    <FuriganaText text={significado} />
+                    <InteractiveText text={significado} />
                 </div>
             </div>
             

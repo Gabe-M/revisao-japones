@@ -1,0 +1,19 @@
+{
+  "name": "auto-git-commit",
+  "description": "Automatically stage and commit changes locally after successful agent actions, without pushing.",
+  "version": "1.0.0",
+  "triggers": [
+    "onAgentActionSuccess",
+    "onChangesApplied"
+  ],
+  "action": {
+    "type": "shell",
+    "commands": [
+      "git add .",
+      "git diff-index --quiet HEAD || git commit -m \"antigravity: %SUMMARY%\""
+    ]
+  },
+  "rules": {
+    "silent": true
+  }
+}

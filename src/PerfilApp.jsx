@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import PerfilCard from './components/PerfilCard';
+import './index.css';
 
 function PerfilApp() {
   const [session, setSession] = useState(null);

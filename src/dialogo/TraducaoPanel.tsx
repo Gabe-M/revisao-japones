@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import FuriganaText from './components/FuriganaText';
+import InteractiveText from '../components/InteractiveText';
 import ScoreBadge from './components/ScoreBadge';
 import AiLoader from './components/AiLoader';
 import AiFallbackPopup from './components/AiFallbackPopup';
@@ -191,7 +191,7 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                 <h3 style={{ marginTop: 0, color: 'gray', fontWeight: 'normal', fontSize: '1em' }}>Traduza esta frase para o português:</h3>
                 
                 <div style={{ fontSize: '2em', fontWeight: 'bold', margin: '20px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
-                    <FuriganaText text={frase.frase_jp} />
+                    <InteractiveText text={frase.frase_jp} />
                     <button onClick={tocarAudio} style={{ border: 'none', fontSize: '1.2em', cursor: 'pointer', padding: '10px', borderRadius: '50%', background: 'rgba(0,0,0,0.05)' }}>🔊</button>
                 </div>
 
@@ -241,12 +241,12 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                                 <h3 style={{ margin: 0, color: '#2980b9', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     💡 Resposta Revelada
                                 </h3>
-                                <p style={{ margin: '5px 0 15px 0', fontSize: '1.1em', fontWeight: 'bold' }}>Tradução correta: <span style={{ color: 'var(--text-color)', fontWeight: 600 }}><FuriganaText text={analise.traducao_correta} /></span></p>
+                                <p style={{ margin: '5px 0 15px 0', fontSize: '1.1em', fontWeight: 'bold' }}>Tradução correta: <span style={{ color: 'var(--text-color)', fontWeight: 600 }}><InteractiveText text={analise.traducao_correta} /></span></p>
                                 
                                 {analise.explicacao && (
                                     <div style={{ marginBottom: '15px', background: 'rgba(0,0,0,0.02)', padding: '15px', borderRadius: '8px', borderLeft: '3px solid #3498db' }}>
                                         <strong>📖 Explicação Estrutural:</strong>
-                                        <p style={{ margin: '8px 0 0 0', lineHeight: '1.5em', fontSize: '0.95em', whiteSpace: 'pre-line' }}><FuriganaText text={analise.explicacao} /></p>
+                                        <p style={{ margin: '8px 0 0 0', lineHeight: '1.5em', fontSize: '0.95em', whiteSpace: 'pre-line' }}><InteractiveText text={analise.explicacao} /></p>
                                     </div>
                                 )}
                             </div>
@@ -257,7 +257,7 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                                     <h3 style={{ margin: 0, color: analise.correto ? '#27ae60' : '#c0392b' }}>
                                         {analise.correto ? 'Muito bem!' : 'Precisa melhorar'}
                                     </h3>
-                                    <p style={{ margin: '5px 0 0 0', fontWeight: 'bold' }}>Correção ideal: <FuriganaText text={analise.traducao_correta} /></p>
+                                    <p style={{ margin: '5px 0 0 0', fontWeight: 'bold' }}>Correção ideal: <InteractiveText text={analise.traducao_correta} /></p>
                                 </div>
                             </div>
                         )}
@@ -272,7 +272,7 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                         )}
                         
                         <div style={{ background: 'rgba(0,0,0,0.05)', padding: '10px', borderRadius: '8px', fontSize: '0.9em', marginBottom: '15px' }}>
-                            <strong>💡 Dica Rápida:</strong> <FuriganaText text={analise.dica || frase.dica} />
+                            <strong>💡 Dica Rápida:</strong> <InteractiveText text={analise.dica || frase.dica} />
                         </div>
 
                         <div style={{ marginTop: '20px', textAlign: 'center' }}>
