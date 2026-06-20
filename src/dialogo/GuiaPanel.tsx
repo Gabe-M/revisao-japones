@@ -31,6 +31,11 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
     const [activeCategory, setActiveCategory] = useState('Todos');
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('Todos');
+    const [currentPage, setCurrentPage] = useState(1);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeCategory, searchQuery, filterStatus]);
 
     const addCard = (newCard: any) => {
         setActiveCards(prev => {
@@ -293,6 +298,23 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
         });
     }
 
+    const itemsPerPageFirstPage = 5;
+    const itemsPerPageSubsequent = 6;
+    
+    const totalPages = filteredVocab.length <= itemsPerPageFirstPage 
+      ? 1 
+      : 1 + Math.ceil((filteredVocab.length - itemsPerPageFirstPage) / itemsPerPageSubsequent);
+
+    const getPaginatedItems = () => {
+      if (currentPage === 1) {
+        return filteredVocab.slice(0, itemsPerPageFirstPage);
+      }
+      const offset = itemsPerPageFirstPage + (currentPage - 2) * itemsPerPageSubsequent;
+      return filteredVocab.slice(offset, offset + itemsPerPageSubsequent);
+    };
+    
+    const paginatedVocab = getPaginatedItems();
+
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -392,18 +414,20 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
                         {/* Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Card de Adição */}
-                            <div 
-                                onClick={() => alert("Adicionar palavra personalizada estará disponível em breve!")}
-                                className="border-2 border-dashed border-gray-800 hover:border-[#ea580c] bg-transparent rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-white/[0.02] min-h-[82px]"
-                            >
-                                <span style={{ color: '#ea580c', fontWeight: 'bold', fontSize: '1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    ➕ Adicionar Nova Palavra
-                                </span>
-                                <span style={{ fontSize: '0.8em', color: 'gray', marginTop: '4px' }}>Insira um vocabulário customizado</span>
-                            </div>
+                            {currentPage === 1 && (
+                                <div 
+                                    onClick={() => alert("Adicionar palavra personalizada estará disponível em breve!")}
+                                    className="border-2 border-dashed border-gray-800 hover:border-[#ea580c] bg-transparent rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-white/[0.02] min-h-[82px]"
+                                >
+                                    <span style={{ color: '#ea580c', fontWeight: 'bold', fontSize: '1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        ➕ Adicionar Nova Palavra
+                                    </span>
+                                    <span style={{ fontSize: '0.8em', color: 'gray', marginTop: '4px' }}>Insira um vocabulário customizado</span>
+                                </div>
+                            )}
 
                             {/* Dynamic Chips rendering */}
-                            {filteredVocab.map((t: any, i: number) => {
+                            {paginatedVocab.map((t: any, i: number) => {
                                 const normalizedTerm = {
                                     item: t.termo || t.item || '',
                                     leitura: t.leitura || '',
@@ -425,6 +449,35 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
                                 );
                             })}
                         </div>
+
+                        {/* Pagination Navigation Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-gray-800">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className={currentPage === 1
+                                        ? "opacity-40 cursor-not-allowed bg-[#202020] text-gray-500 border border-gray-800 px-4 py-2 rounded-lg text-sm"
+                                        : "bg-[#252525] border border-gray-700/50 hover:bg-[#ea580c]/10 text-[#ea580c] hover:border-[#ea580c] px-4 py-2 rounded-lg text-sm transition-all cursor-pointer font-bold outline-none"
+                                    }
+                                >
+                                    Anterior
+                                </button>
+                                <span className="text-sm text-gray-400 font-medium">
+                                    Página {currentPage} de {totalPages}
+                                </span>
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    className={currentPage === totalPages
+                                        ? "opacity-40 cursor-not-allowed bg-[#202020] text-gray-500 border border-gray-800 px-4 py-2 rounded-lg text-sm"
+                                        : "bg-[#252525] border border-gray-700/50 hover:bg-[#ea580c]/10 text-[#ea580c] hover:border-[#ea580c] px-4 py-2 rounded-lg text-sm transition-all cursor-pointer font-bold outline-none"
+                                    }
+                                >
+                                    Próximo
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
