@@ -93,3 +93,9 @@
   background: var(--highlight-color) !important;
   color: white !important;
 }
+
+@keyframes groqPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 2px #e67e22); }
+  50% { transform: scale(1.12); filter: drop-shadow(0 0 12px #e67e22); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 2px #e67e22); }
+}

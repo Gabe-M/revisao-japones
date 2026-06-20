@@ -309,9 +309,14 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                         gap: '10px'
                     }}>
                         <img 
-                            src={provider === 'gemini' ? "https://cdnl.iconscout.com/lottie/premium/thumb/gemini-logo-animation-gif-download-10900314.gif" : "https://cdnl.iconscout.com/lottie/premium/thumb/chatgpt-animation-gif-download-6633794.gif"} 
+                            src={provider === 'gemini' ? "https://cdnl.iconscout.com/lottie/premium/thumb/gemini-logo-animation-gif-download-10900314.gif" : provider === 'groq' ? "https://raw.githubusercontent.com/lobehub/lobe-icons/main/icons/groq.svg" : "https://cdnl.iconscout.com/lottie/premium/thumb/chatgpt-animation-gif-download-6633794.gif"} 
                             alt={provider} 
-                            style={{ width: '28px', height: '28px', objectFit: 'contain' }}
+                            style={{ 
+                                width: '28px', 
+                                height: '28px', 
+                                objectFit: 'contain',
+                                animation: provider === 'groq' ? 'groqPulse 2s infinite ease-in-out' : 'none'
+                            }}
                         />
                         <span style={{ fontSize: '0.9em', fontStyle: 'italic', color: 'gray' }}>
                             {`${provider.charAt(0).toUpperCase() + provider.slice(1)} está digitando...`}
