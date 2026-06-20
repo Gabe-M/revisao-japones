@@ -34,8 +34,12 @@ export default function InteractiveText({ text, children, className, style }: In
     // Capture coordinates and context
     const x = e.clientX;
     const y = e.clientY;
-    // CurrentTarget represents the .interactive-text-container element itself
-    const fraseCompleta = e.currentTarget.textContent?.trim() || '';
+    
+    // Clone the container to remove rt (furigana) elements and get clean text context
+    const containerClone = e.currentTarget.cloneNode(true) as HTMLElement;
+    const containerRts = containerClone.querySelectorAll('rt');
+    containerRts.forEach(rt => rt.remove());
+    const fraseCompleta = containerClone.textContent?.trim() || '';
 
     openCard(term, fraseCompleta, x, y);
   };

@@ -4,13 +4,22 @@
   user-drag: none;
 }
 
-.interactive-text-container .interactive-word, 
-.interactive-text-container ruby { 
+.interactive-text-container .interactive-word { 
   transition: all 0.2s ease; 
   cursor: pointer; 
   padding: 0 2px; 
   border-radius: 4px; 
   display: inline !important;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+.interactive-text-container ruby { 
+  transition: all 0.2s ease; 
+  cursor: pointer; 
+  padding: 0 2px; 
+  border-radius: 4px; 
+  display: ruby !important;
   -webkit-user-drag: none;
   user-drag: none;
 }
