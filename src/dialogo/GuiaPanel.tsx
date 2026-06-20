@@ -369,41 +369,150 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
                 }}>
                     <div style={{ minHeight: 0, paddingTop: '15px' }}>
                         {/* Tab Bar */}
-                        <div className="overflow-x-auto flex gap-3 pb-4 mb-4 border-b border-gray-800" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        <div style={{
+                            display: 'flex',
+                            gap: '8px',
+                            paddingBottom: '12px',
+                            marginBottom: '15px',
+                            borderBottom: '1px solid var(--border-color)',
+                            overflowX: 'auto',
+                            WebkitOverflowScrolling: 'touch',
+                            scrollbarWidth: 'none',
+                            msOverflowStyle: 'none'
+                        }}>
                             {uniqueCategories.map(cat => (
                                 <button
                                     key={cat}
                                     onClick={() => setActiveCategory(cat)}
-                                    className={activeCategory === cat 
-                                        ? "bg-[#ea580c] text-white rounded-full px-4 py-1.5 text-sm font-semibold whitespace-nowrap flex-shrink-0 cursor-pointer border-none outline-none" 
-                                        : "bg-[#252525] text-gray-400 border border-gray-700/50 rounded-full px-4 py-1.5 text-sm hover:text-gray-200 transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer outline-none"
+                                    style={activeCategory === cat 
+                                        ? {
+                                            background: 'var(--highlight-color)',
+                                            color: 'white',
+                                            borderRadius: '20px',
+                                            padding: '8px 16px',
+                                            fontSize: '0.88em',
+                                            fontWeight: '600',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap',
+                                            flexShrink: 0,
+                                            boxShadow: '0 4px 10px rgba(230, 126, 34, 0.3)',
+                                            transition: 'all 0.2s ease',
+                                            outline: 'none'
+                                        } 
+                                        : {
+                                            background: 'rgba(0, 0, 0, 0.02)',
+                                            color: 'var(--text-color)',
+                                            borderRadius: '20px',
+                                            padding: '8px 16px',
+                                            fontSize: '0.88em',
+                                            border: '1px solid var(--border-color)',
+                                            cursor: 'pointer',
+                                            whiteSpace: 'nowrap',
+                                            flexShrink: 0,
+                                            opacity: 0.75,
+                                            transition: 'all 0.2s ease',
+                                            outline: 'none'
+                                        }
                                     }
+                                    onMouseOver={(e) => {
+                                        if (activeCategory !== cat) {
+                                            e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
+                                            e.currentTarget.style.opacity = '1';
+                                        }
+                                    }}
+                                    onMouseOut={(e) => {
+                                        if (activeCategory !== cat) {
+                                            e.currentTarget.style.background = 'rgba(0,0,0,0.02)';
+                                            e.currentTarget.style.opacity = '0.75';
+                                        }
+                                    }}
                                 >
                                     {cat}
                                 </button>
                             ))}
                             <button
                                 onClick={() => alert("Função para criar novo tópico personalizado estará disponível em breve!")}
-                                className="border border-dashed border-[#ea580c] text-[#ea580c] bg-transparent rounded-full px-4 py-1.5 text-sm hover:bg-[#ea580c]/10 transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer outline-none"
+                                style={{
+                                    background: 'transparent',
+                                    color: 'var(--highlight-color)',
+                                    borderRadius: '20px',
+                                    padding: '8px 16px',
+                                    fontSize: '0.88em',
+                                    border: '1px dashed var(--highlight-color)',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0,
+                                    transition: 'all 0.2s ease',
+                                    outline: 'none'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'rgba(230, 126, 34, 0.08)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'transparent';
+                                }}
                             >
                                 + Tópico
                             </button>
                         </div>
 
                         {/* Toolbar */}
-                        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '12px',
+                            marginBottom: '20px'
+                        }}>
                             <input 
                                 type="text"
                                 placeholder="Buscar termo, leitura ou tradução..."
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
-                                className="w-full sm:w-64 bg-[#202020] text-[#e5e7eb] border border-gray-800 rounded-lg px-4 py-2 text-sm outline-none focus:border-[#ea580c] transition-colors"
+                                style={{
+                                    flex: '1 1 200px',
+                                    maxWidth: '300px',
+                                    padding: '10px 14px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border-color)',
+                                    background: 'var(--bg-color)',
+                                    color: 'var(--text-color)',
+                                    fontSize: '0.9em',
+                                    outline: 'none',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = 'var(--highlight-color)';
+                                    e.target.style.boxShadow = '0 0 0 3px rgba(230, 126, 34, 0.15)';
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = 'var(--border-color)';
+                                    e.target.style.boxShadow = 'none';
+                                }}
                             />
 
                             <select
                                 value={filterStatus}
                                 onChange={e => setFilterStatus(e.target.value)}
-                                className="bg-[#202020] text-[#e5e7eb] border border-gray-800 rounded-lg px-4 py-2 text-sm outline-none focus:border-[#ea580c] transition-colors cursor-pointer"
+                                style={{
+                                    padding: '10px 14px',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border-color)',
+                                    background: 'var(--bg-color)',
+                                    color: 'var(--text-color)',
+                                    fontSize: '0.9em',
+                                    outline: 'none',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = 'var(--highlight-color)';
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = 'var(--border-color)';
+                                }}
                             >
                                 <option value="Todos">👁️ Mostrar Todos</option>
                                 <option value="Aprendidos">🟢 Já Aprendidos</option>
@@ -412,14 +521,36 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
                         </div>
 
                         {/* Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))',
+                            gap: '12px'
+                        }}>
                             {/* Card de Adição */}
                             {currentPage === 1 && (
                                 <div 
                                     onClick={() => alert("Adicionar palavra personalizada estará disponível em breve!")}
-                                    className="border-2 border-dashed border-gray-800 hover:border-[#ea580c] bg-transparent rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-white/[0.02] min-h-[82px]"
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '12px',
+                                        background: 'transparent',
+                                        borderRadius: '8px',
+                                        border: '1px dashed var(--highlight-color)',
+                                        cursor: 'pointer',
+                                        minHeight: '62px',
+                                        transition: 'background 0.2s'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        e.currentTarget.style.background = 'rgba(230, 126, 34, 0.05)';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.currentTarget.style.background = 'transparent';
+                                    }}
                                 >
-                                    <span style={{ color: '#ea580c', fontWeight: 'bold', fontSize: '1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ color: 'var(--highlight-color)', fontWeight: 'bold', fontSize: '1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         ➕ Adicionar Nova Palavra
                                     </span>
                                     <span style={{ fontSize: '0.8em', color: 'gray', marginTop: '4px' }}>Insira um vocabulário customizado</span>
@@ -452,27 +583,78 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
 
                         {/* Pagination Navigation Controls */}
                         {totalPages > 1 && (
-                            <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-gray-800">
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '16px',
+                                marginTop: '24px',
+                                paddingTop: '16px',
+                                borderTop: '1px solid var(--border-color)'
+                            }}>
                                 <button
                                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                     disabled={currentPage === 1}
-                                    className={currentPage === 1
-                                        ? "opacity-40 cursor-not-allowed bg-[#202020] text-gray-500 border border-gray-800 px-4 py-2 rounded-lg text-sm"
-                                        : "bg-[#252525] border border-gray-700/50 hover:bg-[#ea580c]/10 text-[#ea580c] hover:border-[#ea580c] px-4 py-2 rounded-lg text-sm transition-all cursor-pointer font-bold outline-none"
-                                    }
+                                    style={{
+                                        background: currentPage === 1 ? 'transparent' : 'rgba(0,0,0,0.02)',
+                                        color: currentPage === 1 ? 'gray' : 'var(--text-color)',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '8px',
+                                        padding: '8px 16px',
+                                        fontSize: '0.85em',
+                                        fontWeight: '600',
+                                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                                        opacity: currentPage === 1 ? 0.4 : 1,
+                                        transition: 'all 0.2s ease',
+                                        outline: 'none'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        if (currentPage !== 1) {
+                                            e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
+                                        }
+                                    }}
+                                    onMouseOut={(e) => {
+                                        if (currentPage !== 1) {
+                                            e.currentTarget.style.background = 'rgba(0,0,0,0.02)';
+                                        }
+                                    }}
                                 >
                                     Anterior
                                 </button>
-                                <span className="text-sm text-gray-400 font-medium">
+                                <span style={{
+                                    fontSize: '0.9em',
+                                    color: 'var(--text-color)',
+                                    opacity: 0.8,
+                                    fontWeight: '500'
+                                }}>
                                     Página {currentPage} de {totalPages}
                                 </span>
                                 <button
                                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                     disabled={currentPage === totalPages}
-                                    className={currentPage === totalPages
-                                        ? "opacity-40 cursor-not-allowed bg-[#202020] text-gray-500 border border-gray-800 px-4 py-2 rounded-lg text-sm"
-                                        : "bg-[#252525] border border-gray-700/50 hover:bg-[#ea580c]/10 text-[#ea580c] hover:border-[#ea580c] px-4 py-2 rounded-lg text-sm transition-all cursor-pointer font-bold outline-none"
-                                    }
+                                    style={{
+                                        background: currentPage === totalPages ? 'transparent' : 'rgba(0,0,0,0.02)',
+                                        color: currentPage === totalPages ? 'gray' : 'var(--text-color)',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '8px',
+                                        padding: '8px 16px',
+                                        fontSize: '0.85em',
+                                        fontWeight: '600',
+                                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                                        opacity: currentPage === totalPages ? 0.4 : 1,
+                                        transition: 'all 0.2s ease',
+                                        outline: 'none'
+                                    }}
+                                    onMouseOver={(e) => {
+                                        if (currentPage !== totalPages) {
+                                            e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
+                                        }
+                                    }}
+                                    onMouseOut={(e) => {
+                                        if (currentPage !== totalPages) {
+                                            e.currentTarget.style.background = 'rgba(0,0,0,0.02)';
+                                        }
+                                    }}
                                 >
                                     Próximo
                                 </button>
