@@ -4,6 +4,7 @@ import VocabularioChip from './components/VocabularioChip';
 import DraggableCard from './components/DraggableCard';
 import AiLoader from './components/AiLoader';
 import AiFallbackPopup from './components/AiFallbackPopup';
+import PhraseCard from './components/PhraseCard';
 
 interface GuiaPanelProps {
     context: any;
@@ -11,6 +12,12 @@ interface GuiaPanelProps {
     onNext: () => void;
     onBack: () => void;
 }
+
+const normalizarVocabulario = (vocab: any) => {
+    if (!Array.isArray(vocab) || vocab.length === 0) return [];
+    if (vocab[0].categoria) return vocab;
+    return [{ categoria: "Vocabulário Geral", termos: vocab }];
+};
 
 export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPanelProps) {
     const [loading, setLoading] = useState(true);
@@ -20,6 +27,10 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
     const [fallbackOpen, setFallbackOpen] = useState(false);
     const [fallbackError, setFallbackError] = useState('');
     const [isVocabOpen, setIsVocabOpen] = useState(true);
+
+    const [activeCategory, setActiveCategory] = useState('Todos');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterStatus, setFilterStatus] = useState('Todos');
 
     const addCard = (newCard: any) => {
         setActiveCards(prev => {
@@ -39,9 +50,28 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
         let reading = leitura.trim();
         if (!item) return;
 
-        const foundVocab = 
-            dados?.vocabulario?.find((v: any) => v.item === item) ||
-            context.vocabularioBanco?.find((b: any) => b.item === item);
+        // Find in legacy or new categorized vocabulary structure
+        let foundVocab = null;
+        if (dados?.vocabulario) {
+            foundVocab = dados.vocabulario.find((v: any) => v.item === item);
+        }
+        if (!foundVocab && dados?.vocabulario_chave) {
+            for (const cat of dados.vocabulario_chave) {
+                const term = cat.termos?.find((t: any) => (t.termo || t.item) === item);
+                if (term) {
+                    foundVocab = {
+                        item: term.termo || term.item,
+                        leitura: term.leitura,
+                        significado: term.traducao || term.significado,
+                        jlpt: term.jlpt
+                    };
+                    break;
+                }
+            }
+        }
+        if (!foundVocab && context.vocabularioBanco) {
+            foundVocab = context.vocabularioBanco.find((b: any) => b.item === item);
+        }
         
         if (foundVocab) {
             addCard({
@@ -218,6 +248,51 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
         );
     }
 
+    // 1. Normalização do vocabulário
+    const vocabCategorias = normalizarVocabulario(dados?.vocabulario_chave || dados?.vocabulario || []);
+
+    // 2. Extração de todas as categorias únicas para o Tab Bar
+    const uniqueCategories = ['Todos', ...Array.from(new Set(vocabCategorias.map((c: any) => c.categoria).filter(Boolean)))];
+
+    // 3. Pipeline de filtragem
+    // a. Agrupa e filtra por categoria ativa
+    const allTerms = vocabCategorias.flatMap((cat: any) => 
+        (cat.termos || []).map((t: any) => ({
+            ...t,
+            categoria: cat.categoria
+        }))
+    );
+
+    let filteredVocab = activeCategory === 'Todos'
+        ? allTerms
+        : allTerms.filter((t: any) => t.categoria === activeCategory);
+
+    // b. Filtro de busca (searchQuery) resiliente
+    if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        filteredVocab = filteredVocab.filter((t: any) => {
+            const term = (t.termo || t.item || '').toLowerCase();
+            const leitura = (t.leitura || '').toLowerCase();
+            const romaji = (t.romaji || '').toLowerCase();
+            const translation = (t.traducao || t.significado || '').toLowerCase();
+            return term.includes(query) || leitura.includes(query) || romaji.includes(query) || translation.includes(query);
+        });
+    }
+
+    // c. Filtro de status (filterStatus) contra context.vocabularioBanco
+    if (filterStatus !== 'Todos') {
+        filteredVocab = filteredVocab.filter((t: any) => {
+            const itemJp = t.termo || t.item || '';
+            const jaPossui = context.vocabularioBanco.some((b: any) => b.item === itemJp);
+            if (filterStatus === 'Aprendidos') {
+                return jaPossui;
+            } else if (filterStatus === 'Novos') {
+                return !jaPossui;
+            }
+            return true;
+        });
+    }
+
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -270,25 +345,82 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
                     opacity: isVocabOpen ? 1 : 0,
                     overflow: 'hidden'
                 }}>
-                    <div style={{ minHeight: 0 }}>
-                        <div style={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
-                            gap: '10px',
-                            paddingTop: '15px'
-                        }}>
-                            {dados.vocabulario?.map((v: any, i: number) => {
-                                const jaPossui = context.vocabularioBanco.some((b:any) => b.item === v.item);
+                    <div style={{ minHeight: 0, paddingTop: '15px' }}>
+                        {/* Tab Bar */}
+                        <div className="overflow-x-auto flex gap-3 pb-4 mb-4 border-b border-gray-800" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {uniqueCategories.map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => setActiveCategory(cat)}
+                                    className={activeCategory === cat 
+                                        ? "bg-[#ea580c] text-white rounded-full px-4 py-1.5 text-sm font-semibold whitespace-nowrap flex-shrink-0 cursor-pointer border-none outline-none" 
+                                        : "bg-[#252525] text-gray-400 border border-gray-700/50 rounded-full px-4 py-1.5 text-sm hover:text-gray-200 transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer outline-none"
+                                    }
+                                >
+                                    {cat}
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => alert("Função para criar novo tópico personalizado estará disponível em breve!")}
+                                className="border border-dashed border-[#ea580c] text-[#ea580c] bg-transparent rounded-full px-4 py-1.5 text-sm hover:bg-[#ea580c]/10 transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer outline-none"
+                            >
+                                + Tópico
+                            </button>
+                        </div>
+
+                        {/* Toolbar */}
+                        <div className="flex flex-col sm:flex-row justify-between gap-4 mb-6">
+                            <input 
+                                type="text"
+                                placeholder="Buscar termo, leitura ou tradução..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                className="w-full sm:w-64 bg-[#202020] text-[#e5e7eb] border border-gray-800 rounded-lg px-4 py-2 text-sm outline-none focus:border-[#ea580c] transition-colors"
+                            />
+
+                            <select
+                                value={filterStatus}
+                                onChange={e => setFilterStatus(e.target.value)}
+                                className="bg-[#202020] text-[#e5e7eb] border border-gray-800 rounded-lg px-4 py-2 text-sm outline-none focus:border-[#ea580c] transition-colors cursor-pointer"
+                            >
+                                <option value="Todos">👁️ Mostrar Todos</option>
+                                <option value="Aprendidos">🟢 Já Aprendidos</option>
+                                <option value="Novos">🟡 Palavras Novas</option>
+                            </select>
+                        </div>
+
+                        {/* Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Card de Adição */}
+                            <div 
+                                onClick={() => alert("Adicionar palavra personalizada estará disponível em breve!")}
+                                className="border-2 border-dashed border-gray-800 hover:border-[#ea580c] bg-transparent rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-white/[0.02] min-h-[82px]"
+                            >
+                                <span style={{ color: '#ea580c', fontWeight: 'bold', fontSize: '1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    ➕ Adicionar Nova Palavra
+                                </span>
+                                <span style={{ fontSize: '0.8em', color: 'gray', marginTop: '4px' }}>Insira um vocabulário customizado</span>
+                            </div>
+
+                            {/* Dynamic Chips rendering */}
+                            {filteredVocab.map((t: any, i: number) => {
+                                const normalizedTerm = {
+                                    item: t.termo || t.item || '',
+                                    leitura: t.leitura || '',
+                                    significado: t.traducao || t.significado || '',
+                                    jlpt: t.jlpt
+                                };
+                                const jaPossui = context.vocabularioBanco.some((b: any) => b.item === normalizedTerm.item);
                                 return (
                                     <VocabularioChip 
                                         key={i}
-                                        item={v.item}
-                                        leitura={v.leitura}
-                                        significado={v.significado}
-                                        jlpt={v.jlpt}
+                                        item={normalizedTerm.item}
+                                        leitura={normalizedTerm.leitura}
+                                        significado={normalizedTerm.significado}
+                                        jlpt={normalizedTerm.jlpt}
                                         jaPossui={jaPossui}
-                                        onAdd={() => adicionarAoBanco(v)}
-                                        onClickCard={() => addCard({ ...v, tipo: 'Vocabulário' })}
+                                        onAdd={() => adicionarAoBanco(normalizedTerm)}
+                                        onClickCard={() => addCard({ ...normalizedTerm, tipo: 'Vocabulário' })}
                                     />
                                 );
                             })}
@@ -315,15 +447,15 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
             </div>
 
             <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '16px', marginBottom: '20px', boxShadow: 'var(--shadow-subtle)' }}>
-                <h3 style={{ marginTop: 0, color: 'var(--highlight-color)' }}>💬 Frases Prontas</h3>
+                <h3 style={{ marginTop: 0, color: 'var(--highlight-color)', marginBottom: '20px' }}>💬 Frases Prontas</h3>
                 {dados.frases_uteis?.map((f: any, i: number) => (
-                    <div 
-                        key={i} 
-                        style={{ marginBottom: '10px', padding: '10px', background: 'rgba(0,0,0,0.02)', borderRadius: '8px' }}
-                    >
-                        <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}><InteractiveText text={f.jp} /></div>
-                        <div style={{ color: 'gray' }}><InteractiveText text={f.pt} /></div>
-                    </div>
+                    <PhraseCard 
+                        key={i}
+                        jp={f.jp}
+                        pt={f.pt}
+                        breakdown={f.breakdown}
+                        session={session}
+                    />
                 ))}
             </div>
 

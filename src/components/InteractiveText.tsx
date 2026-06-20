@@ -6,9 +6,10 @@ interface InteractiveTextProps {
   children?: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  fallbackLeitura?: string;
 }
 
-export default function InteractiveText({ text, children, className, style }: InteractiveTextProps) {
+export default function InteractiveText({ text, children, className, style, fallbackLeitura }: InteractiveTextProps) {
   const { openCard } = useTermCard();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -118,9 +119,14 @@ export default function InteractiveText({ text, children, className, style }: In
     display: 'inline-block'
   };
 
+  let textToUse = text;
+  if (text && fallbackLeitura && text !== fallbackLeitura && /[\u4e00-\u9faf]/.test(text)) {
+    textToUse = `<ruby>${text}<rt>${fallbackLeitura}</rt></ruby>`;
+  }
+
   let contentNode: React.ReactNode = null;
-  if (text !== undefined) {
-    contentNode = parseHtmlToReact(text).map(processNode);
+  if (textToUse !== undefined) {
+    contentNode = parseHtmlToReact(textToUse).map(processNode);
   } else if (children !== undefined) {
     contentNode = React.Children.map(children, processNode);
   }

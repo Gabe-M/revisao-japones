@@ -370,7 +370,7 @@ export default async function handler(req, res) {
                     }
                 }
 
-                systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Use tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> nas frases (em 'exemplo_jp' e 'jp' de frases_uteis) sempre que usar Kanji. O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji) e deve ser colocado apenas sobre os Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>.";
+                systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Use tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> nas frases (em 'exemplo_jp', 'jp' de frases_uteis, 'texto_jp' de breakdown, e 'termo' de termos de vocabulario_chave) sempre que usar Kanji. O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji) e deve ser colocado apenas sobre os Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>.";
                 prompt = `Gere um guia de estudos em japonês para o tema: "${tema}".
                 ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
                 ${vocabulario && vocabulario.length > 0 ? `Palavras que devem ser priorizadas ou incluídas se possível: ${selectContextualVocab(vocabulario, tema, null, null, 20).join(', ')}` : ''}
@@ -380,14 +380,26 @@ export default async function handler(req, res) {
                     "regras": [
                         { "titulo": "Apresentação básica", "termo": "は", "leitura": "wa", "explicacao": "Usa-se a partícula は para marcar o tópico da frase.", "exemplo_jp": "<ruby>私<rt>わたし</rt></ruby>は<ruby>学生<rt>がくせい</rt></ruby>です", "exemplo_pt": "Eu sou estudante" }
                     ],
-                    "vocabulario": [
-                        { "item": "学生", "leitura": "がくせい", "significado": "Estudante", "jlpt": "N5" }
+                    "vocabulario_chave": [
+                        {
+                            "categoria": "Nome da Categoria (ex: Verbos, Partículas, Profissões)",
+                            "termos": [
+                                { "termo": "学生", "leitura": "がくせい", "romaji": "gakusei", "traducao": "Estudante", "jlpt": "N5" }
+                            ]
+                        }
                     ],
                     "frases_uteis": [
-                        { "jp": "<ruby>宜<rt>よろ</rt></ruby>しくお<ruby>願<rt>ねが</rt></ruby>いします", "pt": "Prazer em conhecê-lo / Conto com você" }
+                        { 
+                            "jp": "<ruby>宜<rt>よろ</rt></ruby>しくお<ruby>願<rt>ねが</rt></ruby>いします", 
+                            "pt": "Prazer em conhecê-lo / Conto com você",
+                            "breakdown": [
+                                { "texto_jp": "<ruby>宜<rt>よろ</rt></ruby>しく", "romaji": "yoroshiku", "traducao": "bem / de forma apropriada" },
+                                { "texto_jp": "お<ruby>願<rt>ねが</rt></ruby>いします", "romaji": "onegaishimasu", "traducao": "por favor" }
+                            ]
+                        }
                     ]
                 }
-                Retorne no mínimo 3 regras, 8 vocabulários e 4 frases úteis.`;
+                Retorne no mínimo 3 regras, de 3 a 5 categorias úteis em 'vocabulario_chave' (com 2 a 4 termos por categoria) baseadas estritamente no tema do diálogo atual, e no mínimo 4 frases úteis. Cada item em 'frases_uteis' deve obrigatoriamente conter o array 'breakdown' conforme o esqueleto demonstrado acima.`;
                 
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.3-70b-versatile');
                 
