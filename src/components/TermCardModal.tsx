@@ -10,8 +10,10 @@ export default function TermCardModal() {
   const [isLoading, setIsLoading] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const [adjustedPos, setAdjustedPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
 
-  // Boundary checking
+  // Boundary checking on open/reposition
   useEffect(() => {
     if (isOpen && modalRef.current) {
       const rect = modalRef.current.getBoundingClientRect();
@@ -28,6 +30,42 @@ export default function TermCardModal() {
       setAdjustedPos({ x: Math.max(10, newX), y: Math.max(10, newY) });
     }
   }, [isOpen, posicao]);
+
+  // Dragging logic
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return; // Only left click
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('input') || target.closest('textarea')) return;
+
+    setIsDragging(true);
+    dragStartPos.current = {
+      x: e.clientX - adjustedPos.x,
+      y: e.clientY - adjustedPos.y
+    };
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setAdjustedPos({
+        x: e.clientX - dragStartPos.current.x,
+        y: e.clientY - dragStartPos.current.y
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   // Fetch logic with AbortController
   useEffect(() => {
@@ -82,6 +120,7 @@ export default function TermCardModal() {
   return (
     <div 
       ref={modalRef}
+      onMouseDown={handleMouseDown}
       style={{
         position: 'fixed',
         left: `${adjustedPos.x}px`,
@@ -97,7 +136,9 @@ export default function TermCardModal() {
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
-        animation: 'ajudaSlideUp 0.2s ease-out'
+        animation: 'ajudaSlideUp 0.2s ease-out',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        userSelect: 'none'
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
