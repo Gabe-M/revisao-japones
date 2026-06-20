@@ -38,10 +38,14 @@ Foram atualizados os painéis para passar o array de objetos completo (`context.
 - **Backend Validation and Explanation (`api/dialogo.js`)**: Added a case `analisar_selecao_livre` that routes user selections to LLM. The system instruction validates if the selection is a logical pedagogical segment (rejects cut words or isolated particles) and returns a structured JSON payload with PT-BR explanation/translation.
 - **Mouse Drag Interception (`src/components/InteractiveText.tsx`)**: Incorporated custom `onMouseDown` and `onMouseUp` handlers to compute click-drag distances and durations. It prevents default single-word click logic if a drag occurred, extracts the highlighted substring/surrounding context, clears native selection highlights immediately, and dispatches to the card system under type `SelecaoLivre`.
   * **Trailing Click Fix**: Adjusted the click event suppression window in `handleClick` from 150ms to 800ms to guarantee that trailing click events do not trigger single-word cards when rendering lag occurs during state transition and card rendering.
+  * **Individual Hover Highlights Suppression**: Added a `selecting-text` state/class to the interactive container that is active during text drag selection. The CSS hover rules in `src/index.css` were updated with `:not(.selecting-text)` to hide the individual word hover cards/backgrounds while selecting a wider text range.
 - **Adaptive Card Rendering (`src/components/TermCardModal.tsx` & `src/dialogo/GuiaPanel.tsx` / `DraggableCard.tsx`)**: 
   * Bypasses the default Jisho and Google Translate client-side queries for selection cards.
   * Dynamically queries `/api/dialogo` with `analisar_selecao_livre`.
   * If the LLM marks the selection as invalid (`valido: false`), it shows the pedagogical `erro` inside a premium red error block. Otherwise, it presents the reading, translation, and context explanation.
+- **AI Provider Synchronization**:
+  * Set the default AI provider across all panels and overlays to **Groq**.
+  * Synced AI selection state from the Configuration screen to all sub-panels and the vocabulary card modal via `localStorage` and shared app context.
 
 ## Resultados da Verificação
 

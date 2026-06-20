@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useTermCard } from '../context/TermCardContext';
 
 interface InteractiveTextProps {
@@ -16,17 +16,31 @@ export default function InteractiveText({ text, children, className, style, fall
   const { openCard } = useTermCard();
   const containerRef = useRef<HTMLSpanElement>(null);
 
+  const [isSelecting, setIsSelecting] = useState(false);
   const mouseDownTime = useRef(0);
   const startX = useRef(0);
   const startY = useRef(0);
 
+  useEffect(() => {
+    if (!isSelecting) return;
+    const handleGlobalMouseUp = () => {
+      setIsSelecting(false);
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [isSelecting]);
+
   const handleMouseDown = (e: React.MouseEvent) => {
+    setIsSelecting(true);
     mouseDownTime.current = Date.now();
     startX.current = e.clientX;
     startY.current = e.clientY;
   };
 
   const handleMouseUp = (e: React.MouseEvent<HTMLSpanElement>) => {
+    setIsSelecting(false);
     const selection = window.getSelection();
     if (!selection) return;
     const selectedText = selection.toString().trim();
@@ -223,7 +237,7 @@ export default function InteractiveText({ text, children, className, style, fall
   return (
     <span 
       ref={containerRef}
-      className={`interactive-text-container ${className || ''}`}
+      className={`interactive-text-container ${isSelecting ? 'selecting-text' : ''} ${className || ''}`}
       style={containerStyle}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}

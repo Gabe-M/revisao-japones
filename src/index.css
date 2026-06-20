@@ -24,15 +24,15 @@
   user-drag: none;
 }
 
-.interactive-text-container .interactive-word:hover, 
-.interactive-text-container ruby:hover { 
+.interactive-text-container:not(.selecting-text) .interactive-word:hover, 
+.interactive-text-container:not(.selecting-text) ruby:hover { 
   background: linear-gradient(135deg, #ff6b6b, #c0392b) !important; 
   color: #ffffff !important; 
 }
 
 /* Garante que sub-elementos como rt (furigana) e spans internos também fiquem brancos no hover */
-.interactive-text-container .interactive-word:hover *,
-.interactive-text-container ruby:hover rt {
+.interactive-text-container:not(.selecting-text) .interactive-word:hover *,
+.interactive-text-container:not(.selecting-text) ruby:hover rt {
   color: #ffffff !important;
 }
 
