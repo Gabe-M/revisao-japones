@@ -1,9 +1,16 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import DialoGoApp from './DialoGoApp';
+import { TermCardProvider } from '../context/TermCardContext';
+import TermCardModal from '../components/TermCardModal';
 
 const container = document.getElementById('root');
 if (container) {
     const root = createRoot(container);
-    root.render(<DialoGoApp />);
+    root.render(
+        <TermCardProvider>
+            <DialoGoApp />
+            <TermCardModal />
+        </TermCardProvider>
+    );
 }

@@ -515,6 +515,20 @@ export default async function handler(req, res) {
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
                 return res.status(200).json(result);
 
+            case 'explicar_termo_contextual':
+                systemInstruction = "Atue como um dicionário contextual de japonês. Explique a função exata, classe gramatical e significado da palavra solicitada considerando estritamente a frase de contexto enviada. Retorne APENAS JSON.";
+                prompt = `Termo: "${body.termo}"\nFrase de Contexto: "${body.fraseContexto}"
+                
+                Estrutura do JSON esperado:
+                {
+                    "classe_gramatical": "Substantivo, Verbo, Partícula, etc.",
+                    "significado": "Significado geral da palavra.",
+                    "funcao_no_contexto": "Explicação da função ou nuance exata que a palavra tem nesta frase.",
+                    "leitura": "Leitura em hiragana (opcional, apenas se houver kanji no termo)"
+                }`;
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                return res.status(200).json(result);
+
             default:
                 return res.status(400).json({ error: 'Ação inválida' });
         }
