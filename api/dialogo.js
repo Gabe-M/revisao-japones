@@ -423,6 +423,256 @@ export default async function handler(req, res) {
                 return res.status(200).json(result);
             }
 
+            case 'gerar_vocabulario_lote': {
+                if (!userId) {
+                    return res.status(401).json({ error: 'Não autorizado. Token de autenticação ausente ou inválido.' });
+                }
+                const { tema, jlpt, blacklist, sessionId, categoriaAlvo } = body;
+
+                systemInstruction = "Você é um professor de japonês especialista em vocabulário. Retorne APENAS um JSON válido contendo novos termos de japonês. Nas propriedades 'termo', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes (sem exceção). O furigana deve estar em Hiragana e aplicado apenas sobre Kanjis. Não use nenhuma outra tag HTML além de <ruby> e <rt>. A categoria_sugerida deve ser um texto plano sem tags ruby ou html.";
+                prompt = `Gere exatamente 3 novos termos de vocabulário em japonês úteis e altamente relevantes para o tema: "${tema}".
+                Nível de dificuldade máximo: ${jlpt || 'N5'}.
+                Categoria alvo desejada pelo usuário: "${categoriaAlvo || 'Geral'}".
+                
+                CRÍTICO: NÃO repita nenhuma palavra presente na seguinte lista negra (blacklist): [${(blacklist || []).join(', ')}].
+                
+                Estrutura do JSON esperado:
+                {
+                    "novos_termos": [
+                        {
+                            "termo": "Kanji do termo (com ruby tags se houver Kanji)",
+                            "leitura": "Leitura em hiragana",
+                            "romaji": "Leitura em romaji",
+                            "traducao": "Tradução curta em português",
+                            "categoria_sugerida": "${categoriaAlvo || 'Geral'}"
+                        }
+                    ]
+                }
+                Certifique-se de que cada termo tenha a propriedade 'categoria_sugerida' correspondente a "${categoriaAlvo || 'Geral'}".`;
+
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                
+                // Persistência
+                if (sessionId && result && !result.error && Array.isArray(result.novos_termos)) {
+                    try {
+                        const responseGet = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}&select=guia_dados`, {
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario
+                            }
+                        });
+                        const resData = await responseGet.json();
+                        if (responseGet.ok && resData && resData[0]) {
+                            const currentGuia = resData[0].guia_dados || { regras: [], vocabulario_chave: [], frases_uteis: [] };
+                            
+                            let vocabArray = currentGuia.vocabulario_chave;
+                            let isLegacy = false;
+                            
+                            if (!vocabArray && currentGuia.vocabulario) {
+                                if (Array.isArray(currentGuia.vocabulario) && currentGuia.vocabulario.length > 0 && currentGuia.vocabulario[0].categoria) {
+                                    vocabArray = currentGuia.vocabulario;
+                                } else {
+                                    isLegacy = true;
+                                }
+                            }
+                            
+                            if (!vocabArray && !isLegacy) {
+                                vocabArray = [];
+                                currentGuia.vocabulario_chave = vocabArray;
+                            }
+                            
+                            result.novos_termos.forEach(term => {
+                                const catSugerida = term.categoria_sugerida || categoriaAlvo || 'Geral';
+                                const itemJp = term.termo || '';
+                                const leitura = term.leitura || '';
+                                const romaji = term.romaji || '';
+                                const traducao = term.traducao || '';
+                                
+                                if (isLegacy) {
+                                    if (!Array.isArray(currentGuia.vocabulario)) {
+                                        currentGuia.vocabulario = [];
+                                    }
+                                    if (!currentGuia.vocabulario.some(t => (t.termo || t.item) === itemJp)) {
+                                        currentGuia.vocabulario.push({
+                                            item: itemJp,
+                                            termo: itemJp,
+                                            leitura,
+                                            romaji,
+                                            significado: traducao,
+                                            traducao,
+                                            jlpt: jlpt || 'N5'
+                                        });
+                                    }
+                                } else {
+                                    let catObj = vocabArray.find(c => c.categoria === catSugerida);
+                                    if (!catObj) {
+                                        catObj = { categoria: catSugerida, termos: [] };
+                                        vocabArray.push(catObj);
+                                    }
+                                    if (!catObj.termos) {
+                                        catObj.termos = [];
+                                    }
+                                    if (!catObj.termos.some(t => (t.termo || t.item) === itemJp)) {
+                                        catObj.termos.push({
+                                            termo: itemJp,
+                                            item: itemJp,
+                                            leitura,
+                                            romaji,
+                                            traducao,
+                                            significado: traducao,
+                                            jlpt: jlpt || 'N5'
+                                        });
+                                    }
+                                }
+                            });
+                            
+                            if (!isLegacy) {
+                                currentGuia.vocabulario_chave = vocabArray;
+                            }
+                            
+                            await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}`, {
+                                method: 'PATCH',
+                                headers: {
+                                    "apikey": SUPABASE_KEY,
+                                    "Authorization": tokenUsuario,
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({ guia_dados: currentGuia })
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Erro ao persistir novos termos (lote) no Supabase:", e);
+                    }
+                }
+                return res.status(200).json(result);
+            }
+
+            case 'processar_personalizadas': {
+                if (!userId) {
+                    return res.status(401).json({ error: 'Não autorizado. Token de autenticação ausente ou inválido.' });
+                }
+                const { tema, jlpt, texto, categoriasExistentes, sessionId, quantidade } = body;
+
+                systemInstruction = "Você é um tradutor e professor de japonês. Traduza e classifique os termos fornecidos pelo usuário. Retorne APENAS um JSON válido. Nas propriedades 'termo', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes. O furigana deve estar em Hiragana. A categoria_sugerida deve ser um texto plano sem tags ruby ou html.";
+                prompt = `O usuário forneceu a seguinte lista ou descrição de palavras/termos para tradução e aprendizado: "${texto}".
+                Você deve traduzir cada palavra/conceito para o japonês natural adequado ao tema: "${tema}".
+                Nível de dificuldade máximo: ${jlpt || 'N5'}.
+                
+                Você deve classificar cada termo sugerido em uma das categorias já existentes se for semanticamente compatível. As categorias existentes são: [${(categoriasExistentes || []).join(', ')}].
+                Se nenhum termo for compatível com as existentes, crie uma nova categoria sugerida apropriada (em português, sem tags html ou ruby).
+                
+                Gere pelo menos os termos solicitados pelo usuário. Se o usuário solicitou menos de ${quantidade || 3} palavras, você pode complementar com palavras altamente relacionadas ao tema e aos termos enviados até atingir pelo menos ${quantidade || 3} termos no total.
+                
+                Estrutura do JSON esperado:
+                {
+                    "novos_termos": [
+                        {
+                            "termo": "Kanji do termo (com ruby tags se houver Kanji)",
+                            "leitura": "Leitura em hiragana",
+                            "romaji": "Leitura em romaji",
+                            "traducao": "Tradução em português",
+                            "categoria_sugerida": "Nome da Categoria (uma das existentes ou nova se incompatível)"
+                        }
+                    ]
+                }`;
+
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                
+                // Persistência
+                if (sessionId && result && !result.error && Array.isArray(result.novos_termos)) {
+                    try {
+                        const responseGet = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}&select=guia_dados`, {
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario
+                            }
+                        });
+                        const resData = await responseGet.json();
+                        if (responseGet.ok && resData && resData[0]) {
+                            const currentGuia = resData[0].guia_dados || { regras: [], vocabulario_chave: [], frases_uteis: [] };
+                            
+                            let vocabArray = currentGuia.vocabulario_chave;
+                            let isLegacy = false;
+                            
+                            if (!vocabArray && currentGuia.vocabulario) {
+                                if (Array.isArray(currentGuia.vocabulario) && currentGuia.vocabulario.length > 0 && currentGuia.vocabulario[0].categoria) {
+                                    vocabArray = currentGuia.vocabulario;
+                                } else {
+                                    isLegacy = true;
+                                }
+                            }
+                            
+                            if (!vocabArray && !isLegacy) {
+                                vocabArray = [];
+                                currentGuia.vocabulario_chave = vocabArray;
+                            }
+                            
+                            result.novos_termos.forEach(term => {
+                                const catSugerida = term.categoria_sugerida || 'Geral';
+                                const itemJp = term.termo || '';
+                                const leitura = term.leitura || '';
+                                const romaji = term.romaji || '';
+                                const traducao = term.traducao || '';
+                                
+                                if (isLegacy) {
+                                    if (!Array.isArray(currentGuia.vocabulario)) {
+                                        currentGuia.vocabulario = [];
+                                    }
+                                    if (!currentGuia.vocabulario.some(t => (t.termo || t.item) === itemJp)) {
+                                        currentGuia.vocabulario.push({
+                                            item: itemJp,
+                                            termo: itemJp,
+                                            leitura,
+                                            romaji,
+                                            significado: traducao,
+                                            traducao,
+                                            jlpt: jlpt || 'N5'
+                                        });
+                                    }
+                                } else {
+                                    let catObj = vocabArray.find(c => c.categoria === catSugerida);
+                                    if (!catObj) {
+                                        catObj = { categoria: catSugerida, termos: [] };
+                                        vocabArray.push(catObj);
+                                    }
+                                    if (!catObj.termos) {
+                                        catObj.termos = [];
+                                    }
+                                    if (!catObj.termos.some(t => (t.termo || t.item) === itemJp)) {
+                                        catObj.termos.push({
+                                            termo: itemJp,
+                                            item: itemJp,
+                                            leitura,
+                                            romaji,
+                                            traducao,
+                                            significado: traducao,
+                                            jlpt: jlpt || 'N5'
+                                        });
+                                    }
+                                }
+                            });
+                            
+                            if (!isLegacy) {
+                                currentGuia.vocabulario_chave = vocabArray;
+                            }
+                            
+                            await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}`, {
+                                method: 'PATCH',
+                                headers: {
+                                    "apikey": SUPABASE_KEY,
+                                    "Authorization": tokenUsuario,
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({ guia_dados: currentGuia })
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Erro ao persistir novos termos (personalizados) no Supabase:", e);
+                    }
+                }
+                return res.status(200).json(result);
+            }
+
             case 'gerar_traducao':
                 const novaFrase = body.novaFrase === true || body.forceNew === true || body.ignorar_cache === true;
                 if (sessionId && !novaFrase) {

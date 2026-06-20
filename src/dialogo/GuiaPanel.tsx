@@ -5,12 +5,14 @@ import DraggableCard from './components/DraggableCard';
 import AiLoader from './components/AiLoader';
 import AiFallbackPopup from './components/AiFallbackPopup';
 import PhraseCard from './components/PhraseCard';
+import AdvancedAddModal from './components/AdvancedAddModal';
 
 interface GuiaPanelProps {
     context: any;
     session?: any;
     onNext: () => void;
     onBack: () => void;
+    onUpdateContext: (newData: any) => void;
 }
 
 const normalizarVocabulario = (vocab: any) => {
@@ -19,7 +21,7 @@ const normalizarVocabulario = (vocab: any) => {
     return [{ categoria: "Vocabulário Geral", termos: vocab }];
 };
 
-export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPanelProps) {
+export default function GuiaPanel({ context, session, onNext, onBack, onUpdateContext }: GuiaPanelProps) {
     const [loading, setLoading] = useState(true);
     const [dados, setDados] = useState<any>(null);
     const [activeCards, setActiveCards] = useState<any[]>([]);
@@ -27,6 +29,8 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
     const [fallbackOpen, setFallbackOpen] = useState(false);
     const [fallbackError, setFallbackError] = useState('');
     const [isVocabOpen, setIsVocabOpen] = useState(true);
+    const [isGeneratingLote, setIsGeneratingLote] = useState(false);
+    const [isAdvancedModalOpen, setIsAdvancedModalOpen] = useState(false);
 
     const [activeCategory, setActiveCategory] = useState('Todos');
     const [searchQuery, setSearchQuery] = useState('');
@@ -170,8 +174,7 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
                     tema: context.tema,
                     jlpt: context.jlpt,
                     vocabulario: context.vocabularioBanco || [],
-                    sessionId: context.sessionId,
-                    sugestoesPalavras: context.sugestoesPalavras
+                    sessionId: context.sessionId
                 })
             });
 
@@ -208,6 +211,182 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
             });
         } catch (e) {
             console.error(e);
+        }
+    };
+
+    const atualizarEstadoVocabulario = (novosTermos: any[]) => {
+        setDados((prev: any) => {
+            if (!prev) return prev;
+            const newDados = { ...prev };
+            
+            let vocabArray = newDados.vocabulario_chave;
+            let isLegacy = false;
+            
+            if (!vocabArray && newDados.vocabulario) {
+                if (Array.isArray(newDados.vocabulario) && newDados.vocabulario.length > 0 && newDados.vocabulario[0].categoria) {
+                    vocabArray = newDados.vocabulario;
+                } else {
+                    isLegacy = true;
+                }
+            }
+            
+            if (!vocabArray && !isLegacy) {
+                vocabArray = [];
+                newDados.vocabulario_chave = vocabArray;
+            }
+            
+            novosTermos.forEach((nt: any) => {
+                const itemJp = nt.termo || nt.item || '';
+                const leitura = nt.leitura || '';
+                const romaji = nt.romaji || '';
+                const traducao = nt.traducao || nt.significado || '';
+                const catSugerida = nt.categoria_sugerida || 'Geral';
+                
+                if (isLegacy) {
+                    if (!Array.isArray(newDados.vocabulario)) {
+                        newDados.vocabulario = [];
+                    }
+                    if (!newDados.vocabulario.some((x: any) => (x.item || x.termo) === itemJp)) {
+                        newDados.vocabulario.push({
+                            item: itemJp,
+                            termo: itemJp,
+                            leitura,
+                            romaji,
+                            significado: traducao,
+                            traducao,
+                            jlpt: context.jlpt || 'N5'
+                        });
+                    }
+                } else {
+                    let catObj = vocabArray.find((c: any) => c.categoria === catSugerida);
+                    if (!catObj) {
+                        catObj = { categoria: catSugerida, termos: [] };
+                        vocabArray.push(catObj);
+                    }
+                    if (!catObj.termos) {
+                        catObj.termos = [];
+                    }
+                    if (!catObj.termos.some((t: any) => (t.termo || t.item) === itemJp)) {
+                        catObj.termos.push({
+                            termo: itemJp,
+                            item: itemJp,
+                            leitura,
+                            romaji,
+                            traducao,
+                            significado: traducao,
+                            jlpt: context.jlpt || 'N5'
+                        });
+                    }
+                }
+            });
+            
+            if (!isLegacy) {
+                newDados.vocabulario_chave = vocabArray;
+            }
+            
+            return newDados;
+        });
+
+        const normalizedNewTerms = novosTermos.map(nt => ({
+            item: nt.termo || nt.item || '',
+            leitura: nt.leitura || '',
+            significado: nt.traducao || nt.significado || '',
+            jlpt: context.jlpt || 'N5',
+            conjuntos: ['Geral'],
+            baralhos: ['Geral'],
+            campos_anki: {},
+            notas: ''
+        }));
+        
+        if (onUpdateContext) {
+            onUpdateContext({
+                vocabularioBanco: [...(context.vocabularioBanco || []), ...normalizedNewTerms]
+            });
+        }
+    };
+
+    const handleGerarLote = async () => {
+        if (isGeneratingLote) return;
+        setIsGeneratingLote(true);
+        try {
+            const blacklist = allTerms.map((t: any) => t.termo || t.item).filter(Boolean);
+            
+            const res = await fetch('/api/dialogo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    acao: 'gerar_vocabulario_lote',
+                    tema: context.tema,
+                    jlpt: context.jlpt,
+                    blacklist,
+                    sessionId: context.sessionId,
+                    categoriaAlvo: activeCategory === 'Todos' ? 'Geral' : activeCategory,
+                    provider: context.provider || 'gemini'
+                })
+            });
+            
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.message || errData.error || `HTTP error ${res.status}`);
+            }
+            
+            const data = await res.json();
+            if (data.novos_termos && Array.isArray(data.novos_termos)) {
+                atualizarEstadoVocabulario(data.novos_termos);
+            } else {
+                throw new Error("Resposta inválida da IA.");
+            }
+        } catch (e: any) {
+            console.error("Erro ao gerar vocabulário em lote", e);
+            alert(`Erro ao gerar palavras: ${e.message || e}`);
+        } finally {
+            setIsGeneratingLote(false);
+        }
+    };
+
+    const handleAdvancedGenerate = async (textoPalavras: string, quantidade: number) => {
+        setIsAdvancedModalOpen(false);
+        setIsGeneratingLote(true);
+        try {
+            const categoriasExistentes = uniqueCategories.filter(c => c !== 'Todos');
+            
+            const res = await fetch('/api/dialogo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    acao: 'processar_personalizadas',
+                    tema: context.tema,
+                    jlpt: context.jlpt,
+                    texto: textoPalavras,
+                    categoriasExistentes,
+                    sessionId: context.sessionId,
+                    quantidade,
+                    provider: context.provider || 'gemini'
+                })
+            });
+            
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.message || errData.error || `HTTP error ${res.status}`);
+            }
+            
+            const data = await res.json();
+            if (data.novos_termos && Array.isArray(data.novos_termos)) {
+                atualizarEstadoVocabulario(data.novos_termos);
+            } else {
+                throw new Error("Resposta inválida da IA.");
+            }
+        } catch (e: any) {
+            console.error("Erro ao processar palavras personalizadas", e);
+            alert(`Erro ao adicionar palavras: ${e.message || e}`);
+        } finally {
+            setIsGeneratingLote(false);
         }
     };
 
@@ -530,31 +709,82 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
                             {/* Card de Adição */}
                             {currentPage === 1 && (
                                 <div 
-                                    onClick={() => alert("Adicionar palavra personalizada estará disponível em breve!")}
                                     style={{
                                         display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        padding: '12px',
+                                        alignItems: 'stretch',
                                         background: 'transparent',
-                                        borderRadius: '8px',
+                                        borderRadius: '12px',
                                         border: '1px dashed var(--highlight-color)',
-                                        cursor: 'pointer',
                                         minHeight: '62px',
-                                        transition: 'background 0.2s'
-                                    }}
-                                    onMouseOver={(e) => {
-                                        e.currentTarget.style.background = 'rgba(230, 126, 34, 0.05)';
-                                    }}
-                                    onMouseOut={(e) => {
-                                        e.currentTarget.style.background = 'transparent';
+                                        overflow: 'hidden',
+                                        transition: 'all 0.2s ease',
+                                        boxSizing: 'border-box'
                                     }}
                                 >
-                                    <span style={{ color: 'var(--highlight-color)', fontWeight: 'bold', fontSize: '1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        ➕ Adicionar Nova Palavra
-                                    </span>
-                                    <span style={{ fontSize: '0.8em', color: 'gray', marginTop: '4px' }}>Insira um vocabulário customizado</span>
+                                    <button 
+                                        type="button"
+                                        onClick={handleGerarLote}
+                                        disabled={isGeneratingLote}
+                                        style={{
+                                            flex: 1,
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: 'var(--highlight-color)',
+                                            fontWeight: 'bold',
+                                            fontSize: '0.95em',
+                                            cursor: isGeneratingLote ? 'not-allowed' : 'pointer',
+                                            padding: '12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            transition: 'background 0.2s'
+                                        }}
+                                        onMouseOver={(e) => {
+                                            if (!isGeneratingLote) e.currentTarget.style.background = 'rgba(230, 126, 34, 0.05)';
+                                        }}
+                                        onMouseOut={(e) => {
+                                            e.currentTarget.style.background = 'transparent';
+                                        }}
+                                    >
+                                        {isGeneratingLote ? (
+                                            <>⏳ Gerando...</>
+                                        ) : (
+                                            <>✨ Gerar Palavras Aqui</>
+                                        )}
+                                    </button>
+                                    <div style={{ width: '1px', background: 'var(--border-color)' }} />
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAdvancedModalOpen(true)}
+                                        disabled={isGeneratingLote}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: 'var(--text-color)',
+                                            opacity: 0.7,
+                                            cursor: isGeneratingLote ? 'not-allowed' : 'pointer',
+                                            padding: '0 16px',
+                                            fontSize: '1.1em',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => {
+                                            if (!isGeneratingLote) {
+                                                e.currentTarget.style.background = 'rgba(0,0,0,0.03)';
+                                                e.currentTarget.style.opacity = '1';
+                                            }
+                                        }}
+                                        onMouseOut={(e) => {
+                                            e.currentTarget.style.background = 'transparent';
+                                            e.currentTarget.style.opacity = '0.7';
+                                        }}
+                                        title="Adição Avançada"
+                                    >
+                                        ⚙️
+                                    </button>
                                 </div>
                             )}
 
@@ -724,6 +954,14 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
                 }}
                 onCancel={() => setFallbackOpen(false)}
             />
+
+            {isAdvancedModalOpen && (
+                <AdvancedAddModal
+                    isOpen={isAdvancedModalOpen}
+                    onClose={() => setIsAdvancedModalOpen(false)}
+                    onGenerate={handleAdvancedGenerate}
+                />
+            )}
         </div>
     );
 }
