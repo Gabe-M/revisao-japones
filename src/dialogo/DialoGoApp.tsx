@@ -180,8 +180,60 @@ export default function DialoGoApp() {
         setMode('guia');
     };
 
+    const renderSubNav = () => {
+        if (mode === 'config') return null;
+        return (
+            <div 
+                className="dialogo-sub-nav"
+                style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '12px',
+                    marginBottom: '25px',
+                    background: 'var(--card-bg)',
+                    padding: '8px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: 'var(--shadow-subtle)',
+                    backdropFilter: 'blur(10px)',
+                    maxWidth: '800px',
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
+                    flexWrap: 'wrap'
+                }}
+            >
+                <button 
+                    onClick={() => setMode('config')} 
+                    style={{ opacity: 0.8 }}
+                >
+                    ⚙️ Configuração
+                </button>
+                <div style={{ width: '1px', background: 'var(--border-color)', margin: '4px 0' }} className="hidden sm:block" />
+                <button 
+                    onClick={() => setMode('guia')} 
+                    className={mode === 'guia' ? 'active' : ''}
+                >
+                    📖 Guia
+                </button>
+                <button 
+                    onClick={() => setMode('traducao')} 
+                    className={mode === 'traducao' ? 'active' : ''}
+                >
+                    ✍️ Praticar
+                </button>
+                <button 
+                    onClick={() => setMode('dialogo')} 
+                    className={mode === 'dialogo' ? 'active' : ''}
+                >
+                    💬 Diálogo
+                </button>
+            </div>
+        );
+    };
+
     return (
         <div style={{ paddingBottom: '60px' }}>
+            {renderSubNav()}
             {mode === 'config' && (
                 <ConfiguracaoPanel 
                     onStart={handleStart} 

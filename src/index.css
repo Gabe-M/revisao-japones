@@ -55,3 +55,31 @@
 .interactive-text-container *::-moz-selection {
   background-color: rgba(0, 120, 215, 0.4);
 }
+
+/* Sub-navegação do Diálogo */
+.dialogo-sub-nav button {
+  background: transparent;
+  color: var(--text-color);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dialogo-sub-nav button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .dialogo-sub-nav button:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dialogo-sub-nav button.active {
+  background: var(--highlight-color) !important;
+  color: white !important;
+}
