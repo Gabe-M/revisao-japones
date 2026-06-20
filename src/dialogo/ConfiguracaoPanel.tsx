@@ -12,6 +12,8 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
     const [conjuntoSelecionado, setConjuntoSelecionado] = useState('');
     const [useConjuntos, setUseConjuntos] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
+    const [sugestoesPalavras, setSugestoesPalavras] = useState('');
+    const [isSugestoesFocused, setIsSugestoesFocused] = useState(false);
 
     // Novos estados para baralhos e filtros SRS
     const [bancoTipo, setBancoTipo] = useState<'conjuntos' | 'baralhos' | 'ambos'>('conjuntos');
@@ -80,9 +82,21 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                 if (conf.conjuntoSelecionado) setConjuntoSelecionado(conf.conjuntoSelecionado);
                 if (conf.baralhoSelecionado) setBaralhoSelecionado(conf.baralhoSelecionado);
                 if (conf.srsFiltro) setSrsFiltro(conf.srsFiltro);
+                if (conf.sugestoesPalavras !== undefined) {
+                    setSugestoesPalavras(conf.sugestoesPalavras || '');
+                } else {
+                    setSugestoesPalavras('');
+                }
             }
         }
     }, [sessaoSelecionadaId, sessoesExistentes]);
+
+    useEffect(() => {
+        if (tipoExibicaoSessao === 'nova') {
+            setTema('');
+            setSugestoesPalavras('');
+        }
+    }, [tipoExibicaoSessao]);
 
     const carregarDadosBanco = async () => {
         if (!session) return;
@@ -175,7 +189,8 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
             provider: selectedProvider,
             criarNovaSessao: session ? (tipoExibicaoSessao === 'nova') : false,
             nomeSessao: nomeSessao || tema,
-            sessionId: session ? (tipoExibicaoSessao === 'existente' ? sessaoSelecionadaId : null) : null
+            sessionId: session ? (tipoExibicaoSessao === 'existente' ? sessaoSelecionadaId : null) : null,
+            sugestoesPalavras: sugestoesPalavras
         });
     };
 
@@ -408,6 +423,37 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                         </button>
                     ))}
                 </div>
+            </div>
+
+            <div style={{ marginBottom: '25px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-color)', fontSize: '0.95em' }}>
+                    📝 Palavras Específicas Desejadas (Opcional):
+                </label>
+                <input 
+                    type="text" 
+                    value={sugestoesPalavras} 
+                    onChange={e => setSugestoesPalavras(e.target.value)} 
+                    onFocus={() => setIsSugestoesFocused(true)}
+                    onBlur={() => setIsSugestoesFocused(false)}
+                    placeholder="Ex: 車, 食べる, amigo, aeroporto... (deixe em branco para a IA escolher tudo)"
+                    disabled={tipoExibicaoSessao === 'existente'}
+                    style={{ 
+                        width: '100%', 
+                        padding: '14px 18px', 
+                        borderRadius: '12px', 
+                        border: isSugestoesFocused ? '2px solid var(--highlight-color)' : '2px solid var(--border-color)', 
+                        background: 'var(--bg-color)', 
+                        color: 'var(--text-color)', 
+                        fontSize: '1.05em',
+                        boxSizing: 'border-box', 
+                        outline: 'none', 
+                        transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                        boxShadow: isSugestoesFocused ? '0 0 0 4px rgba(230, 126, 34, 0.15)' : 'none',
+                        transform: isSugestoesFocused ? 'translateY(-2px)' : 'none',
+                        cursor: tipoExibicaoSessao === 'existente' ? 'not-allowed' : 'text',
+                        opacity: tipoExibicaoSessao === 'existente' ? 0.7 : 1
+                    }}
+                />
             </div>
 
             <div style={{ marginBottom: '25px' }}>

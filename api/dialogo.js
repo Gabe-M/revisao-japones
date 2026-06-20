@@ -352,7 +352,8 @@ export default async function handler(req, res) {
                     return res.status(500).json({ error: "Erro ao criar sessão", message: err.message });
                 }
 
-            case 'gerar_guia':
+            case 'gerar_guia': {
+                const { sugestoesPalavras } = body;
                 if (sessionId) {
                     try {
                         const responseGet = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}&select=guia_dados`, {
@@ -374,6 +375,7 @@ export default async function handler(req, res) {
                 prompt = `Gere um guia de estudos em japonês para o tema: "${tema}".
                 ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
                 ${vocabulario && vocabulario.length > 0 ? `Palavras que devem ser priorizadas ou incluídas se possível: ${selectContextualVocab(vocabulario, tema, null, null, 20).join(', ')}` : ''}
+                ${sugestoesPalavras ? `CRÍTICO: O usuário solicitou prioridade ou foco nos seguintes conceitos/termos: "${sugestoesPalavras}". Você deve analisar cada termo fornecido (mesmo que escrito em português, inglês, romaji ou kanji direto), identificar seu significado pretendido e convertê-lo para o vocabulário em japonês natural equivalente. Integre esses conceitos convertidos dentro do array de categorias do 'vocabulario_chave' ou use-os como base de construção em 'frases_uteis', aplicando estritamente as tags <ruby> nos Kanjis correspondentes.` : 'Escolha livremente os vocabulários mais adequados para o tema.'}
                 
                 Estrutura do JSON esperado:
                 {
@@ -419,6 +421,7 @@ export default async function handler(req, res) {
                     }
                 }
                 return res.status(200).json(result);
+            }
 
             case 'gerar_traducao':
                 const novaFrase = body.novaFrase === true || body.forceNew === true || body.ignorar_cache === true;

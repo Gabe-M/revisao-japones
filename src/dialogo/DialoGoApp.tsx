@@ -14,6 +14,7 @@ export interface DialogoContextData {
     vocabularioBanco: any[];
     provider: 'gemini' | 'openai' | 'groq' | 'pollinations';
     sessionId?: string | null;
+    sugestoesPalavras?: string | null;
     traducaoDados?: {
         frase: any;
         resposta: string;
@@ -35,6 +36,7 @@ export default function DialoGoApp() {
         vocabularioBanco: [],
         provider: 'gemini',
         sessionId: null,
+        sugestoesPalavras: null,
         traducaoDados: null,
         dialogoDados: null
     });
@@ -197,7 +199,8 @@ export default function DialoGoApp() {
                             bancoTipo: config.bancoTipo,
                             conjuntoSelecionado: config.conjuntoSelecionado,
                             baralhoSelecionado: config.baralhoSelecionado,
-                            srsFiltro: config.srsFiltro
+                            srsFiltro: config.srsFiltro,
+                            sugestoesPalavras: config.sugestoesPalavras
                         }
                     })
                 });
@@ -219,6 +222,7 @@ export default function DialoGoApp() {
             provider: config.provider || 'gemini',
             conjuntos: config.useBanco ? (config.bancoTipo === 'conjuntos' || config.bancoTipo === 'ambos' ? [config.conjuntoSelecionado] : []) : [],
             sessionId: activeSessionId,
+            sugestoesPalavras: config.sugestoesPalavras || null,
             traducaoDados: null,
             dialogoDados: null
         }));

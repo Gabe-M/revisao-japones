@@ -170,7 +170,8 @@ export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPane
                     tema: context.tema,
                     jlpt: context.jlpt,
                     vocabulario: context.vocabularioBanco || [],
-                    sessionId: context.sessionId
+                    sessionId: context.sessionId,
+                    sugestoesPalavras: context.sugestoesPalavras
                 })
             });
 
