@@ -7,11 +7,12 @@ import AiFallbackPopup from './components/AiFallbackPopup';
 
 interface GuiaPanelProps {
     context: any;
+    session?: any;
     onNext: () => void;
     onBack: () => void;
 }
 
-export default function GuiaPanel({ context, onNext, onBack }: GuiaPanelProps) {
+export default function GuiaPanel({ context, session, onNext, onBack }: GuiaPanelProps) {
     const [loading, setLoading] = useState(true);
     const [dados, setDados] = useState<any>(null);
     const [activeCards, setActiveCards] = useState<any[]>([]);
@@ -121,6 +122,9 @@ export default function GuiaPanel({ context, onNext, onBack }: GuiaPanelProps) {
             if (userKey) {
                 headers['X-Gemini-Key'] = userKey;
             }
+            if (session?.access_token) {
+                headers['Authorization'] = `Bearer ${session.access_token}`;
+            }
 
             const res = await fetch('/api/dialogo', {
                 method: 'POST',
@@ -130,7 +134,8 @@ export default function GuiaPanel({ context, onNext, onBack }: GuiaPanelProps) {
                     acao: 'gerar_guia',
                     tema: context.tema,
                     jlpt: context.jlpt,
-                    vocabulario: context.vocabularioBanco || []
+                    vocabulario: context.vocabularioBanco || [],
+                    sessionId: context.sessionId
                 })
             });
 

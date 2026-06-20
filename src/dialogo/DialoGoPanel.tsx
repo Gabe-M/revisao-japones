@@ -8,10 +8,12 @@ import AjudaModal from './components/AjudaModal';
 
 interface DialoGoPanelProps {
     context: any;
+    session?: any;
     onBack: () => void;
+    onUpdateContext: (data: Partial<any>) => void;
 }
 
-export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
+export default function DialoGoPanel({ context, session, onBack, onUpdateContext }: DialoGoPanelProps) {
     const [loading, setLoading] = useState(true);
     const [contextoDialogo, setContextoDialogo] = useState('');
     const [historico, setHistorico] = useState<any[]>([]);
@@ -27,17 +29,43 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
+    const stateRef = useRef({ contextoDialogo, historico, inputUser });
     useEffect(() => {
-        iniciarDialogo(context.provider);
-        
-        // Ativar wanakana se o input existir
-        if (inputRef.current) {
-            wanakana.bind(inputRef.current);
+        stateRef.current = { contextoDialogo, historico, inputUser };
+    }, [contextoDialogo, historico, inputUser]);
+
+    useEffect(() => {
+        if (context.dialogoDados) {
+            setContextoDialogo(context.dialogoDados.contexto || '');
+            setHistorico(context.dialogoDados.historico || []);
+            setInputUser(context.dialogoDados.inputUser || '');
+            setLoading(false);
+        } else {
+            iniciarDialogo(context.provider);
         }
+
         return () => {
-            if (inputRef.current) wanakana.unbind(inputRef.current);
+            onUpdateContext({
+                dialogoDados: {
+                    contexto: stateRef.current.contextoDialogo,
+                    historico: stateRef.current.historico,
+                    inputUser: stateRef.current.inputUser
+                }
+            });
         };
     }, []);
+
+    useEffect(() => {
+        const inputEl = inputRef.current;
+        if (!loading && inputEl) {
+            wanakana.bind(inputEl);
+        }
+        return () => {
+            if (inputEl) {
+                wanakana.unbind(inputEl);
+            }
+        };
+    }, [loading]);
 
     useEffect(() => {
         // Auto scroll to bottom
@@ -53,6 +81,9 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
             if (userKey) {
                 headers['X-Gemini-Key'] = userKey;
             }
+            if (session?.access_token) {
+                headers['Authorization'] = `Bearer ${session.access_token}`;
+            }
 
             const res = await fetch('/api/dialogo', {
                 method: 'POST',
@@ -62,7 +93,8 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                     acao: 'iniciar_dialogo',
                     tema: context.tema,
                     jlpt: context.jlpt,
-                    vocabulario: context.vocabularioBanco || []
+                    vocabulario: context.vocabularioBanco || [],
+                    sessionId: context.sessionId
                 })
             });
 
@@ -74,14 +106,18 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
             const data = await res.json();
             
             setContextoDialogo(data.contexto);
-            setHistorico([
-                {
-                    role: 'assistant',
-                    jp: data.mensagem_ia_jp,
-                    pt: data.mensagem_ia_pt,
-                    content: data.mensagem_ia_jp
-                }
-            ]);
+            if (data.historico && data.historico.length > 0) {
+                setHistorico(data.historico);
+            } else {
+                setHistorico([
+                    {
+                        role: 'assistant',
+                        jp: data.mensagem_ia_jp,
+                        pt: data.mensagem_ia_pt,
+                        content: data.mensagem_ia_jp
+                    }
+                ]);
+            }
         } catch (e: any) {
             console.error(e);
             if (targetProvider === 'gemini') {
@@ -119,6 +155,9 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
             if (userKey) {
                 headers['X-Gemini-Key'] = userKey;
             }
+            if (session?.access_token) {
+                headers['Authorization'] = `Bearer ${session.access_token}`;
+            }
 
             const res = await fetch('/api/dialogo', {
                 method: 'POST',
@@ -130,7 +169,8 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
                     resposta_usuario_jp: textoJp,
                     tema: context.tema,
                     jlpt: context.jlpt,
-                    vocabulario: context.vocabularioBanco || []
+                    vocabulario: context.vocabularioBanco || [],
+                    sessionId: context.sessionId
                 })
             });
 
@@ -141,20 +181,24 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
 
             const data = await res.json();
 
-            // Atualiza a ultima msg do user com a analise
-            const updateHistorico = [...novoHistorico];
-            updateHistorico[updateHistorico.length - 1].analise = data.analise;
-            updateHistorico[updateHistorico.length - 1].score = data.score;
-            
-            // Adiciona a resposta da IA
-            updateHistorico.push({
-                role: 'assistant',
-                jp: data.mensagem_ia_jp,
-                pt: data.mensagem_ia_pt,
-                content: data.mensagem_ia_jp
-            });
-            
-            setHistorico(updateHistorico);
+            if (data.historico && data.historico.length > 0) {
+                setHistorico(data.historico);
+            } else {
+                // Atualiza a ultima msg do user com a analise
+                const updateHistorico = [...novoHistorico];
+                updateHistorico[updateHistorico.length - 1].analise = data.analise;
+                updateHistorico[updateHistorico.length - 1].score = data.score;
+                
+                // Adiciona a resposta da IA
+                updateHistorico.push({
+                    role: 'assistant',
+                    jp: data.mensagem_ia_jp,
+                    pt: data.mensagem_ia_pt,
+                    content: data.mensagem_ia_jp
+                });
+                
+                setHistorico(updateHistorico);
+            }
         } catch (error: any) {
             console.error(error);
             if (targetProvider === 'gemini') {
@@ -171,9 +215,9 @@ export default function DialoGoPanel({ context, onBack }: DialoGoPanelProps) {
     };
 
     const tocarAudio = (texto: string) => {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = texto;
-        const textoPuro = tempDiv.textContent || tempDiv.innerText || "";
+        const textoPuro = texto
+            .replace(/<rt>.*?<\/rt>/g, '')
+            .replace(/<[^>]*>/g, '');
         
         const utterance = new SpeechSynthesisUtterance(textoPuro);
         utterance.lang = 'ja-JP';

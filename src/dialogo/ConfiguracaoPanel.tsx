@@ -20,13 +20,69 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
     const [srsFiltro, setSrsFiltro] = useState<'Todos' | 'Aprendidos' | 'Novos'>('Todos');
     const [selectedProvider, setSelectedProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>('gemini');
 
+    // Estados de sessões
+    const [tipoExibicaoSessao, setTipoExibicaoSessao] = useState<'nova' | 'existente'>('nova');
+    const [nomeSessao, setNomeSessao] = useState('');
+    const [sessoesExistentes, setSessoesExistentes] = useState<any[]>([]);
+    const [sessaoSelecionadaId, setSessaoSelecionadaId] = useState('');
+    const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+
     const temasRapidos = ['Me apresentar', 'Fazer compras', 'Pedir direções', 'No restaurante', 'Em uma entrevista'];
 
     useEffect(() => {
         if (session) {
             carregarDadosBanco();
+            carregarSessoes();
+        } else {
+            setIsLoadingSessions(false);
         }
     }, [session]);
+
+    const carregarSessoes = async () => {
+        if (!session) {
+            setIsLoadingSessions(false);
+            return;
+        }
+        setIsLoadingSessions(true);
+        try {
+            const res = await fetch('/api/dialogo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ acao: 'listar_sessoes' })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setSessoesExistentes(data || []);
+                if (data && data.length > 0) {
+                    setSessaoSelecionadaId(data[0].id);
+                }
+            }
+        } catch (e) {
+            console.error("Erro ao carregar sessões:", e);
+        } finally {
+            setIsLoadingSessions(false);
+        }
+    };
+
+    useEffect(() => {
+        if (sessaoSelecionadaId) {
+            const selected = sessoesExistentes.find(s => s.id === sessaoSelecionadaId);
+            if (selected && selected.config) {
+                const conf = selected.config;
+                if (conf.tema) setTema(conf.tema);
+                if (conf.jlpt) setJlpt(conf.jlpt || 'N5');
+                if (conf.provider) setSelectedProvider(conf.provider || 'gemini');
+                if (conf.useBanco !== undefined) setUseConjuntos(conf.useBanco);
+                if (conf.bancoTipo) setBancoTipo(conf.bancoTipo);
+                if (conf.conjuntoSelecionado) setConjuntoSelecionado(conf.conjuntoSelecionado);
+                if (conf.baralhoSelecionado) setBaralhoSelecionado(conf.baralhoSelecionado);
+                if (conf.srsFiltro) setSrsFiltro(conf.srsFiltro);
+            }
+        }
+    }, [sessaoSelecionadaId, sessoesExistentes]);
 
     const carregarDadosBanco = async () => {
         if (!session) return;
@@ -99,10 +155,15 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
     };
 
     const handleStart = () => {
-        if (!tema.trim()) {
+        if (tipoExibicaoSessao === 'nova' && !tema.trim()) {
             alert('Por favor, digite ou selecione um tema.');
             return;
         }
+        if (tipoExibicaoSessao === 'existente' && !sessaoSelecionadaId) {
+            alert('Por favor, selecione uma sessão existente.');
+            return;
+        }
+
         onStart({
             tema,
             useBanco: useConjuntos,
@@ -111,7 +172,10 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
             baralhoSelecionado: baralhoSelecionado || 'Geral',
             srsFiltro,
             jlpt: useConjuntos ? null : jlpt,
-            provider: selectedProvider
+            provider: selectedProvider,
+            criarNovaSessao: session ? (tipoExibicaoSessao === 'nova') : false,
+            nomeSessao: nomeSessao || tema,
+            sessionId: session ? (tipoExibicaoSessao === 'existente' ? sessaoSelecionadaId : null) : null
         });
     };
 
@@ -143,6 +207,139 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
             }}>
                 💬 Configurar Diálogo
             </h2>
+
+            {/* Escolha de Sessão */}
+            {session && (
+                <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <label style={{ display: 'block', fontWeight: 'bold', color: 'var(--text-color)', fontSize: '0.95em' }}>
+                        Modo de Sessão:
+                    </label>
+                    <div style={{
+                        display: 'flex',
+                        background: 'rgba(0, 0, 0, 0.03)',
+                        borderRadius: '24px',
+                        padding: '4px',
+                        gap: '4px',
+                        border: '1px solid var(--border-color)',
+                        width: '100%',
+                        boxSizing: 'border-box'
+                    }}>
+                        <button 
+                            type="button"
+                            onClick={() => setTipoExibicaoSessao('nova')} 
+                            style={{
+                                flex: 1,
+                                padding: '10px 16px',
+                                fontSize: '0.92em',
+                                fontWeight: 700,
+                                border: 'none',
+                                borderRadius: '20px',
+                                cursor: 'pointer',
+                                background: tipoExibicaoSessao === 'nova' ? 'var(--card-bg)' : 'transparent',
+                                color: 'var(--text-color)',
+                                opacity: tipoExibicaoSessao === 'nova' ? 1 : 0.6,
+                                boxShadow: tipoExibicaoSessao === 'nova' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
+                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            ➕ Nova Sessão
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setTipoExibicaoSessao('existente')} 
+                            style={{
+                                flex: 1,
+                                padding: '10px 16px',
+                                fontSize: '0.92em',
+                                fontWeight: 700,
+                                border: 'none',
+                                borderRadius: '20px',
+                                cursor: 'pointer',
+                                background: tipoExibicaoSessao === 'existente' ? 'var(--card-bg)' : 'transparent',
+                                color: 'var(--text-color)',
+                                opacity: tipoExibicaoSessao === 'existente' ? 1 : 0.6,
+                                boxShadow: tipoExibicaoSessao === 'existente' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
+                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            📂 Sessão Existente
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {tipoExibicaoSessao === 'existente' && session && (
+                <div style={{ marginBottom: '25px' }}>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-color)', fontSize: '0.95em' }}>
+                        Selecione a Sessão:
+                    </label>
+                    <select 
+                        value={sessaoSelecionadaId} 
+                        onChange={e => setSessaoSelecionadaId(e.target.value)}
+                        disabled={isLoadingSessions}
+                        style={{ 
+                            width: '100%', 
+                            padding: '14px 18px', 
+                            borderRadius: '12px', 
+                            background: 'var(--bg-color)', 
+                            color: 'var(--text-color)', 
+                            border: '2px solid var(--border-color)', 
+                            fontSize: '1.05em',
+                            fontWeight: '600',
+                            outline: 'none',
+                            cursor: isLoadingSessions ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s ease',
+                            boxShadow: 'var(--shadow-subtle)'
+                        }}
+                    >
+                        {isLoadingSessions ? (
+                            <option>Carregando sessões...</option>
+                        ) : sessoesExistentes.length === 0 ? (
+                            <option value="">Nenhuma sessão encontrada</option>
+                        ) : (
+                            sessoesExistentes.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    {s.nome} ({s.config?.tema || s.tema}) - {new Date(s.created_at).toLocaleDateString()}
+                                </option>
+                            ))
+                        )}
+                    </select>
+                </div>
+            )}
+
+            {tipoExibicaoSessao === 'nova' && session && (
+                <div style={{ marginBottom: '25px' }}>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-color)', fontSize: '0.95em' }}>
+                        Nome da Sessão (Opcional):
+                    </label>
+                    <input 
+                        type="text" 
+                        value={nomeSessao} 
+                        onChange={e => setNomeSessao(e.target.value)} 
+                        placeholder="Ex: Minha conversa no restaurante"
+                        style={{ 
+                            width: '100%', 
+                            padding: '14px 18px', 
+                            borderRadius: '12px', 
+                            border: '2px solid var(--border-color)', 
+                            background: 'var(--bg-color)', 
+                            color: 'var(--text-color)', 
+                            fontSize: '1.05em',
+                            boxSizing: 'border-box', 
+                            outline: 'none', 
+                            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
+                        }}
+                    />
+                </div>
+            )}
             
             <div style={{ marginBottom: '25px' }}>
                 <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-color)', fontSize: '0.95em' }}>
@@ -155,6 +352,7 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
                     placeholder="Ex: Como pedir comida num restaurante..."
+                    disabled={tipoExibicaoSessao === 'existente'}
                     style={{ 
                         width: '100%', 
                         padding: '14px 18px', 
@@ -167,7 +365,9 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                         outline: 'none', 
                         transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
                         boxShadow: isFocused ? '0 0 0 4px rgba(230, 126, 34, 0.15)' : 'none',
-                        transform: isFocused ? 'translateY(-2px)' : 'none'
+                        transform: isFocused ? 'translateY(-2px)' : 'none',
+                        cursor: tipoExibicaoSessao === 'existente' ? 'not-allowed' : 'text',
+                        opacity: tipoExibicaoSessao === 'existente' ? 0.7 : 1
                     }}
                 />
                 <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -176,18 +376,20 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                             key={t} 
                             type="button"
                             onClick={() => setTema(t)}
+                            disabled={tipoExibicaoSessao === 'existente'}
                             style={{ 
                                 padding: '8px 16px', 
                                 borderRadius: '20px', 
                                 border: '1px solid var(--border-color)', 
                                 background: tema === t ? 'var(--highlight-color)' : 'transparent', 
                                 color: tema === t ? '#fff' : 'var(--text-color)', 
-                                cursor: 'pointer',
+                                cursor: tipoExibicaoSessao === 'existente' ? 'not-allowed' : 'pointer',
                                 fontWeight: '600',
                                 fontSize: '0.88em',
                                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                                 boxShadow: tema === t ? '0 4px 10px rgba(230, 126, 34, 0.3)' : 'none',
-                                transform: tema === t ? 'scale(1.03)' : 'scale(1)'
+                                transform: tema === t ? 'scale(1.03)' : 'scale(1)',
+                                opacity: tipoExibicaoSessao === 'existente' ? 0.5 : 1
                             }}
                             onMouseOver={(e) => {
                                 if (tema !== t) {
@@ -651,34 +853,40 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
 
             <button 
                 onClick={handleStart}
+                disabled={isLoadingSessions && !!session}
                 style={{ 
                     width: '100%', 
                     padding: '16px', 
                     borderRadius: '12px', 
                     border: 'none', 
-                    background: 'linear-gradient(135deg, var(--highlight-color) 0%, #d35400 100%)', 
+                    background: isLoadingSessions && !!session ? 'gray' : 'linear-gradient(135deg, var(--highlight-color) 0%, #d35400 100%)', 
                     color: '#fff', 
                     fontSize: '1.15em', 
                     fontWeight: '800', 
-                    cursor: 'pointer',
+                    cursor: isLoadingSessions && !!session ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: '0 4px 15px rgba(230, 126, 34, 0.3)',
+                    boxShadow: isLoadingSessions && !!session ? 'none' : '0 4px 15px rgba(230, 126, 34, 0.3)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    marginTop: '15px'
+                    marginTop: '15px',
+                    opacity: isLoadingSessions && !!session ? 0.6 : 1
                 }}
                 onMouseOver={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 8px 25px rgba(230, 126, 34, 0.45)';
+                    if (!(isLoadingSessions && !!session)) {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 8px 25px rgba(230, 126, 34, 0.45)';
+                    }
                 }}
                 onMouseOut={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(230, 126, 34, 0.3)';
+                    if (!(isLoadingSessions && !!session)) {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(230, 126, 34, 0.3)';
+                    }
                 }}
             >
-                🚀 Iniciar Diálogo
+                {isLoadingSessions && !!session ? '⏳ Carregando Sessões...' : '🚀 Iniciar Diálogo'}
             </button>
         </div>
     );

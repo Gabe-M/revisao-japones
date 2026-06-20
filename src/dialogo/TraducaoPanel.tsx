@@ -6,11 +6,13 @@ import AiFallbackPopup from './components/AiFallbackPopup';
 
 interface TraducaoPanelProps {
     context: any;
+    session?: any;
     onNext: () => void;
     onBack: () => void;
+    onUpdateContext: (data: Partial<any>) => void;
 }
 
-export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanelProps) {
+export default function TraducaoPanel({ context, session, onNext, onBack, onUpdateContext }: TraducaoPanelProps) {
     const [loading, setLoading] = useState(true);
     const [frase, setFrase] = useState<any>(null);
     const [resposta, setResposta] = useState('');
@@ -21,11 +23,33 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
     const [fallbackError, setFallbackError] = useState('');
     const [pendingAction, setPendingAction] = useState<'carregar' | 'analisar' | null>(null);
 
+    const stateRef = React.useRef({ frase, resposta, analise });
     useEffect(() => {
-        carregarFrase(context.provider);
+        stateRef.current = { frase, resposta, analise };
+    }, [frase, resposta, analise]);
+
+    useEffect(() => {
+        if (context.traducaoDados) {
+            setFrase(context.traducaoDados.frase);
+            setResposta(context.traducaoDados.resposta || '');
+            setAnalise(context.traducaoDados.analise || null);
+            setLoading(false);
+        } else {
+            carregarFrase(context.provider, false);
+        }
+
+        return () => {
+            onUpdateContext({
+                traducaoDados: {
+                    frase: stateRef.current.frase,
+                    resposta: stateRef.current.resposta,
+                    analise: stateRef.current.analise
+                }
+            });
+        };
     }, []);
 
-    const carregarFrase = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini') => {
+    const carregarFrase = async (targetProvider: 'gemini' | 'openai' | 'groq' | 'pollinations' = 'gemini', isNew: boolean = false) => {
         setLoading(true);
         setProvider(targetProvider);
         setAnalise(null);
@@ -36,6 +60,9 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
             if (userKey) {
                 headers['X-Gemini-Key'] = userKey;
             }
+            if (session?.access_token) {
+                headers['Authorization'] = `Bearer ${session.access_token}`;
+            }
 
             const res = await fetch('/api/dialogo', {
                 method: 'POST',
@@ -45,7 +72,9 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                     acao: 'gerar_traducao',
                     tema: context.tema,
                     jlpt: context.jlpt,
-                    vocabulario: context.vocabularioBanco || []
+                    vocabulario: context.vocabularioBanco || [],
+                    sessionId: context.sessionId,
+                    novaFrase: isNew
                 })
             });
 
@@ -56,6 +85,12 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
 
             const data = await res.json();
             setFrase(data);
+            if (data.resposta_aluno) {
+                setResposta(data.resposta_aluno);
+            }
+            if (data.analise) {
+                setAnalise(data.analise);
+            }
         } catch (e: any) {
             console.error(e);
             if (targetProvider === 'gemini') {
@@ -79,6 +114,9 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
             if (userKey) {
                 headers['X-Gemini-Key'] = userKey;
             }
+            if (session?.access_token) {
+                headers['Authorization'] = `Bearer ${session.access_token}`;
+            }
 
             const res = await fetch('/api/dialogo', {
                 method: 'POST',
@@ -87,7 +125,8 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                     provider: targetProvider,
                     acao: 'analisar_traducao',
                     frase_jp: frase.frase_jp,
-                    resposta_pt: resposta
+                    resposta_pt: resposta,
+                    sessionId: context.sessionId
                 })
             });
 
@@ -113,9 +152,9 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
 
     const tocarAudio = () => {
         if (!frase?.frase_jp) return;
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = frase.frase_jp;
-        const textoPuro = tempDiv.textContent || tempDiv.innerText || "";
+        const textoPuro = frase.frase_jp
+            .replace(/<rt>.*?<\/rt>/g, '')
+            .replace(/<[^>]*>/g, '');
         
         const utterance = new SpeechSynthesisUtterance(textoPuro);
         utterance.lang = 'ja-JP';
@@ -123,9 +162,9 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
         window.speechSynthesis.speak(utterance);
     };
 
-    const revelarResposta = () => {
+    const revelarResposta = async () => {
         if (!frase) return;
-        setAnalise({
+        const mockAnalise = {
             revelado: true,
             correto: false,
             score: 0,
@@ -133,7 +172,32 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
             explicacao: frase.explicacao || 'Nenhuma explicação detalhada disponível.',
             dica: frase.dica,
             erros: []
-        });
+        };
+        setAnalise(mockAnalise);
+
+        if (session && context.sessionId) {
+            try {
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                if (session.access_token) {
+                    headers['Authorization'] = `Bearer ${session.access_token}`;
+                }
+                await fetch('/api/dialogo', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        acao: 'salvar_traducao_dados',
+                        sessionId: context.sessionId,
+                        traducao_dados: {
+                            ...frase,
+                            resposta_aluno: resposta,
+                            analise: mockAnalise
+                        }
+                    })
+                });
+            } catch (e) {
+                console.error("Erro ao salvar revelação da tradução no banco:", e);
+            }
+        }
     };
 
     if (loading) {
@@ -276,7 +340,7 @@ export default function TraducaoPanel({ context, onNext, onBack }: TraducaoPanel
                         </div>
 
                         <div style={{ marginTop: '20px', textAlign: 'center' }}>
-                            <button onClick={() => carregarFrase(provider)} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Nova Frase</button>
+                            <button onClick={() => carregarFrase(provider, true)} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Nova Frase</button>
                         </div>
                     </div>
                 )}

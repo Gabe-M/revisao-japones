@@ -209,6 +209,30 @@ function selectContextualVocab(vocabList, tema, historico, resposta_usuario_jp, 
     return scored.slice(0, limit).map(s => s.item).filter(Boolean);
 }
 
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = "https://sodqxkvkxifczfscbxwo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_qanav-1ayeNA40f692w2Xg_qqGnFcuG";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function obterUserIdDoToken(authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+    const token = authHeader.substring(7);
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) {
+            console.error("Erro ao validar token com Supabase:", error);
+            return null;
+        }
+        return user.id;
+    } catch (e) {
+        console.error("Exceção ao decodificar/validar token:", e);
+        return null;
+    }
+}
+
 function cleanFuriganaHtml(text) {
     if (typeof text !== 'string') return '';
     return text.replace(/<rt>.*?<\/rt>/g, '').replace(/<[^>]*>/g, '');
@@ -217,10 +241,16 @@ function cleanFuriganaHtml(text) {
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Gemini-Key, X-OpenAI-Key');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Gemini-Key, X-OpenAI-Key, Authorization');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
+
+    const tokenUsuario = req.headers['authorization'];
+    let userId = null;
+    if (tokenUsuario) {
+        userId = await obterUserIdDoToken(tokenUsuario);
+    }
 
     let geminiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '') : null;
     let openAIKey = process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '') : null;
@@ -254,7 +284,12 @@ export default async function handler(req, res) {
 
     try {
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-        const { provider = 'gemini', acao, tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp } = body;
+        const { provider = 'gemini', acao, tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp, sessionId } = body;
+
+        const precisaAuth = ['listar_sessoes', 'criar_sessao'].includes(acao) || !!sessionId;
+        if (precisaAuth && !userId) {
+            return res.status(401).json({ error: 'Não autorizado. Token de autenticação ausente ou inválido.' });
+        }
 
         // Validação da chave correspondente ao provedor
         if (provider === 'gemini' && !geminiKey) {
@@ -272,7 +307,69 @@ export default async function handler(req, res) {
         let result = {};
 
         switch (acao) {
+            case 'listar_sessoes':
+                try {
+                    const response = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?select=id,nome,config,created_at&order=created_at.desc`, {
+                        headers: {
+                            "apikey": SUPABASE_KEY,
+                            "Authorization": tokenUsuario
+                        }
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || JSON.stringify(data));
+                    return res.status(200).json(data);
+                } catch (err) {
+                    console.error("Erro ao listar sessões:", err);
+                    return res.status(500).json({ error: "Erro ao listar sessões", message: err.message });
+                }
+
+            case 'criar_sessao':
+                try {
+                    const { nome: nomeSessao, config } = body;
+                    const payload = {
+                        user_id: userId,
+                        nome: nomeSessao || config?.tema || 'Nova Sessão',
+                        config: config || {},
+                        historico: [],
+                        guia_dados: null,
+                        contexto: null
+                    };
+                    const response = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes`, {
+                        method: 'POST',
+                        headers: {
+                            "apikey": SUPABASE_KEY,
+                            "Authorization": tokenUsuario,
+                            "Content-Type": "application/json",
+                            "Prefer": "return=representation"
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || JSON.stringify(data));
+                    return res.status(201).json(Array.isArray(data) ? data[0] : data);
+                } catch (err) {
+                    console.error("Erro ao criar sessão:", err);
+                    return res.status(500).json({ error: "Erro ao criar sessão", message: err.message });
+                }
+
             case 'gerar_guia':
+                if (sessionId) {
+                    try {
+                        const responseGet = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}&select=guia_dados`, {
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario
+                            }
+                        });
+                        const resData = await responseGet.json();
+                        if (responseGet.ok && resData && resData[0] && resData[0].guia_dados) {
+                            return res.status(200).json(resData[0].guia_dados);
+                        }
+                    } catch (e) {
+                        console.error("Erro ao recuperar guia_dados do banco:", e);
+                    }
+                }
+
                 systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Use tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> nas frases (em 'exemplo_jp' e 'jp' de frases_uteis) sempre que usar Kanji. O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji) e deve ser colocado apenas sobre os Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>.";
                 prompt = `Gere um guia de estudos em japonês para o tema: "${tema}".
                 ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
@@ -293,9 +390,43 @@ export default async function handler(req, res) {
                 Retorne no mínimo 3 regras, 8 vocabulários e 4 frases úteis.`;
                 
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.3-70b-versatile');
+                
+                if (sessionId && result && !result.error) {
+                    try {
+                        await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}`, {
+                            method: 'PATCH',
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({ guia_dados: result })
+                        });
+                    } catch (e) {
+                        console.error("Erro ao salvar guia_dados no banco:", e);
+                    }
+                }
                 return res.status(200).json(result);
 
             case 'gerar_traducao':
+                const novaFrase = body.novaFrase === true || body.forceNew === true || body.ignorar_cache === true;
+                if (sessionId && !novaFrase) {
+                    try {
+                        const responseGet = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}&select=traducao_dados`, {
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario
+                            }
+                        });
+                        const resData = await responseGet.json();
+                        if (responseGet.ok && resData && resData[0] && resData[0].traducao_dados && resData[0].traducao_dados.frase_jp) {
+                            return res.status(200).json(resData[0].traducao_dados);
+                        }
+                    } catch (e) {
+                        console.error("Erro ao carregar traducao_dados do banco:", e);
+                    }
+                }
+
                 systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Em 'frase_jp', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes na frase (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby> (nunca faça <ruby>Kanji</ruby><rt>furigana</rt>). O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji) e deve ser colocado apenas sobre os Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. NÃO utilize de forma alguma tags <span> ou qualquer outra tag HTML além de <ruby> e <rt>. Restrinja o vocabulário e Kanjis ao solicitado pelo aluno.";
                 
                 let limitacoesVocab = '';
@@ -303,7 +434,7 @@ export default async function handler(req, res) {
                     limitacoesVocab = `
                     IMPORTANTE: O aluno está utilizando um filtro de palavras aprendidas. 
                     Você DEVE obrigatoriamente criar a frase utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${selectContextualVocab(vocabulario, tema, null, null, 40).join(', ')}]. 
-                    Para ligar os termos e formar a frase, use apenas partículas gramaticais básicas (は, が, に, を, で, の, と, も, へ, から, まで, ね, よ) e flexões verbais elementares (lesse/verbos como です, ます, だ, する, いる, ある, った, ない). 
+                    Para ligar os termos e formar a frase, use apenas partículas gramaticais básicas (は, が, に, を, de, の, と, も, へ, から, até, ne, yo) e flexões verbais elementares (como です, ます, da, する, em, ao, った, não). 
                     NÃO introduza de forma alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
                 }
 
@@ -320,6 +451,24 @@ export default async function handler(req, res) {
                 }`;
                 
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                
+                if (sessionId && result && !result.error) {
+                    try {
+                        await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}`, {
+                            method: 'PATCH',
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                traducao_dados: result
+                            })
+                        });
+                    } catch (e) {
+                        console.error("Erro ao salvar traducao_dados no banco:", e);
+                    }
+                }
                 return res.status(200).json(result);
 
             case 'analisar_traducao':
@@ -337,9 +486,87 @@ export default async function handler(req, res) {
                 }`;
                 
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+
+                if (sessionId && result && !result.error) {
+                    try {
+                        const responseGet = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}&select=traducao_dados`, {
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario
+                            }
+                        });
+                        const resData = await responseGet.json();
+                        const currentData = (responseGet.ok && resData && resData[0]) ? resData[0].traducao_dados : {};
+                        
+                        const updatedData = {
+                            ...currentData,
+                            resposta_aluno: resposta_pt,
+                            analise: result
+                        };
+
+                        await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}`, {
+                            method: 'PATCH',
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                traducao_dados: updatedData
+                            })
+                        });
+                    } catch (e) {
+                        console.error("Erro ao atualizar traducao_dados com a analise:", e);
+                    }
+                }
                 return res.status(200).json(result);
 
+            case 'salvar_traducao_dados':
+                if (sessionId) {
+                    try {
+                        await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}`, {
+                            method: 'PATCH',
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                traducao_dados: body.traducao_dados
+                            })
+                        });
+                        return res.status(200).json({ success: true });
+                    } catch (e) {
+                        console.error("Erro ao salvar traducao_dados:", e);
+                        return res.status(500).json({ error: e.message });
+                    }
+                }
+                return res.status(400).json({ error: "Sessão inválida" });
+
             case 'iniciar_dialogo':
+                if (sessionId) {
+                    try {
+                        const responseGet = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}&select=historico,contexto`, {
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario
+                            }
+                        });
+                        const resData = await responseGet.json();
+                        if (responseGet.ok && resData && resData[0] && Array.isArray(resData[0].historico) && resData[0].historico.length > 0) {
+                            const firstMsg = resData[0].historico[0];
+                            return res.status(200).json({
+                                contexto: resData[0].contexto,
+                                mensagem_ia_jp: firstMsg.jp || firstMsg.content,
+                                mensagem_ia_pt: firstMsg.pt,
+                                historico: resData[0].historico
+                            });
+                        }
+                    } catch (e) {
+                        console.error("Erro ao recuperar historico/contexto do banco:", e);
+                    }
+                }
+
                 let limitacoesVocabIni = '';
                 if (vocabulario && vocabulario.length > 0) {
                     limitacoesVocabIni = `
@@ -362,11 +589,62 @@ export default async function handler(req, res) {
                 }`;
                 
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.3-70b-versatile');
+
+                if (sessionId && result && !result.error) {
+                    try {
+                        const firstMsg = {
+                            role: 'assistant',
+                            jp: result.mensagem_ia_jp,
+                            pt: result.mensagem_ia_pt,
+                            content: result.mensagem_ia_jp
+                        };
+                        await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}`, {
+                            method: 'PATCH',
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                contexto: result.contexto,
+                                historico: [firstMsg]
+                            })
+                        });
+                    } catch (e) {
+                        console.error("Erro ao salvar primeiro contato no banco:", e);
+                    }
+                }
                 return res.status(200).json(result);
 
             case 'continuar_dialogo':
-                const hasTruncated = historico && historico.length > 6;
-                const historicoFiltrado = hasTruncated ? historico.slice(-6) : (historico || []);
+                let activeHistory = historico || [];
+                if (sessionId) {
+                    try {
+                        const responseGet = await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}&select=historico`, {
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario
+                            }
+                        });
+                        const resData = await responseGet.json();
+                        if (responseGet.ok && resData && resData[0] && Array.isArray(resData[0].historico)) {
+                            activeHistory = resData[0].historico;
+                        }
+                    } catch (e) {
+                        console.error("Erro ao recuperar historico para continuar diálogo:", e);
+                    }
+                }
+
+                // Garante que a última mensagem do usuário está no activeHistory
+                const userMsgText = resposta_usuario_jp || '';
+                const userMsgObj = { role: 'user', content: userMsgText, jp: userMsgText };
+                const lastMsg = activeHistory[activeHistory.length - 1];
+                if (!lastMsg || lastMsg.role !== 'user' || lastMsg.jp !== userMsgText) {
+                    activeHistory.push(userMsgObj);
+                }
+
+                const hasTruncated = activeHistory && activeHistory.length > 6;
+                const historicoFiltrado = hasTruncated ? activeHistory.slice(-6) : (activeHistory || []);
                 const memoriaPrevia = hasTruncated ? `Contexto do RPG: A conversa atual é uma continuação do cenário definido pelo tópico '${tema}'. Mantenha a coerência com as interações anteriores.` : '';
 
                 let limitacoesVocabCont = '';
@@ -387,6 +665,11 @@ export default async function handler(req, res) {
                     role: m.role === 'assistant' ? 'assistant' : 'user',
                     content: cleanFuriganaHtml(m.content || m.jp || '')
                 }));
+
+                if (msgs.length > 0 && msgs[msgs.length - 1].role === 'user') {
+                    msgs.pop();
+                }
+
                 // A última mensagem deve ser a do usuário:
                 msgs.push({
                     role: 'user',
@@ -406,7 +689,49 @@ export default async function handler(req, res) {
                 });
 
                 result = await callAI(systemInstruction, msgs, geminiKey, openAIKey, groqKey, provider, 'llama-3.3-70b-versatile');
-                return res.status(200).json(result);
+
+                // Atualiza o item do usuário correspondente no activeHistory
+                const userIdx = activeHistory.findIndex(m => m.role === 'user' && m.jp === userMsgText && m.analise === undefined);
+                if (userIdx !== -1) {
+                    activeHistory[userIdx].analise = result.analise;
+                    activeHistory[userIdx].score = result.score;
+                } else {
+                    activeHistory[activeHistory.length - 1].analise = result.analise;
+                    activeHistory[activeHistory.length - 1].score = result.score;
+                }
+
+                // Adiciona a resposta da IA no activeHistory
+                const assistantMsgObj = {
+                    role: 'assistant',
+                    jp: result.mensagem_ia_jp,
+                    pt: result.mensagem_ia_pt,
+                    content: result.mensagem_ia_jp
+                };
+                activeHistory.push(assistantMsgObj);
+
+                // Salva o histórico atualizado
+                if (sessionId) {
+                    try {
+                        await fetch(`${SUPABASE_URL}/rest/v1/dialogo_sessoes?id=eq.${sessionId}`, {
+                            method: 'PATCH',
+                            headers: {
+                                "apikey": SUPABASE_KEY,
+                                "Authorization": tokenUsuario,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                historico: activeHistory
+                            })
+                        });
+                    } catch (e) {
+                        console.error("Erro ao salvar histórico atualizado no banco:", e);
+                    }
+                }
+
+                return res.status(200).json({
+                    ...result,
+                    historico: activeHistory
+                });
 
             case 'ajustar_nota':
                 const fraseLimpa = body.fraseOriginal ? body.fraseOriginal.replace(/<[^>]*>/g, '') : '';

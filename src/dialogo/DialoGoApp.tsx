@@ -13,6 +13,17 @@ export interface DialogoContextData {
     conjuntos: string[];
     vocabularioBanco: any[];
     provider: 'gemini' | 'openai' | 'groq' | 'pollinations';
+    sessionId?: string | null;
+    traducaoDados?: {
+        frase: any;
+        resposta: string;
+        analise: any;
+    } | null;
+    dialogoDados?: {
+        contexto: string;
+        historico: any[];
+        inputUser: string;
+    } | null;
 }
 
 export default function DialoGoApp() {
@@ -22,7 +33,10 @@ export default function DialoGoApp() {
         jlpt: 'N5',
         conjuntos: [],
         vocabularioBanco: [],
-        provider: 'gemini'
+        provider: 'gemini',
+        sessionId: null,
+        traducaoDados: null,
+        dialogoDados: null
     });
 
     const [session, setSession] = useState<any>(null);
@@ -162,13 +176,53 @@ export default function DialoGoApp() {
     };
 
     const handleStart = async (config: any) => {
+        let activeSessionId = config.sessionId;
+        
+        if (config.criarNovaSessao && session) {
+            try {
+                const res = await fetch('/api/dialogo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({
+                        acao: 'criar_sessao',
+                        nome: config.nomeSessao,
+                        config: {
+                            tema: config.tema,
+                            jlpt: config.jlpt,
+                            provider: config.provider,
+                            useBanco: config.useBanco,
+                            bancoTipo: config.bancoTipo,
+                            conjuntoSelecionado: config.conjuntoSelecionado,
+                            baralhoSelecionado: config.baralhoSelecionado,
+                            srsFiltro: config.srsFiltro
+                        }
+                    })
+                });
+                if (res.ok) {
+                    const sessionData = await res.json();
+                    activeSessionId = sessionData.id;
+                } else {
+                    console.error("Falha ao criar sessão:", await res.text());
+                }
+            } catch (err) {
+                console.error("Erro ao criar sessão no backend:", err);
+            }
+        }
+
         setContextData(prev => ({
             ...prev,
             tema: config.tema,
             jlpt: config.jlpt,
             provider: config.provider || 'gemini',
-            conjuntos: config.useBanco ? (config.bancoTipo === 'conjuntos' || config.bancoTipo === 'ambos' ? [config.conjuntoSelecionado] : []) : []
+            conjuntos: config.useBanco ? (config.bancoTipo === 'conjuntos' || config.bancoTipo === 'ambos' ? [config.conjuntoSelecionado] : []) : [],
+            sessionId: activeSessionId,
+            traducaoDados: null,
+            dialogoDados: null
         }));
+
         if (config.useBanco) {
             await fetchVocabulario(config);
         } else {
@@ -243,6 +297,7 @@ export default function DialoGoApp() {
             {mode === 'guia' && (
                 <GuiaPanel 
                     context={contextData} 
+                    session={session}
                     onNext={() => setMode('traducao')}
                     onBack={() => setMode('config')}
                 />
@@ -250,14 +305,18 @@ export default function DialoGoApp() {
             {mode === 'traducao' && (
                 <TraducaoPanel 
                     context={contextData} 
+                    session={session}
                     onNext={() => setMode('dialogo')}
                     onBack={() => setMode('guia')}
+                    onUpdateContext={(newData) => setContextData(prev => ({ ...prev, ...newData }))}
                 />
             )}
             {mode === 'dialogo' && (
                 <DialoGoPanel 
                     context={contextData} 
+                    session={session}
                     onBack={() => setMode('traducao')}
+                    onUpdateContext={(newData) => setContextData(prev => ({ ...prev, ...newData }))}
                 />
             )}
         </div>
