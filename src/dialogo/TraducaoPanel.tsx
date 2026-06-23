@@ -330,7 +330,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
                             <div style={{ marginBottom: '10px' }}>
                                 <strong>Pontos de atenção:</strong>
                                 <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                                    {analise.erros.map((erro: string, i: number) => <li key={i}>{erro}</li>)}
+                                    {analise.erros.map((erro: string, i: number) => <li key={i}><InteractiveText text={erro} /></li>)}
                                 </ul>
                             </div>
                         )}

@@ -336,12 +336,12 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                             <div style={{ marginBottom: '14px' }}>
                                                 <div style={{ fontSize: '0.75em', fontWeight: 700, opacity: 0.6, textTransform: 'uppercase', marginBottom: '4px' }}>Erros encontrados</div>
                                                 <ul style={{ color: '#e74c3c', paddingLeft: '20px', margin: '4px 0', fontSize: '0.9em' }}>
-                                                    {analisePratica.erros.map((err: string, i: number) => <li key={i}>{err}</li>)}
+                                                    {analisePratica.erros.map((err: string, i: number) => <li key={i}><InteractiveText text={err} /></li>)}
                                                 </ul>
                                             </div>
                                         )}
                                         <div className="ajuda-dica-box">
-                                            <strong style={{ color: '#9b59b6' }}>Dica:</strong> {analisePratica.dica}
+                                            <strong style={{ color: '#9b59b6' }}>Dica:</strong> <InteractiveText text={analisePratica.dica} />
                                         </div>
                                         {analisePratica.traducao_correta && (
                                             <div className="ajuda-natural-box" style={{ marginTop: '12px' }}>
@@ -379,10 +379,10 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                 <div className="ajuda-sugestao-box">
                                     <div className="sugestao-label">💡 Sugestão de Resposta</div>
                                     <div className="sugestao-jp"><InteractiveText text={sugestao.jp} /></div>
-                                    <div className="sugestao-pt">{sugestao.pt}</div>
+                                    <div className="sugestao-pt"><InteractiveText text={sugestao.pt} /></div>
                                     <div className="sugestao-dica">
                                         <MessageCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                                        <span>{sugestao.dica}</span>
+                                        <span><InteractiveText text={sugestao.dica} /></span>
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
