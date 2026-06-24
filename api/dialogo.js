@@ -1076,21 +1076,37 @@ export default async function handler(req, res) {
                 if (vocabulario && vocabulario.length > 0) {
                     limitacoesVocabSugestao = `
                     IMPORTANTE: O aluno está utilizando um filtro de palavras aprendidas. 
-                    Você DEVE obrigatoriamente criar a frase utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${selectContextualVocab(vocabulario, tema, null, body.mensagem_ia_jp, 40).join(', ')}]. 
-                    Para ligar os termos e formar a frase, use apenas partículas gramaticais básicas e flexões verbais elementares. 
+                    Você DEVE obrigatoriamente criar as frases utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${selectContextualVocab(vocabulario, tema, null, body.mensagem_ia_jp, 40).join(', ')}]. 
+                    Para ligar os termos e formar as frases, use apenas partículas gramaticais básicas e flexões verbais elementares. 
                     NÃO introduza de forma alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
                 }
-                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}" e também um professor ajudando o aluno. Retorne APENAS um JSON válido. IMPORTANTE: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na propriedade 'sugestao_jp' para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>. O furigana deve ser escrito exclusivamente em Hiragana e aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. Você DEVE separar os blocos lógicos/pedagógicos da frase japonesa usando a tag <w>. Agrupe partículas com seus substantivos se achar útil, ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>). Exemplo de formatação obrigatória: <w>私</w><w>は</w><w><ruby>見<rt>み</rt></ruby>てください</w>. Nunca use tags <span> ou qualquer outra tag HTML além de <ruby>, <rt> e <w>.`;
+                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}" e também um professor ajudando o aluno.
+Retorne APENAS um JSON válido seguindo estritamente a estrutura solicitada.
+Siga com rigor absoluto as seguintes regras pedagógicas para qualquer texto em japonês retornado (especialmente 'sugestao_jp'):
+1. Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes (sem exceção). A tag <rt> deve estar aninhada imediatamente dentro da tag <ruby>.
+2. O furigana dentro de <rt> deve ser escrito exclusivamente em Hiragana (ou Katakana se aplicável a palavras estrangeiras) e nunca em Romaji.
+3. Você deve envelopar todos os termos e blocos lógicos/pedagógicos em japonês usando a tag <w>. Nenhuma parte de texto japonês pode ficar fora de uma tag <w>.
+4. Agrupe partículas com seus substantivos precedentes (ex: <w>私は</w>), ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>).
+5. Exemplo de formatação japonesa obrigatória: <w>私</w><w>は</w><w><ruby>行<rt>い</rt></ruby>きます</w>.
+6. É estritamente proibido o uso de qualquer outra tag HTML (como <span>, <div>, etc.) nos campos em japonês. Apenas <ruby>, <rt> e <w> são permitidas.
+7. Garanta que o JSON retornado esteja bem-formado e não possua barras invertidas ou formatação quebrada nos campos de texto.`;
                 prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
                 Tema do RPG: "${tema}"
                 ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
                 ${limitacoesVocabSugestao}
                 
-                Estrutura do JSON esperado:
+                Gere exatamente 3 opções de resposta variando em tom (sendo especificamente: "Formal", "Casual" e "Declínio Polido", ou tons equivalentes extremamente apropriados para o contexto de RPG).
+                
+                Estrutura exata do JSON esperado:
                 {
-                    "sugestao_jp": "Sugestão de resposta do aluno em japonês (com ruby tags)",
-                    "sugestao_pt": "Tradução exata da sugestão",
-                    "dica": "Explicação curta do motivo dessa ser uma boa resposta"
+                    "opcoes": [
+                        {
+                            "tom": "Formal / Casual / Declínio Polido",
+                            "sugestao_jp": "Sugestão em japonês formatada estritamente com w e ruby tags",
+                            "sugestao_pt": "Tradução em português da sugestão",
+                            "dica": "Breve explicação didática em português de por que essa resposta e esse tom são apropriados"
+                        }
+                    ]
                 }`;
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
                 return res.status(200).json(result);
@@ -1109,18 +1125,35 @@ export default async function handler(req, res) {
                 return res.status(200).json(result);
 
             case 'analisar_pratica':
-                systemInstruction = "Você é um professor de japonês avaliando a resposta do aluno no contexto de um diálogo. Retorne APENAS um JSON válido. O feedback (dica e erro) DEVE estar em Português. IMPORTANTE: Na propriedade 'traducao_correta', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes na frase (sem exceção). O furigana deve ser escrito exclusivamente em Hiragana e deve ser colocado apenas sobre os Kanjis, nunca sobre hiragana ou katakana puro. Não utilize nenhuma outra tag além de <ruby> e <rt>.";
-                prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
-                Resposta do aluno: "${body.resposta_usuario_jp}"
+                systemInstruction = `Você é um professor de japonês avaliando a resposta do aluno no contexto de um diálogo.
+Retorne APENAS um JSON válido. Todo o feedback textual explicativo e regras gramaticais devem ser escritos em português.
+Siga com rigor absoluto as seguintes regras pedagógicas para qualquer texto em japonês retornado (inclusive no array de 'erros' em 'trecho_errado' e 'correcao', e no campo 'traducao_correta'):
+1. Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes (sem exceção). A tag <rt> deve estar aninhada imediatamente dentro da tag <ruby>.
+2. O furigana dentro de <rt> deve ser escrito exclusivamente em Hiragana (ou Katakana se aplicável a palavras estrangeiras) e nunca em Romaji.
+3. Você deve envelopar todos os termos e blocos lógicos/pedagógicos em japonês usando a tag <w>. Nenhuma parte de texto japonês pode ficar fora de uma tag <w>.
+4. Agrupe partículas com seus substantivos precedentes (ex: <w>写真は</w>), ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>).
+5. Exemplo de formatação japonesa obrigatória: <w>私</w><w>は</w><w><ruby>行<rt>い</rt></ruby>きます</w>.
+6. É estritamente proibido o uso de qualquer outra tag HTML (como <span>, <div>, etc.) nos campos em japonês. Apenas <ruby>, <rt> e <w> são permitidas.
+7. Garanta que o JSON retornado esteja bem-formado e não possua barras invertidas ou formatação quebrada nos campos de texto.`;
+                prompt = `Mensagem do personagem (contexto): "${body.mensagem_ia_jp}"
+                Resposta digitada pelo aluno: "${body.resposta_usuario_jp}"
                 
-                Avalie se a resposta do aluno faz sentido no contexto da conversa e se a gramática/vocabulário estão corretos.
-                Estrutura do JSON esperado:
+                Avalie se a resposta do aluno é gramaticalmente correta, se faz sentido no contexto do diálogo e se soa natural.
+                Identifique erros específicos de gramática, ortografia, partículas ou escolha vocabular.
+                
+                Estrutura exata do JSON esperado:
                 {
-                    "score": 85, // número de 0 a 100
-                    "correto": true, // true se for uma resposta aceitável e compreensível, false caso contrário
-                    "erros": ["O aluno usou a partícula errada em X"], // array de strings com erros identificados (vazio se não houver)
-                    "dica": "Dica de como soar mais natural ou corrigir o erro.",
-                    "traducao_correta": "Sugestão de como o aluno poderia ter formulado essa mesma ideia de forma correta e natural em japonês"
+                    "score": 85, // Pontuação de 0 a 100 baseada na qualidade e adequação da resposta
+                    "correto": true, // true se a resposta for aceitável e compreensível, false se possuir erros gramaticais ou for inadequada
+                    "erros": [
+                        {
+                            "trecho_errado": "Trecho incorreto ou inadequado digitado pelo aluno (formatado com w e ruby tags se contiver japonês)",
+                            "correcao": "Correção sugerida para o trecho específico (formatada com w e ruby tags)",
+                            "regra_gramatical": "Explicação pedagógica curta em português sobre a correção ou o motivo do erro"
+                        }
+                    ], // Array contendo cada erro identificado detalhadamente. Se a frase estiver 100% perfeita, o array deve ser vazio []
+                    "dica": "Conselho didático curto em português de como melhorar a fluência, a naturalidade ou a polidez.",
+                    "traducao_correta": "Como soaria uma formulação ideal e natural para expressar a mesma ideia em japonês (formatada estritamente com w e ruby tags)"
                 }`;
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
                 return res.status(200).json(result);
