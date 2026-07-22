@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import InteractiveText from '../components/InteractiveText';
 import ScoreBadge from './components/ScoreBadge';
-import * as wanakana from 'wanakana';
+import KanaKanjiInput from './components/KanaKanjiInput';
 import AiLoader from './components/AiLoader';
 import AiFallbackPopup from './components/AiFallbackPopup';
 import AjudaModal from './components/AjudaModal';
@@ -68,18 +68,6 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
             });
         };
     }, []);
-
-    useEffect(() => {
-        const inputEl = inputRef.current;
-        if (!loading && inputEl) {
-            wanakana.bind(inputEl);
-        }
-        return () => {
-            if (inputEl) {
-                wanakana.unbind(inputEl);
-            }
-        };
-    }, [loading]);
 
     useEffect(() => {
         // Auto scroll to bottom
@@ -489,17 +477,18 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
             {/* Formulário de envio */}
             <form
                 onSubmit={(e) => enviarMensagem(e, provider || context.provider || 'groq')}
-                className="flex gap-2"
+                className="flex gap-2 items-end"
             >
-                <Input
-                    ref={inputRef}
-                    type="text"
-                    value={inputUser}
-                    onChange={e => setInputUser(e.target.value)}
-                    placeholder="Digite em romaji (será convertido para hiragana/katakana automaticamente)..."
-                    disabled={enviando}
-                    className="flex-1 text-base h-12 border-2 border-input bg-card text-foreground"
-                />
+                <div className="flex-1">
+                    <KanaKanjiInput
+                        value={inputUser}
+                        onChange={setInputUser}
+                        onSendMessage={() => enviarMensagem(undefined, provider || context.provider || 'groq')}
+                        placeholder="Digite em romaji... Espaço para Kanji"
+                        disabled={enviando}
+                        className="text-base h-12 border-2 border-input bg-card text-foreground"
+                    />
+                </div>
                 <Button
                     type="submit"
                     disabled={enviando || !inputUser.trim()}

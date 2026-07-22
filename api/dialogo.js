@@ -272,11 +272,11 @@ function sanitizeRubyHtml(text) {
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Gemini-Key, X-OpenAI-Key, Authorization');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' });
+    if (req.method !== 'POST' && req.method !== 'GET') return res.status(405).json({ error: 'Método não permitido' });
 
     const tokenUsuario = req.headers['authorization'];
     let userId = null;
@@ -315,8 +315,21 @@ export default async function handler(req, res) {
     }
 
     try {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-        const { provider = 'gemini', acao, tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp, sessionId, palavras_aprendendo } = body;
+        const query = req.query || {};
+        let body = {};
+        if (typeof req.body === 'string' && req.body.trim()) {
+            try {
+                body = JSON.parse(req.body);
+            } catch (e) {
+                body = {};
+            }
+        } else if (req.body && typeof req.body === 'object') {
+            body = req.body;
+        }
+
+        const acao = body.acao || query.acao;
+        const provider = body.provider || query.provider || 'gemini';
+        const { tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp, sessionId, palavras_aprendendo } = body;
 
         const precisaAuth = ['listar_sessoes', 'criar_sessao'].includes(acao) || !!sessionId;
         if (precisaAuth && !userId) {
@@ -324,14 +337,16 @@ export default async function handler(req, res) {
         }
 
         // Validação da chave correspondente ao provedor
-        if (provider === 'gemini' && !geminiKey) {
-            return res.status(401).json({ error: 'Chave de API do Gemini não configurada no .env' });
-        }
-        if (provider === 'openai' && !openAIKey) {
-            return res.status(401).json({ error: 'Chave de API da OpenAI não configurada no .env' });
-        }
-        if (provider === 'groq' && !groqKey) {
-            return res.status(401).json({ error: 'Chave de API do Groq (GROQ_API_KEY) não configurada no .env' });
+        if (acao !== 'converter_kanji') {
+            if (provider === 'gemini' && !geminiKey) {
+                return res.status(401).json({ error: 'Chave de API do Gemini não configurada no .env' });
+            }
+            if (provider === 'openai' && !openAIKey) {
+                return res.status(401).json({ error: 'Chave de API da OpenAI não configurada no .env' });
+            }
+            if (provider === 'groq' && !groqKey) {
+                return res.status(401).json({ error: 'Chave de API do Groq (GROQ_API_KEY) não configurada no .env' });
+            }
         }
 
         let systemInstruction = "";
@@ -1373,6 +1388,28 @@ export default async function handler(req, res) {
                 }`;
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
                 return res.status(200).json(result);
+
+            case 'converter_kanji': {
+                try {
+                    const texto = body.texto || body.text || query.texto || query.text;
+                    if (!texto || typeof texto !== 'string' || !texto.trim()) {
+                        return res.status(400).json({ error: 'Texto não informado' });
+                    }
+                    const url = `http://www.google.com/transliterate?langpair=ja-Hira|ja&text=${encodeURIComponent(texto.trim())}`;
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`Google Transliterate API retornou status ${response.status}`);
+                    }
+                    const data = await response.json();
+                    return res.status(200).json({
+                        status: 'SUCCESS',
+                        candidates: Array.isArray(data?.[0]?.[1]) ? data[0][1] : []
+                    });
+                } catch (err) {
+                    console.error("Erro na ação converter_kanji:", err);
+                    return res.status(500).json({ error: 'Erro ao converter texto para kanji', message: err.message });
+                }
+            }
 
             default:
                 return res.status(400).json({ error: 'Ação inválida' });

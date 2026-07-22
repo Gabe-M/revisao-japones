@@ -1,13 +1,76 @@
-# Victory Audit Report — DialoGo Feature Implementation Project
+# Victory Audit Report — KanaKanjiInput Component (DialoGo)
 
-**Workspace Root**: `c:\Users\Fabiano\Downloads\sites\japones`  
-**Auditor**: Independent Victory Auditor (`victory_auditor`)  
-**Target**: DialoGo Feature Implementation (R1, R2, R3, R4, Resilience & Auth Directives)  
-**Final Verdict**: **VICTORY CONFIRMED**
+## 1. Observation
+
+- **Project Root**: `c:\Users\Fabiano\Downloads\sites\japones`
+- **Working Directory**: `c:\Users\Fabiano\Downloads\sites\japones\.agents\victory_auditor`
+- **Inspected Files**:
+  - `src/dialogo/components/KanaKanjiInput.tsx` (Lines 1–399): Full implementation of controlled IME input, mode selection, popover dropdown, keyboard intercept, and AbortController resilience.
+  - `api/dialogo.js` (Lines 1392–1412): Proxy endpoint for `converter_kanji` action targeting `http://www.google.com/transliterate?langpair=ja-Hira|ja&text={texto}`.
+  - `src/dialogo/DialoGoPanel.tsx` (Lines 483–491): Integration of `KanaKanjiInput` component in the main chat interface.
+  - `scripts/test-kanakanji-resilience-runner.js`: Empirical test suite for network resilience.
+- **Commands Executed & Outputs**:
+  - `npm run build`:
+    ```
+    vite v8.0.16 building client environment for production...
+    ✓ 1940 modules transformed.
+    rendering chunks...
+    computing gzip size...
+    ✓ built in 3.17s
+    ```
+  - `node scripts/test-kanakanji-resilience-runner.js`:
+    ```
+    === Running KanaKanjiInput Empirical Network Resilience Tests ===
+    [Test 1] Testing HTTP 500 response resilience... PASS
+    [Test 2] Testing non-JSON response handling... PASS
+    [Test 3] Testing 3-second AbortController timeout resilience... PASS (Fetch duration: 3013ms)
+    [Test 4] Checking for unhandled promise rejections... PASS (0 rejections)
+    === Summary: 4 Passed, 0 Failed ===
+    ```
+
+## 2. Logic Chain
+
+1. **Phase A — Timeline & Provenance Audit**:
+   - Reconstructed multi-stage development history from `.agents/` workspace folders (`explorer_1-3`, `reviewer_1-2`, `challenger_1-2`, `auditor_1`).
+   - Verified iterative changes and empirical resilience test generation without pre-populated result cheating or timestamp clustering.
+   - Result: PASS.
+
+2. **Phase B — Integrity Check**:
+   - Analyzed `KanaKanjiInput.tsx` for prohibited patterns (hardcoded test strings, facade return values, fake test outputs).
+   - Confirmed full functional component implementation with real React state (`committedText`, `compositionBuffer`, `candidates`, `selectedIndex`), custom conversion pipelines, and actual HTTP request handling.
+   - Verified library usage: `wanakana` is used directly in `onChange` handlers for Romaji->Kana conversion without binding directly to DOM input elements (`wanakana.bind` is omitted as required).
+   - Result: PASS.
+
+3. **Phase C — Independent Directive & Build Verification**:
+   - **Directive 1 (Controlled React IME without wanakana.bind)**: Verified `KanaKanjiInput.tsx` uses `<Input value={value} onChange={handleInputChange} />` and converts text via `wanakana.toKana(rawText, { IMEMode: true })` prior to state updates. `wanakana.bind` is 0% present. (PASS)
+   - **Directive 2 (Spacebar trigger for Kanji fetch)**: Verified `handleKeyDown` catches `Space` key, prevents default behavior when composition buffer has text, and calls `fetchKanjiCandidates(compositionBuffer)`. (PASS)
+   - **Directive 3 (Buffer segmentation)**: Verified `committedText` and `compositionBuffer` are maintained independently and synchronized on candidate commitment. (PASS)
+   - **Directive 4 (Proxy action `converter_kanji`)**: Verified `api/dialogo.js` handles `converter_kanji` by proxying to Google Transliterate (`http://www.google.com/transliterate?langpair=ja-Hira|ja&text={texto}`) and bypasses AI API key validation. (PASS)
+   - **Directive 5 (Frontend resilience)**: Verified `fetchKanjiCandidates` uses `try/catch` and a 3000ms `AbortController` timeout to silently close candidate popup on failure/timeout while preserving raw Kana composition buffer. Verified via resilience test runner. (PASS)
+   - **Directive 6 (Keyboard navigation)**: Verified `ArrowDown`/`ArrowUp` cycle selection, `Enter` commits candidate and calls `e.preventDefault()` to prevent chat submission while candidate popover is open, and `Escape` closes popover retaining raw Kana buffer. (PASS)
+   - **Directive 7 (Clean build)**: Verified `npm run build` succeeds cleanly in 3.17s. (PASS)
+   - Result: PASS.
+
+## 3. Caveats
+
+- Google Transliterate API relies on network connectivity to `http://www.google.com/transliterate`. In offline environments, the component fallback mechanism (Directive 5) activates cleanly and preserves raw Kana without crashing or throwing unhandled errors.
+
+## 4. Conclusion
+
+The implementation of `KanaKanjiInput` in DialoGo satisfies all 7 user directives cleanly, maintains zero prohibited integrity shortcuts, passes empirical resilience tests, and builds without errors.
+
+Verdict: **VICTORY CONFIRMED**.
+
+## 5. Verification Method
+
+To independently re-verify this victory audit:
+1. Run build: `npm run build` (confirm build succeeds in project root `c:\Users\Fabiano\Downloads\sites\japones`).
+2. Run empirical resilience test suite: `node scripts/test-kanakanji-resilience-runner.js` (confirm 4/4 tests pass).
+3. Inspect `src/dialogo/components/KanaKanjiInput.tsx` to verify controlled input handling and keyboard navigation logic.
+4. Inspect `api/dialogo.js` lines 1392-1412 to verify `converter_kanji` action.
 
 ---
 
-```
 === VICTORY AUDIT REPORT ===
 
 VERDICT: VICTORY CONFIRMED
@@ -18,93 +81,19 @@ PHASE A — TIMELINE:
 
 PHASE B — INTEGRITY CHECK:
   Result: PASS
-  Details: All modified source files scanned. Zero hardcoded test mocks, zero fake logic, zero facade implementations, zero bypasses of authentication or validation detected. Code is genuine and production-ready.
+  Details: Clean implementation. No hardcoded results, facade returns, or prohibited code borrowing.
 
 PHASE C — INDEPENDENT TEST EXECUTION:
-  Test command: Verification of R1-R4 requirements, component structure, prop interfaces, and API endpoints
-  Your results: 100% compliance with R1, R2, R3, R4, Resilience & Auth directives
-  Claimed results: 100% compliance with R1, R2, R3, R4, Resilience & Auth directives
+  Test command: npm run build & node scripts/test-kanakanji-resilience-runner.js
+  Your results: Built in 3.17s cleanly with 0 errors; 4/4 resilience tests passed with 0 unhandled rejections.
+  Claimed results: Build succeeds cleanly; network resilience handles errors/timeouts gracefully.
   Match: YES
-```
 
----
-
-## 1. Observation
-
-Direct empirical observations verified from independent source code and process review:
-
-### Phase A: Timeline & Process Audit
-- **Milestone sequence**: Processed systematically from initial request (`ORIGINAL_REQUEST.md`) -> multi-perspective architectural exploration (`explorer_1`, `explorer_2`, `explorer_3`) -> milestone implementation (`worker_1`, `worker_2`) -> independent peer code review (`reviewer_1`, `reviewer_2`) -> adversarial boundary testing (`challenger_1`, `challenger_2`) -> forensic integrity verification (`auditor_1`).
-- **File history & provenance**: Modification timestamps across target files (`api/dialogo.js`, `AjudaModal.tsx`, `DialoGoPanel.tsx`, `ProgressoDrawer.tsx`) reflect clean iterative implementation. No pre-populated log files, fake test artifacts, or suspicious timestamp clustering were found.
-
-### Phase B: Anti-Cheating & Integrity Audit
-- **`api/dialogo.js`**:
-  - `analisar_pratica` (lines 1256-1304): Generates dynamic LLM completions for structured grammar analysis (`erros_detalhados`). Contains robust JSON parsing normalization for `{ erro, regra_gramatical, explicacao, exemplo_correto }`. No hardcoded response stubs.
-  - `sugerir_multiplas_respostas` (lines 1196-1241): Invokes dynamic LLM prompt producing 3 distinct context-adapted suggestions (`Concordar`, `Discordar`, `Perguntar`).
-- **`src/dialogo/components/AjudaModal.tsx`**:
-  - **R1 (Grammar Accordion)** (lines 455-491): Maps `erros_detalhados` using Shadcn `Accordion` component (`Accordion`, `AccordionItem`, `AccordionTrigger`, `AccordionContent`). Trigger displays `item.erro`; Content displays `regra_gramatical`, `explicacao`, and `exemplo_correto`. Empty error arrays are handled gracefully without breaking the modal UI.
-  - **R2 (3 Suggestion Cards)** (lines 534-615): Consumes `sugerir_multiplas_respostas` payload and renders 3 Shadcn `Card`s with intent badges. Includes functional `✏️ Praticar` (copies text to practice input) and `✅ Usar direto` (sends message directly to chat via `onUsarResposta`).
-  - **R3 (Vocabulary & SRS Dual Persistence)** (lines 212-266, 763-784): Renders "💾 Salvar" button on Extracted Vocab cards. On click, executes dual POST requests to `/api/jisho?acao=salvar` (with `{ item, leitura, significado, categoria, jlpt }`) and `/api/srs?acao=salvar` (with `{ item, repetitions: 0, due }`). Transmits `Authorization: Bearer ${session.access_token}` header. Tgresses state to "Salvando..." and then desablitated "✅ Salvo".
-- **`src/dialogo/DialoGoPanel.tsx`**:
-  - **R4 (Progress Button)** (lines 256-262, 412-419): Includes "📊 Progresso" button in chat header. Controls `progressoOpen` state without unmounting `AjudaModal` or resetting active chat history.
-- **`src/dialogo/components/ProgressoDrawer.tsx`**:
-  - **R4 (Progress Drawer Stats)** (lines 40-88, 102-160, 180-285): Renders Radix-backed `@/components/ui/sheet`. Calculates live session turn count (`totalTurnos`) and average score (`mediaScore`). Aggregates recurring errors by `regra_gramatical`. Performs authenticated fetch (`POST /api/dialogo` with `acao: 'listar_sessoes'`) to retrieve past sessions from Supabase.
-- **Global Directives**:
-  - All API calls in `AjudaModal.tsx`, `DialoGoPanel.tsx`, and `ProgressoDrawer.tsx` are wrapped in `try/catch/finally` blocks with visual user feedback on failure.
-  - Authentication token (`session.access_token`) is correctly prop-drilled and passed as `Authorization: Bearer <token>` header across all authenticated API interactions.
-
----
-
-## 2. Logic Chain
-
-1. **Phase A Process Validation**:
-   - *Premise*: An authentic implementation project must follow a documented timeline where code changes correspond to tracked milestones.
-   - *Observation*: The orchestrator plan, progress logs, explorer analysis, worker implementations, reviewer approvals, and challenger test outputs demonstrate a complete, verified execution lifecycle.
-   - *Conclusion*: Phase A result is **PASS**.
-
-2. **Phase B Integrity Verification**:
-   - *Premise*: No hardcoded outputs, fake facades, bypassed validations, or self-certifying mock tests should exist in the repository.
-   - *Observation*: Source inspection of `api/dialogo.js`, `AjudaModal.tsx`, `DialoGoPanel.tsx`, `ProgressoDrawer.tsx`, `accordion.tsx`, and `sheet.tsx` confirmed all functions perform genuine computations and real network calls.
-   - *Conclusion*: Phase B result is **PASS**.
-
-3. **Phase C Requirements Verification**:
-   - *Premise*: All functional criteria (R1, R2, R3, R4) and non-functional directives (Resilience, Auth, Shadcn UI stack) must be 100% satisfied.
-   - *Observation*: 
-     - R1: `erros_detalhados` schema implemented in backend and rendered via Shadcn `Accordion` in `AjudaModal.tsx`.
-     - R2: 3 contextual suggestion cards (Concordar, Discordar, Perguntar) rendered with "Praticar" and "Usar direto" action handlers.
-     - R3: "Salvar" button on Extracted Vocab cards triggers dual POST to `/api/jisho?acao=salvar` and `/api/srs?acao=salvar` with Bearer auth token, loading state, and disabled "✅ Salvo" state.
-     - R4: "📊 Progresso" button in `DialoGoPanel.tsx` triggers `Sheet` drawer without unmounting chat state; displays live turn count, average score, Supabase session history, and grouped grammar errors.
-     - Resilience & Auth: All fetch calls wrapped in `try/catch` and utilize `session.access_token`.
-   - *Conclusion*: Phase C result is **PASS**.
-
----
-
-## 3. Caveats
-
-- Environment-dependent variables (e.g. `GEMINI_API_KEY`, `GROQ_API_KEY`, Supabase database connection string) are required at runtime for full live API communications.
-- Non-interactive terminal environment timed out during `npm run build` execution; however, full static inspection confirms 100% syntactic correctness, type safety, and Shadcn UI component alignment across all target files.
-
----
-
-## 4. Conclusion
-
-The DialoGo feature implementation team has delivered an authentic, complete, resilient, and fully compliant implementation of requirements R1 through R4. All global architectural directives (Shadcn UI stack, Tailwind CSS v4, try/catch error handling, and Bearer token auth propagation) have been satisfied without any integrity violations.
-
-**Final Verdict**: **VICTORY CONFIRMED**
-
----
-
-## 5. Verification Method
-
-To independently re-verify this verdict:
-
-1. **Backend Verification**:
-   - Inspect `api/dialogo.js` lines 1196-1241 (`sugerir_multiplas_respostas`) and lines 1256-1304 (`analisar_pratica`).
-
-2. **Frontend Component Verification**:
-   - Inspect `src/dialogo/components/AjudaModal.tsx` lines 455-491 (Accordion R1), lines 534-615 (Cards R2), lines 212-266 & 763-784 (Dual persistence R3).
-   - Inspect `src/dialogo/DialoGoPanel.tsx` lines 256-262 & 412-419 (Progress Button & Drawer R4).
-   - Inspect `src/dialogo/components/ProgressoDrawer.tsx` lines 40-88 (Error aggregation) and lines 124-160 (Supabase session listing R4).
-
-3. **Build Execution**:
-   - Run `npm run build` in root workspace directory to confirm zero TypeScript compilation errors.
+DIRECTIVE CHECKLIST:
+  1. Controlled React IME (NO wanakana.bind): PASS
+  2. Spacebar trigger (onKeyDown space intercept): PASS
+  3. Buffer segmentation (committed vs composition): PASS
+  4. Proxy action converter_kanji in api/dialogo.js: PASS
+  5. Frontend resilience (try/catch & 3s timeout): PASS
+  6. Keyboard navigation (Arrow keys, Enter prevent send, Esc): PASS
+  7. Production build (npm run build): PASS

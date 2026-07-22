@@ -1,23 +1,23 @@
-# BRIEFING — 2026-07-21T22:57:30Z
+# BRIEFING — 2026-07-21T23:34:20-03:00
 
 ## Mission
-Supervise and monitor the DialoGo feature implementation project, spawn the Orchestrator, run cron monitoring, and dispatch Victory Auditor upon completion claim.
+Supervise implementation of KanaKanjiInput in DialoGoPanel using controlled React IME architecture and spacebar trigger.
 
 ## 🔒 My Identity
 - Archetype: sentinel
 - Working directory: c:\Users\Fabiano\Downloads\sites\japones\.agents\sentinel
-- Orchestrator: 87972493-60e7-430e-9028-467da4efa493
-- Victory Auditor: caa7bbd2-598a-4e47-bf50-df6682590436
+- Orchestrator: 490a2820-d90b-496b-b107-5c538a6a13d6
+- Victory Auditor: 5bbc3ddb-92bd-4653-b96d-e6fc44f1cfd2
 
 ## 🔒 Key Constraints
 - No technical decisions — relay only
 - Victory Audit is MANDATORY before reporting completion
-- Must enforce global architecture guidelines (Shadcn UI, Tailwind v4, resiliência, prop drilling session.access_token)
+- Must enforce global architecture guidelines (Controlled IME, no wanakana.bind, Space trigger, buffer segmentation, proxy converter_kanji with fallback, keyboard navigation)
 
 ## User Context
-- **Last user request**: Implementar explicações gramaticais, múltiplas sugestões, persistência dupla no banco de vocabulário/SRS e painel de progresso no DialoGo.
+- **Last user request**: Implementar componente KanaKanjiInput no DialoGoPanel utilizando arquitetura IME controlada por React e gatilho de barra de espaço.
 - **Pending clarifications**: none
-- **Delivered results**: Explicações gramaticais estruturadas (R1), sugestões contextuais múltiplas (R2), persistência dupla vocabulário/SRS (R3), drawer de estatísticas de progresso (R4).
+- **Delivered results**: none for current request
 
 ## Project Status
 - **Phase**: complete
@@ -30,5 +30,5 @@ Supervise and monitor the DialoGo feature implementation project, spawn the Orch
 ## Artifact Index
 - c:\Users\Fabiano\Downloads\sites\japones\.agents\ORIGINAL_REQUEST.md — Verbatim user prompt record
 - c:\Users\Fabiano\Downloads\sites\japones\.agents\sentinel\BRIEFING.md — Sentinel state briefing
-- c:\Users\Fabiano\Downloads\sites\japones\.agents\sentinel\handoff.md — Final sentinel handoff
-- c:\Users\Fabiano\Downloads\sites\japones\.agents\victory_auditor\handoff.md — Victory Auditor report
+- c:\Users\Fabiano\Downloads\sites\japones\.agents\sentinel\handoff.md — Sentinel handoff report
+

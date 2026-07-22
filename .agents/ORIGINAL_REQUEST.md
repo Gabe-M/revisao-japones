@@ -70,3 +70,29 @@ Integrity mode: development
 ### Geral
 - [ ] `npm run build` executa sem erros após todas as mudanças
 - [ ] Nenhuma chamada de API sem tratamento de erro (try/catch ausente)
+
+## Follow-up — 2026-07-21T23:34:20-03:00
+
+Implementar componente KanaKanjiInput no DialoGoPanel utilizando arquitetura IME controlada por React e gatilho de barra de espaço.
+
+Working directory: `c:\Users\Fabiano\Downloads\sites\japones`
+Integrity mode: development
+
+---
+
+## ⚠️ Diretivas Globais de Arquitetura (Obrigatório)
+
+1. Proibição de Mutação de DOM: É estritamente proibido utilizar `wanakana.bind()`. O input no novo componente `KanaKanjiInput.tsx` deve ser 100% controlled. A conversão romaji-kana deve ocorrer interceptando o `onChange` e aplicando `wanakana.toKana()` antes de atualizar o estado do React.
+2. Modelo de Interação IME Autêntico: Não utilize debouncing para abrir o popup. O fluxo deve ser:
+   - O usuário digita os caracteres (que viram kana automaticamente).
+   - O usuário pressiona a tecla `Space` (Espaço).
+   - O evento `onKeyDown` intercepta o `Space`, previne o comportamento padrão e dispara a requisição de busca de Kanji para a palavra atual.
+3. Gerenciamento de Buffer (Segmentação): O componente deve separar logicamente o texto "commitado" (já confirmado) do "buffer de composição" (a palavra final que está sendo digitada atualmente). A requisição para a API só envia o conteúdo do buffer.
+4. Proxy de API e Fallback de Resiliência: 
+   - Backend (`api/dialogo.js`): Adicione a ação `converter_kanji` para fazer o proxy da requisição GET para `http://www.google.com/transliterate?langpair=ja-Hira|ja&text={texto}`.
+   - Frontend: A chamada para `converter_kanji` deve estar em um bloco `try/catch` com timeout. Se a API não oficial falhar, retornar HTTP 500 ou demorar demais, o sistema deve capturar o erro silenciosamente, fechar o popup e aceitar o buffer atual em kana bruto sem travar a interface.
+5. Navegação por Teclado: Quando o popup de sugestões estiver aberto:
+   - `ArrowDown` / `ArrowUp`: Navegam pelo array de resultados.
+   - `Enter`: Seleciona o Kanji destacado, substitui o buffer de composição na string principal e fecha o popup. O `Enter` NÃO deve disparar o envio da mensagem no chat enquanto o popup estiver ativo (use `e.preventDefault()`).
+   - `Escape`: Fecha o popup e mantém o kana original.
+

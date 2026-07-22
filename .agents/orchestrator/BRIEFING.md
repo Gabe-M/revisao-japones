@@ -1,64 +1,64 @@
-# BRIEFING — 2026-07-21T22:55:30Z
+# BRIEFING — 2026-07-21T23:41:40Z
 
 ## Mission
-Orchestrate the implementation of DialoGo features (R1: Grammar, R2: Suggestions, R3: Vocab/SRS, R4: Stats Drawer) following strict stack, resilience, auth, and build constraints.
+Orchestrate the implementation of the `KanaKanjiInput` component in `DialoGoPanel` using controlled React IME architecture, spacebar trigger, proxy action `converter_kanji`, resilient timeout/fallback, and complete keyboard navigation.
 
 ## 🔒 My Identity
 - Archetype: teamwork_preview_orchestrator
 - Roles: orchestrator, user_liaison, human_reporter, successor
 - Working directory: c:\Users\Fabiano\Downloads\sites\japones\.agents\orchestrator
-- Original parent: c450bc67-7a58-475f-87b2-8290d97655c4
-- Original parent conversation ID: c450bc67-7a58-475f-87b2-8290d97655c4
+- Original parent: 246194c6-e1ae-402e-aa7b-27e3ecebcc7c
+- Original parent conversation ID: 246194c6-e1ae-402e-aa7b-27e3ecebcc7c
 
 ## 🔒 My Workflow
 - **Pattern**: Project Pattern
 - **Scope document**: c:\Users\Fabiano\Downloads\sites\japones\.agents\orchestrator\PROJECT.md
-1. **Decompose**: Decompose requirements R1, R2, R3, R4 into distinct milestones.
+1. **Decompose**: Decompose KanaKanjiInput into M6 (backend proxy), M7 (KanaKanjiInput component), M8 (DialoGoPanel integration), M9 (Verification & Audit).
 2. **Dispatch & Execute**:
-   - Explorer(s) -> Worker -> Reviewer(s) -> Challenger(s) -> Forensic Auditor -> Gate.
+   - Explorer(s) -> Worker(s) -> Reviewer(s) -> Challenger(s) -> Forensic Auditor -> Gate.
 3. **On failure**: Retry, replace, skip, redistribute, redesign.
 4. **Succession**: Self-succeed at spawn count 16.
 - **Work items**:
   1. Phase 1: Explorer Investigation [done]
-  2. Milestone 1: Structured Grammar Explanations (R1) [done]
-  3. Milestone 2: Contextual Response Suggestions (R2) [done]
-  4. Milestone 3: Vocabulary & SRS Dual Persistence (R3) [done]
-  5. Milestone 4: Session Progress Stats Drawer (R4) [done]
-  6. Phase 3: Review, Challenge & Forensic Audit Verification [done - VERDICT: CLEAN]
+  2. Milestone 6: Backend Proxy Action (`converter_kanji`) [done]
+  3. Milestone 7: Frontend `KanaKanjiInput` Component [done]
+  4. Milestone 8: `DialoGoPanel.tsx` Integration [done]
+  5. Milestone 9: Final Verification & Forensic Audit [done - VERDICT: CLEAN]
 - **Current phase**: 4
-- **Current focus**: Handoff & Victory Claim
+- **Current focus**: Handoff & Project Completion
 
 ## 🔒 Key Constraints
-- Stack: Shadcn UI + Tailwind CSS v4 only.
-- Error handling: try/catch on all /api/dialogo, /api/jisho, /api/srs calls with visual error feedback (Toast/alert).
-- Auth: Prop drill session.access_token in Authorization: Bearer <token> header.
-- Build: npm run build succeeds without TypeScript errors.
+- Controlled React IME (NO `wanakana.bind()`). Romaji->Kana via `wanakana.toKana()` in `onChange` before React state update.
+- Spacebar trigger (`onKeyDown` space intercept, prevent default, fetch Kanji options for active composition buffer).
+- Buffer segmentation (committed text vs active composition buffer).
+- Proxy action `converter_kanji` in `api/dialogo.js` fetching `http://www.google.com/transliterate?langpair=ja-Hira|ja&text={texto}`.
+- Frontend resilience: try/catch with timeout on `converter_kanji`. If failed/timed out, close popup and commit raw kana buffer.
+- Keyboard navigation: ArrowUp/ArrowDown to select candidate, Enter to choose candidate & replace buffer (prevent chat send while popup active), Escape to cancel popup & keep original kana.
+- Stack: Shadcn UI + Tailwind CSS v4.
+- Build: `npm run build` succeeds without TypeScript errors.
 - Never write source code files directly from Orchestrator.
 
 ## Current Parent
-- Conversation ID: c450bc67-7a58-475f-87b2-8290d97655c4
+- Conversation ID: 246194c6-e1ae-402e-aa7b-27e3ecebcc7c
 - Updated: not yet
 
 ## Key Decisions Made
-- Decomposed the project into 4 feature milestones (M1: R1, M2: R2, M3: R3, M4: R4) plus Final Verification (M5).
-- Dispatched 3 Explorers for parallel Phase 1 investigation (completed).
-- Dispatched Worker 1 for R1, R2, R3 implementation (completed).
-- Dispatched Worker 2 for R4 Session Progress Drawer implementation (completed).
-- Dispatched 2 Reviewers, 2 Challengers, and 1 Forensic Auditor for Phase 3 verification (completed - all PASS, audit CLEAN).
+- All phases completed: Explorers, Workers, Reviewers, Challengers, and Forensic Auditor verified implementation.
+- Forensic Auditor verdict: CLEAN. Build passes with 0 errors.
 
 ## Team Roster
 | Agent | Type | Work Item | Status | Conv ID |
 |-------|------|-----------|--------|---------|
-| Explorer 1 | teamwork_preview_explorer | Backend API Investigation | completed | 3ace06c8-a47b-46d4-86bc-e760d74489c7 |
-| Explorer 2 | teamwork_preview_explorer | AjudaModal & Dialog UI Investigation | completed | 1497e14f-c243-4f82-84c9-7405feae18da |
-| Explorer 3 | teamwork_preview_explorer | DialoGoPanel & Shadcn Components | completed | eb865ed9-893b-4b81-b9a7-b4c56762dde8 |
-| Worker 1 | teamwork_preview_worker | Backend & AjudaModal (R1, R2, R3) | completed | 4d29692f-31cb-4a18-bc76-03d21b0b31f4 |
-| Worker 2 | teamwork_preview_worker | Progress Stats Drawer (R4) | completed | 2cdcf151-fae0-4d25-8709-441070c8aa98 |
-| Reviewer 1 | teamwork_preview_reviewer | Code Review (R1, R2, R3) | completed | 7dbec214-b5e3-4b31-b648-89fcf2579fd0 |
-| Reviewer 2 | teamwork_preview_reviewer | Code Review (R4 & Auth) | completed | cd86fc79-57cb-48ef-af98-f27a4a967e48 |
-| Challenger 1 | teamwork_preview_challenger | Adversarial Verification (R1-3) | completed | 17bf267c-84c8-48bf-86d1-12586e3cfd75 |
-| Challenger 2 | teamwork_preview_challenger | Adversarial Verification (R4) | completed | 84010a2b-f938-4781-a0e9-ea6adeeab5e9 |
-| Auditor 1 | teamwork_preview_auditor | Forensic Integrity Audit | completed | c8c1ae16-2025-423b-8fd6-31e84db53bef |
+| Explorer 1 | teamwork_preview_explorer | Backend Proxy (`converter_kanji`) | completed | 9668d8cf-256f-4bee-9999-95bba7bba304 |
+| Explorer 2 | teamwork_preview_explorer | Frontend IME Architecture | completed | a98f3a08-a708-4e69-9ecc-20892c4f495c |
+| Explorer 3 | teamwork_preview_explorer | Candidate Popup & Keyboard Nav | completed | 76376123-514b-4480-8f5d-462864a1a996 |
+| Worker 1 | teamwork_preview_worker | Backend Proxy (`converter_kanji`) in `api/dialogo.js` | completed | 6ea42b77-055e-42a1-87b1-88b5887648c8 |
+| Worker 2 | teamwork_preview_worker | `KanaKanjiInput.tsx` & `DialoGoPanel.tsx` integration | completed | f811fb8b-aa98-449d-8161-8984c118551a |
+| Reviewer 1 | teamwork_preview_reviewer | Frontend Component & IME Review | completed | 1e04aa22-28da-4b83-b97b-f97faff3cc9e |
+| Reviewer 2 | teamwork_preview_reviewer | Backend Proxy & Integration Review | completed | 9f36cb16-6302-4fed-bae4-afe3f898c2a7 |
+| Challenger 1 | teamwork_preview_challenger | Keyboard Nav & Input Stress | completed | 89847482-2f46-4f30-b0ff-d4252de0db84 |
+| Challenger 2 | teamwork_preview_challenger | API Resilience & Timeout Stress | completed | 0047949f-c57f-4e61-9a05-a507eb91b9b6 |
+| Auditor 1 | teamwork_preview_auditor | Forensic Integrity Audit | completed | f90715ad-c02a-41b5-ba37-cbf1b2546213 |
 
 ## Succession Status
 - Succession required: no
@@ -68,7 +68,7 @@ Orchestrate the implementation of DialoGo features (R1: Grammar, R2: Suggestions
 - Successor: not yet spawned
 
 ## Active Timers
-- Heartbeat cron: task-21
+- Heartbeat cron: cancelled (task-15)
 - Safety timer: none
 
 ## Artifact Index
@@ -76,4 +76,5 @@ Orchestrate the implementation of DialoGo features (R1: Grammar, R2: Suggestions
 - c:\Users\Fabiano\Downloads\sites\japones\.agents\orchestrator\PROJECT.md — Architecture & Milestones
 - c:\Users\Fabiano\Downloads\sites\japones\.agents\orchestrator\plan.md — Detailed execution plan
 - c:\Users\Fabiano\Downloads\sites\japones\.agents\orchestrator\progress.md — Real-time progress and liveness
-- c:\Users\Fabiano\Downloads\sites\japones\.agents\orchestrator\context.md — Context and requirements index
+- c:\Users\Fabiano\Downloads\sites\japones\.agents\orchestrator\ORIGINAL_REQUEST.md — Verbatim user requirements
+- c:\Users\Fabiano\Downloads\sites\japones\.agents\orchestrator\handoff.md — Final handoff report
