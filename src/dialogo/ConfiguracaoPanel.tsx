@@ -29,6 +29,9 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
     const [baralhosDisp, setBaralhosDisp] = useState<string[]>([]);
     const [baralhoSelecionado, setBaralhoSelecionado] = useState('');
     const [srsFiltro, setSrsFiltro] = useState<'Todos' | 'Aprendidos' | 'Novos'>('Todos');
+    // Destino das palavras novas aprendidas no diálogo
+    const [baralhoDestino, setBaralhoDestino] = useState('');
+    const [conjuntoDestino, setConjuntoDestino] = useState('Geral');
     const [selectedProvider, setSelectedProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(
         () => (localStorage.getItem('selected_provider') as any) || 'groq'
     );
@@ -319,7 +322,8 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
             criarNovaSessao: session ? (tipoExibicaoSessao === 'nova') : false,
             nomeSessao: nomeSessao || tema,
             sessionId: session ? (tipoExibicaoSessao === 'existente' ? sessaoSelecionadaId : null) : null,
-
+            baralhoDestino: baralhoDestino || '',
+            conjuntoDestino: conjuntoDestino || 'Geral',
         });
     };
 
@@ -565,6 +569,41 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                             </button>
                         ))}
                     </div>
+                </div>
+
+                {/* Destino das palavras novas aprendidas */}
+                <div className="flex flex-col gap-2.5">
+                    <label className="font-bold text-foreground text-[0.95em]">📥 Destino das palavras novas aprendidas:</label>
+                    {baralhosDisp.length > 1 ? (
+                        // Se há baralhos Anki disponíveis, mostrar seletor de baralho
+                        <div className="flex flex-col gap-1.5">
+                            <p className="text-xs text-muted-foreground">Palavras avaliadas como Fácil/Médio/Difícil serão salvas no baralho Anki:</p>
+                            <select
+                                value={baralhoDestino}
+                                onChange={e => setBaralhoDestino(e.target.value)}
+                                className="w-full px-3 py-2.5 rounded-xl border-2 border-border bg-background text-foreground font-semibold text-[1em] outline-none transition-all cursor-pointer shadow-sm"
+                            >
+                                {baralhosDisp.map(b => (
+                                    <option key={b} value={b}>{b}</option>
+                                ))}
+                            </select>
+                        </div>
+                    ) : (
+                        // Sem baralhos Anki: salvar em conjunto
+                        <div className="flex flex-col gap-1.5">
+                            <p className="text-xs text-muted-foreground">Palavras avaliadas serão salvas no conjunto de vocabulário:</p>
+                            <select
+                                value={conjuntoDestino}
+                                onChange={e => setConjuntoDestino(e.target.value)}
+                                className="w-full px-3 py-2.5 rounded-xl border-2 border-border bg-background text-foreground font-semibold text-[1em] outline-none transition-all cursor-pointer shadow-sm"
+                            >
+                                {conjuntosDisp.map(c => (
+                                    <option key={c} value={c}>{c}</option>
+                                ))}
+                                <option value="DialoGo">🎌 DialoGo (novo)</option>
+                            </select>
+                        </div>
+                    )}
                 </div>
 
                 {/* Botão Iniciar */}

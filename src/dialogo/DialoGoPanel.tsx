@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import InteractiveText from '../components/InteractiveText';
 import ScoreBadge from './components/ScoreBadge';
 import * as wanakana from 'wanakana';
 import AiLoader from './components/AiLoader';
 import AiFallbackPopup from './components/AiFallbackPopup';
 import AjudaModal from './components/AjudaModal';
+import ProgressoDrawer from './components/ProgressoDrawer';
+import PalavraNovaPopover, { PalavraAdaptativa, StatusAdaptativo } from './components/PalavraNovaPopover';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -29,6 +31,14 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
     const [pendingAction, setPendingAction] = useState<'iniciar' | 'continuar' | null>(null);
     const [pendingMessage, setPendingMessage] = useState('');
     const [ajudaModal, setAjudaModal] = useState<{isOpen: boolean, mensagem: string}>({isOpen: false, mensagem: ''});
+    const [progressoOpen, setProgressoOpen] = useState(false);
+
+    // Vocabulário Adaptativo
+    const [vocabularioAdaptativo, setVocabularioAdaptativo] = useState<PalavraAdaptativa[]>([]);
+    // Map de msgIndex -> set de itens novos introduzidos naquela mensagem
+    const [novasPorMensagem, setNovasPorMensagem] = useState<Record<number, string[]>>({});
+    // Popover da palavra nova
+    const [popoverPalavra, setPopoverPalavra] = useState<{ info: PalavraAdaptativa; x: number; y: number } | null>(null);
     
     const inputRef = useRef<HTMLInputElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -174,7 +184,10 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                     tema: context.tema,
                     jlpt: context.jlpt,
                     vocabulario: context.vocabularioBanco || [],
-                    sessionId: context.sessionId
+                    sessionId: context.sessionId,
+                    palavras_aprendendo: vocabularioAdaptativo.filter(p =>
+                        p.status === 'aprendendo_medio' || p.status === 'aprendendo_dificil'
+                    )
                 })
             });
 
@@ -185,23 +198,69 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
 
             const data = await res.json();
 
+            // Processa palavras novas introduzidas pela IA
+            const novasIntroducidas: PalavraAdaptativa[] = (data.palavras_novas_introducidas || []).map((p: any) => ({
+                item: p.item,
+                leitura: p.leitura || '',
+                significado: p.significado || '',
+                tipo: p.tipo || '',
+                status: 'novo' as StatusAdaptativo,
+                vezesUsadaPeloAluno: 0,
+                vezesIntroducida: 1
+            }));
+
+            if (novasIntroducidas.length > 0) {
+                setVocabularioAdaptativo(prev => {
+                    const existentes = new Set(prev.map(p => p.item));
+                    const reaisNovas = novasIntroducidas.filter(p => !existentes.has(p.item));
+                    return [...prev, ...reaisNovas];
+                });
+            }
+
+            // Verifica se o aluno usou palavras em aprendizado na resposta
+            if (textoJp) {
+                setVocabularioAdaptativo(prev => prev.map(p => {
+                    if ((p.status === 'aprendendo_medio' || p.status === 'aprendendo_dificil') &&
+                        textoJp.includes(p.item)) {
+                        const novasVezes = p.vezesUsadaPeloAluno + 1;
+                        let novoStatus = p.status;
+                        if (p.status === 'aprendendo_dificil' && novasVezes >= 2) novoStatus = 'aprendendo_medio';
+                        else if (p.status === 'aprendendo_medio' && novasVezes >= 3) novoStatus = 'aprendido';
+                        return { ...p, vezesUsadaPeloAluno: novasVezes, status: novoStatus };
+                    }
+                    return p;
+                }));
+            }
+
             if (data.historico && data.historico.length > 0) {
-                setHistorico(data.historico);
+                const newHist = data.historico;
+                setHistorico(newHist);
+                // Registra quais palavras novas foram na última mensagem da IA
+                if (novasIntroducidas.length > 0) {
+                    const lastIdx = newHist.length - 1;
+                    setNovasPorMensagem(prev => ({
+                        ...prev,
+                        [lastIdx]: novasIntroducidas.map(p => p.item)
+                    }));
+                }
             } else {
-                // Atualiza a ultima msg do user com a analise
                 const updateHistorico = [...novoHistorico];
                 updateHistorico[updateHistorico.length - 1].analise = data.analise;
                 updateHistorico[updateHistorico.length - 1].score = data.score;
-                
-                // Adiciona a resposta da IA
                 updateHistorico.push({
                     role: 'assistant',
                     jp: data.mensagem_ia_jp,
                     pt: data.mensagem_ia_pt,
                     content: data.mensagem_ia_jp
                 });
-                
                 setHistorico(updateHistorico);
+                if (novasIntroducidas.length > 0) {
+                    const lastIdx = updateHistorico.length - 1;
+                    setNovasPorMensagem(prev => ({
+                        ...prev,
+                        [lastIdx]: novasIntroducidas.map(p => p.item)
+                    }));
+                }
             }
         } catch (error: any) {
             console.error(error);
@@ -228,6 +287,65 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
         window.speechSynthesis.speak(utterance);
     };
 
+    // Handler para avaliação de dificuldade de palavra nova
+    const handleAvaliarPalavra = useCallback(async (item: string, dificuldade: 'facil' | 'medio' | 'dificil') => {
+        const novoStatus: StatusAdaptativo =
+            dificuldade === 'facil' ? 'aprendido' :
+            dificuldade === 'medio' ? 'aprendendo_medio' : 'aprendendo_dificil';
+
+        const palavraInfo = vocabularioAdaptativo.find(p => p.item === item);
+        if (!palavraInfo) return;
+
+        setVocabularioAdaptativo(prev =>
+            prev.map(p => p.item === item ? { ...p, status: novoStatus, avaliadaEm: new Date().toISOString() } : p)
+        );
+        setPopoverPalavra(null);
+
+        if (!session?.access_token) return;
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+        };
+        const srsRepetitions = dificuldade === 'facil' ? 2 : dificuldade === 'medio' ? 1 : 0;
+
+        try {
+            // Salva no banco de vocabulário (jisho)
+            if (dificuldade === 'facil') {
+                await fetch('/api/jisho?acao=salvar', {
+                    method: 'POST', headers,
+                    body: JSON.stringify({
+                        item: palavraInfo.item,
+                        leitura: palavraInfo.leitura,
+                        significado: palavraInfo.significado,
+                        categoria: palavraInfo.tipo || 'Vocabulário',
+                        jlpt: context.jlpt || 'N5',
+                        conjuntos: context.conjuntoDestino ? [context.conjuntoDestino] : ['Geral'],
+                        baralhos: context.baralhoDestino ? [context.baralhoDestino] : []
+                    })
+                });
+            }
+            // Inicializa no SRS
+            await fetch('/api/srs?acao=salvar', {
+                method: 'POST', headers,
+                body: JSON.stringify({
+                    item: palavraInfo.item,
+                    leitura: palavraInfo.leitura,
+                    significado: palavraInfo.significado,
+                    repetitions: srsRepetitions,
+                    due: Date.now()
+                })
+            });
+        } catch (e) {
+            console.error('Erro ao persistir palavra adaptativa:', e);
+        }
+    }, [vocabularioAdaptativo, session, context]);
+
+    // Handler para clique em palavra nova/aprendendo no chat
+    const handlePalavraNovaClick = useCallback((item: string, x: number, y: number) => {
+        const info = vocabularioAdaptativo.find(p => p.item === item);
+        if (info) setPopoverPalavra({ info, x, y });
+    }, [vocabularioAdaptativo]);
+
     if (loading) {
         return (
             <div className="p-5">
@@ -251,7 +369,13 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                     ← Voltar à Tradução
                 </Button>
                 <h2 className="text-lg font-bold text-foreground m-0">Diálogo</h2>
-                <div className="w-[130px]" /> {/* spacer for centering */}
+                <Button
+                    variant="outline"
+                    onClick={() => setProgressoOpen(true)}
+                    className="text-sm flex items-center gap-1.5 font-semibold hover:bg-accent"
+                >
+                    📊 Progresso
+                </Button>
             </div>
 
             {/* Banner do cenário */}
@@ -282,7 +406,16 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                                         ].join(' ')}
                                     >
                                         <div className="text-lg flex items-center gap-2 flex-wrap">
-                                            <InteractiveText text={msg.jp} />
+                                            <InteractiveText
+                                                text={msg.jp}
+                                                palavrasNovas={isIA ? new Set(novasPorMensagem[i] || []) : undefined}
+                                                palavrasAprendendo={isIA ? Object.fromEntries(
+                                                    vocabularioAdaptativo
+                                                        .filter(p => p.status === 'aprendendo_medio' || p.status === 'aprendendo_dificil')
+                                                        .map(p => [p.item, p.status === 'aprendendo_medio' ? 'medio' : 'dificil' as 'medio' | 'dificil'])
+                                                ) : undefined}
+                                                onPalavraAdaptativaClick={isIA ? handlePalavraNovaClick : undefined}
+                                            />
                                             {isIA && (
                                                 <div className="flex gap-1">
                                                     <Button
@@ -397,8 +530,29 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                 onClose={() => setAjudaModal({isOpen: false, mensagem: ''})}
                 mensagem={ajudaModal.mensagem}
                 context={context}
+                session={session}
                 onUsarResposta={(texto) => { setInputUser(texto); setAjudaModal({isOpen: false, mensagem: ''}); }}
             />
+
+            <ProgressoDrawer
+                isOpen={progressoOpen}
+                onClose={() => setProgressoOpen(false)}
+                historico={historico}
+                session={session}
+                currentSessionId={context.sessionId}
+                tema={context.tema}
+            />
+
+            {/* Popover de palavra nova/aprendendo */}
+            {popoverPalavra && (
+                <PalavraNovaPopover
+                    palavra={popoverPalavra.info}
+                    x={popoverPalavra.x}
+                    y={popoverPalavra.y}
+                    onAvaliar={handleAvaliarPalavra}
+                    onClose={() => setPopoverPalavra(null)}
+                />
+            )}
         </div>
     );
 }

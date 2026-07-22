@@ -8,18 +8,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Card } from '@/components/ui/card';
 
 interface AjudaModalProps {
     isOpen: boolean;
     onClose: () => void;
     mensagem: string; // raw JP string with ruby tags
     context: any; // tema, jlpt, vocabularioBanco, provider
+    session?: any;
     onUsarResposta: (texto: string) => void;
 }
 
 type ModoAtivo = 'analisar' | 'sugestao' | 'duvida' | null;
 
-export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarResposta }: AjudaModalProps) {
+export default function AjudaModal({ isOpen, onClose, mensagem, context, session, onUsarResposta }: AjudaModalProps) {
     // Vocabulário (automático)
     const [vocabTab, setVocabTab] = useState<'extraido' | 'relacionado'>('extraido');
     const [vocabulario, setVocabulario] = useState<any[]>([]);
@@ -28,6 +31,10 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
     const [loadingVocabRel, setLoadingVocabRel] = useState(false);
     const [vocabAberto, setVocabAberto] = useState(true);
 
+    // Vocabulário Extraído - Salvamento (R3)
+    const [salvandoMap, setSalvandoMap] = useState<Record<string, boolean>>({});
+    const [salvosMap, setSalvosMap] = useState<Record<string, boolean>>({});
+
     // Campo de prática
     const [praticaInput, setPraticaInput] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -35,12 +42,12 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
     // Modo ativo (qual seção de resultado mostrar)
     const [modoAtivo, setModoAtivo] = useState<ModoAtivo>(null);
 
-    // Análise de prática
+    // Análise de prática (R1)
     const [analisePratica, setAnalisePratica] = useState<any>(null);
     const [loadingPratica, setLoadingPratica] = useState(false);
 
-    // Sugestão de resposta
-    const [sugestao, setSugestao] = useState<{ jp: string; pt: string; dica: string } | null>(null);
+    // Sugestões de resposta - 3 Cards (R2)
+    const [sugestoes, setSugestoes] = useState<any[]>([]);
     const [loadingSugestao, setLoadingSugestao] = useState(false);
 
     // Dúvida
@@ -60,7 +67,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
         if (isOpen) {
             setPraticaInput('');
             setAnalisePratica(null);
-            setSugestao(null);
+            setSugestoes([]);
             setDuvidaInput('');
             setRespostaDuvida('');
             setModoAtivo(null);
@@ -68,6 +75,8 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
             setSugestoesLacuna([]);
             setVocabAberto(true);
             setVocabTab('extraido');
+            setSalvandoMap({});
+            setSalvosMap({});
             carregarVocabulario();
             carregarVocabularioRelacionado();
         }
@@ -80,7 +89,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                 resultadoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }, 100);
         }
-    }, [analisePratica, sugestao, respostaDuvida]);
+    }, [analisePratica, sugestoes, respostaDuvida]);
 
     const handlePraticaInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const rawVal = e.target.value;
@@ -126,9 +135,13 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
             mensagem_ia_jp: mensagem,
             ...extraBody
         };
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (session?.access_token) {
+            headers['Authorization'] = 'Bearer ' + session.access_token;
+        }
         const response = await fetch('/api/dialogo', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify(body)
         });
         if (!response.ok) {
@@ -196,6 +209,62 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
         }
     };
 
+    const handleSalvarVocabulario = async (itemVocab: any) => {
+        const key = itemVocab.item;
+        if (!session?.access_token) {
+            alert("Sessão não autenticada. Por favor, faça login.");
+            return;
+        }
+        setSalvandoMap(prev => ({ ...prev, [key]: true }));
+        try {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+            };
+
+            // Dual HTTP POST 1: Jisho API
+            const resJisho = await fetch('/api/jisho?acao=salvar', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    item: itemVocab.item,
+                    leitura: itemVocab.leitura || '',
+                    significado: itemVocab.significado || '',
+                    categoria: itemVocab.tipo || 'Vocabulário',
+                    jlpt: context?.jlpt || 'N5'
+                })
+            });
+            if (!resJisho.ok) {
+                const err = await resJisho.json().catch(() => ({}));
+                throw new Error(err.error || `Erro Jisho (${resJisho.status})`);
+            }
+
+            // Dual HTTP POST 2: SRS API
+            const resSrs = await fetch('/api/srs?acao=salvar', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    item: itemVocab.item,
+                    leitura: itemVocab.leitura || '',
+                    significado: itemVocab.significado || '',
+                    repetitions: 0,
+                    due: new Date().toISOString()
+                })
+            });
+            if (!resSrs.ok) {
+                const err = await resSrs.json().catch(() => ({}));
+                throw new Error(err.error || `Erro SRS (${resSrs.status})`);
+            }
+
+            setSalvosMap(prev => ({ ...prev, [key]: true }));
+        } catch (e: any) {
+            console.error("Erro ao salvar vocabulário:", e);
+            alert(`Falha ao salvar "${itemVocab.item}": ${e.message || e}`);
+        } finally {
+            setSalvandoMap(prev => ({ ...prev, [key]: false }));
+        }
+    };
+
     const handleInserirVocabularioNaResposta = (item: string) => {
         const itemLimpo = item.replace(/<[^>]*>/g, '').trim();
         if (!itemLimpo) return;
@@ -220,13 +289,17 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
 
     const handleSugestao = async () => {
         setModoAtivo('sugestao');
-        setSugestao(null);
+        setSugestoes([]);
         setLoadingSugestao(true);
         try {
-            const data = await callEndpoint('sugerir_resposta');
-            setSugestao({ jp: data.sugestao_jp, pt: data.sugestao_pt, dica: data.dica });
+            const data = await callEndpoint('sugerir_multiplas_respostas');
+            if (data.sugestoes && Array.isArray(data.sugestoes)) {
+                setSugestoes(data.sugestoes);
+            } else {
+                setSugestoes([]);
+            }
         } catch (e) {
-            console.error(e);
+            console.error('Erro ao carregar sugestões:', e);
         } finally {
             setLoadingSugestao(false);
         }
@@ -254,7 +327,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
         const textoPuro = textoJp.replace(/<[^>]*>/g, '');
         setPraticaInput(textoPuro);
         setModoAtivo(null);
-        setSugestao(null);
+        setSugestoes([]);
         setTimeout(() => inputRef.current?.focus(), 50);
     };
 
@@ -360,7 +433,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
 
         return (
             <div ref={resultadoRef} className="transition-all">
-                {/* Analisar */}
+                {/* Analisar (R1) */}
                 {modoAtivo === 'analisar' && (
                     <div>
                         {loadingPratica ? (
@@ -377,17 +450,59 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                         <div className={`font-bold text-sm mb-3 ${analisePratica.correto ? 'text-green-500' : 'text-rose-500'}`}>
                                             {analisePratica.correto ? '✨ Resposta adequada' : '⚠️ Precisa de revisão'}
                                         </div>
-                                        {analisePratica.erros?.length > 0 && (
+
+                                        {/* R1: Accordion para erros_detalhados */}
+                                        {analisePratica.erros_detalhados && analisePratica.erros_detalhados.length > 0 ? (
+                                            <div className="mb-3.5">
+                                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                                                    Erros encontrados ({analisePratica.erros_detalhados.length})
+                                                </div>
+                                                <Accordion type="single" collapsible className="w-full space-y-2">
+                                                    {analisePratica.erros_detalhados.map((item: any, i: number) => (
+                                                        <AccordionItem key={i} value={`erro-${i}`} className="border border-rose-500/20 rounded-lg bg-rose-500/5 px-3">
+                                                            <AccordionTrigger className="text-rose-400 font-semibold hover:no-underline py-2.5 text-sm">
+                                                                <span>{item.erro || `Erro ${i + 1}`}</span>
+                                                            </AccordionTrigger>
+                                                            <AccordionContent className="pt-1 pb-3 text-xs space-y-2 text-foreground/90">
+                                                                {item.regra_gramatical && (
+                                                                    <div>
+                                                                        <span className="font-semibold text-amber-400">Regra Gramatical: </span>
+                                                                        <span className="text-foreground font-medium">{item.regra_gramatical}</span>
+                                                                    </div>
+                                                                )}
+                                                                {item.explicacao && (
+                                                                    <div>
+                                                                        <span className="font-semibold text-muted-foreground">Explicação: </span>
+                                                                        <p className="mt-0.5 text-muted-foreground leading-relaxed">{item.explicacao}</p>
+                                                                    </div>
+                                                                )}
+                                                                {item.exemplo_correto && (
+                                                                    <div className="mt-2 p-2 rounded bg-background/80 border border-border/60">
+                                                                        <span className="font-semibold text-green-400 block mb-1 text-[0.7rem] uppercase tracking-wide">Exemplo Correto:</span>
+                                                                        <div className="text-sm font-bold text-foreground">
+                                                                            <InteractiveText text={item.exemplo_correto} />
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </AccordionContent>
+                                                        </AccordionItem>
+                                                    ))}
+                                                </Accordion>
+                                            </div>
+                                        ) : analisePratica.erros?.length > 0 ? (
                                             <div className="mb-3.5">
                                                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Erros encontrados</div>
                                                 <ul className="text-rose-500 pl-5 my-1 text-sm space-y-1">
                                                     {analisePratica.erros.map((err: string, i: number) => <li key={i}>{err}</li>)}
                                                 </ul>
                                             </div>
+                                        ) : null}
+
+                                        {analisePratica.dica && (
+                                            <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20 text-sm">
+                                                <strong className="text-purple-400">Dica:</strong> {analisePratica.dica}
+                                            </div>
                                         )}
-                                        <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20 text-sm">
-                                            <strong className="text-purple-400">Dica:</strong> {analisePratica.dica}
-                                        </div>
                                         {analisePratica.traducao_correta && (
                                             <div className="mt-3 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                                                 <div className="text-xs font-semibold text-green-500/90 uppercase tracking-wider mb-1">Como soaria mais natural</div>
@@ -415,46 +530,86 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                     </div>
                 )}
 
-                {/* Sugestão */}
+                {/* Sugestão (R2: 3 Cards) */}
                 {modoAtivo === 'sugestao' && (
                     <div>
                         {loadingSugestao ? (
                             <div className="text-center py-6">
-                                <AiLoader provider={context.provider || 'groq'} message="Gerando sugestão de resposta..." />
+                                <AiLoader provider={context.provider || 'groq'} message="Gerando 3 opções de resposta..." />
                             </div>
-                        ) : sugestao ? (
+                        ) : sugestoes && sugestoes.length > 0 ? (
                             <div className="flex flex-col gap-3.5">
-                                <div className="bg-card p-4 rounded-xl border border-border shadow-sm flex flex-col gap-3">
-                                    <div className="text-xs font-semibold text-primary uppercase tracking-wider">💡 Sugestão de Resposta</div>
-                                    <div className="text-2xl font-bold text-primary"><InteractiveText text={sugestao.jp} /></div>
-                                    <div className="text-base text-muted-foreground">{sugestao.pt}</div>
-                                    <div className="flex gap-2 items-start p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm text-blue-500">
-                                        <MessageCircle size={16} className="shrink-0 mt-0.5" />
-                                        <span>{sugestao.dica}</span>
-                                    </div>
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    💡 Sugestões Contextuais de Resposta
                                 </div>
-                                <div className="flex gap-2.5 flex-wrap sm:flex-nowrap">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => usarSugestaoNoCampo(sugestao.jp)}
-                                        className="flex-1 h-11 text-xs sm:text-sm font-semibold"
-                                        title="Copia para o campo de prática para você editar"
-                                    >
-                                        ✏️ Praticar esta resposta
-                                    </Button>
-                                    <Button
-                                        onClick={() => onUsarResposta(stripTags(sugestao.jp))}
-                                        className="flex-1 flex items-center justify-center gap-1.5 h-11 bg-green-600 hover:bg-green-700 text-white font-bold transition-all text-xs sm:text-sm shadow-sm"
-                                    >
-                                        <Check size={16} /> Usar direto
-                                    </Button>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {sugestoes.map((s: any, idx: number) => {
+                                        const intencao = s.intencao || s.tipo || 'Sugestão';
+                                        const emoji = s.emoji || (intencao.toLowerCase().includes('concordar') ? '✅' : intencao.toLowerCase().includes('discordar') ? '🙅' : '🤔');
+                                        const jpText = s.jp || s.texto_jp || '';
+                                        const ptText = s.pt || s.traducao_pt || '';
+                                        const dicaText = s.dica || '';
+
+                                        let borderStyle = "border-border";
+                                        let bgBadge = "bg-muted text-muted-foreground";
+                                        if (intencao.toLowerCase().includes('concordar')) {
+                                            borderStyle = "border-green-500/30 hover:border-green-500/50";
+                                            bgBadge = "bg-green-500/10 text-green-500 border-green-500/20";
+                                        } else if (intencao.toLowerCase().includes('discordar')) {
+                                            borderStyle = "border-rose-500/30 hover:border-rose-500/50";
+                                            bgBadge = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+                                        } else if (intencao.toLowerCase().includes('perguntar')) {
+                                            borderStyle = "border-amber-500/30 hover:border-amber-500/50";
+                                            bgBadge = "bg-amber-500/10 text-amber-500 border-amber-500/20";
+                                        }
+
+                                        return (
+                                            <Card key={idx} className={`p-4 bg-card border ${borderStyle} transition-all shadow-sm flex flex-col gap-2.5`}>
+                                                <div className="flex items-center justify-between">
+                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded border ${bgBadge}`}>
+                                                        {emoji} {intencao}
+                                                    </span>
+                                                </div>
+                                                <div className="text-xl font-bold text-foreground">
+                                                    <InteractiveText text={jpText} />
+                                                </div>
+                                                <div className="text-sm text-muted-foreground font-medium">
+                                                    {ptText}
+                                                </div>
+                                                {dicaText && (
+                                                    <div className="flex gap-2 items-start p-2.5 bg-muted/40 border border-border/50 rounded-lg text-xs text-muted-foreground">
+                                                        <MessageCircle size={14} className="shrink-0 mt-0.5 text-primary" />
+                                                        <span>{dicaText}</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-2 pt-1">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => usarSugestaoNoCampo(jpText)}
+                                                        className="flex-1 h-9 text-xs font-semibold"
+                                                        title="Copia para o campo de prática para você editar"
+                                                    >
+                                                        ✏️ Praticar
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => onUsarResposta(stripTags(jpText))}
+                                                        className="flex-1 flex items-center justify-center gap-1 h-9 bg-green-600 hover:bg-green-700 text-white font-bold text-xs shadow-sm"
+                                                    >
+                                                        <Check size={14} /> ✅ Usar direto
+                                                    </Button>
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
                                 </div>
                                 <Button
                                     variant="outline"
                                     onClick={handleSugestao}
-                                    className="self-start text-xs font-semibold"
+                                    className="self-start text-xs font-semibold mt-1"
                                 >
-                                    Gerar outra sugestão
+                                    Gerar novas sugestões
                                 </Button>
                             </div>
                         ) : null}
@@ -516,7 +671,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                         <Sparkles size={18} className="text-primary" />
                         Assistente de Prática
                     </DialogTitle>
-                    {/* DialogDescription obrigatório para acessibilidade (visualmente oculto) */}
+                    {/* DialogDescription obrigatório para acessibilidade */}
                     <DialogDescription className="sr-only">
                         Modal de ajuda para prática de diálogo em japonês
                     </DialogDescription>
@@ -592,9 +747,11 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                     ) : vocabulario.length > 0 ? (
                                         <div className="flex flex-col gap-2.5">
                                             {vocabulario.map((v, idx) => (
-                                                <div key={idx} className="bg-card p-3.5 rounded-xl border border-border shadow-sm flex flex-col gap-1 relative overflow-hidden transition-all hover:border-border/80">
-                                                    <div className="text-base font-bold text-foreground">
-                                                        <InteractiveText text={`<ruby>${v.item}<rt>${v.leitura}</rt></ruby>`} />
+                                                <div key={idx} className="bg-card p-3.5 rounded-xl border border-border shadow-sm flex flex-col gap-1.5 relative overflow-hidden transition-all hover:border-border/80">
+                                                    <div className="flex justify-between items-start gap-2 pr-16">
+                                                        <div className="text-base font-bold text-foreground">
+                                                            <InteractiveText text={`<ruby>${v.item}<rt>${v.leitura}</rt></ruby>`} />
+                                                        </div>
                                                     </div>
                                                     <div className="text-xs text-muted-foreground font-medium">{v.significado}</div>
                                                     {v.tipo && (
@@ -602,6 +759,28 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, onUsarR
                                                             {v.tipo}
                                                         </div>
                                                     )}
+                                                    {/* R3: Botão Salvar (Jisho + SRS) */}
+                                                    <div className="flex items-center justify-end mt-1 pt-2 border-t border-border/40">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={salvandoMap[v.item] || salvosMap[v.item]}
+                                                            onClick={() => handleSalvarVocabulario(v)}
+                                                            className={`h-7 px-2.5 text-xs font-semibold transition-all ${
+                                                                salvosMap[v.item]
+                                                                    ? 'bg-green-500/10 text-green-500 border-green-500/30 opacity-100 cursor-default font-bold'
+                                                                    : 'hover:bg-primary/10 hover:text-primary'
+                                                            }`}
+                                                        >
+                                                            {salvandoMap[v.item] ? (
+                                                                <span className="animate-pulse">Salvando...</span>
+                                                            ) : salvosMap[v.item] ? (
+                                                                '✅ Salvo'
+                                                            ) : (
+                                                                '💾 Salvar'
+                                                            )}
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>

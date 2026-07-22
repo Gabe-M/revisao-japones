@@ -7,12 +7,16 @@ interface InteractiveTextProps {
   className?: string;
   style?: React.CSSProperties;
   fallbackLeitura?: string;
+  // Adaptive vocabulary props
+  palavrasNovas?: Set<string>;  // words to highlight in red (new, not yet rated)
+  palavrasAprendendo?: Record<string, 'medio' | 'dificil'>;  // words in yellow (medium) or orange (hard)
+  onPalavraAdaptativaClick?: (item: string, x: number, y: number) => void;
 }
 
 // Module-level variable to persist selection state across React mount/unmount renders
 let lastSelectionTime = 0;
 
-export default function InteractiveText({ text, children, className, style, fallbackLeitura }: InteractiveTextProps) {
+export default function InteractiveText({ text, children, className, style, fallbackLeitura, palavrasNovas, palavrasAprendendo, onPalavraAdaptativaClick }: InteractiveTextProps) {
   const { openCard } = useTermCard();
   const containerRef = useRef<HTMLSpanElement>(null);
 
@@ -96,6 +100,16 @@ export default function InteractiveText({ text, children, className, style, fall
     const term = clone.textContent?.trim() || '';
     if (!term) return;
 
+    // Check if this is an adaptive vocabulary word
+    if (onPalavraAdaptativaClick) {
+      const isNova = palavrasNovas?.has(term);
+      const isAprendendo = palavrasAprendendo?.[term];
+      if (isNova || isAprendendo) {
+        onPalavraAdaptativaClick(term, e.clientX, e.clientY);
+        return;
+      }
+    }
+
     // Capture coordinates and context
     const x = e.clientX;
     const y = e.clientY;
@@ -116,8 +130,18 @@ export default function InteractiveText({ text, children, className, style, fall
       return segments.map((seg, idx) => {
         const isJp = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/.test(seg.segment);
         if (isJp) {
+          // Check adaptive vocabulary status
+          const isNova = palavrasNovas?.has(seg.segment);
+          const aprendendoStatus = palavrasAprendendo?.[seg.segment];
+          const extraClass = isNova
+            ? ' palavra-nova'
+            : aprendendoStatus === 'medio'
+            ? ' palavra-aprendendo-medio'
+            : aprendendoStatus === 'dificil'
+            ? ' palavra-aprendendo-dificil'
+            : '';
           return (
-            <span key={idx} className="interactive-word">
+            <span key={idx} className={`interactive-word${extraClass}`}>
               {seg.segment}
             </span>
           );
@@ -304,6 +328,31 @@ export default function InteractiveText({ text, children, className, style, fall
         .interactive-text-container:not(.selecting-text) ruby:hover { 
           background: linear-gradient(135deg, #ff6b6b, #c0392b) !important; 
           color: #ffffff !important; 
+        }
+
+        /* Adaptive vocabulary highlighting */
+        .interactive-text-container .palavra-nova {
+          background: rgba(239, 68, 68, 0.15);
+          color: #f87171;
+          border-bottom: 2px solid #ef4444;
+          border-radius: 2px;
+          animation: palavraNovaPulse 2s ease-in-out infinite;
+        }
+        .interactive-text-container .palavra-aprendendo-medio {
+          background: rgba(234, 179, 8, 0.15);
+          color: #facc15;
+          border-bottom: 2px solid #eab308;
+          border-radius: 2px;
+        }
+        .interactive-text-container .palavra-aprendendo-dificil {
+          background: rgba(249, 115, 22, 0.15);
+          color: #fb923c;
+          border-bottom: 2px dashed #f97316;
+          border-radius: 2px;
+        }
+        @keyframes palavraNovaPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+          50% { box-shadow: 0 0 6px 2px rgba(239, 68, 68, 0.3); }
         }
 
         .interactive-text-container:not(.selecting-text) .interactive-word:hover *,

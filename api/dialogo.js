@@ -316,7 +316,7 @@ export default async function handler(req, res) {
 
     try {
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-        const { provider = 'gemini', acao, tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp, sessionId } = body;
+        const { provider = 'gemini', acao, tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp, sessionId, palavras_aprendendo } = body;
 
         const precisaAuth = ['listar_sessoes', 'criar_sessao'].includes(acao) || !!sessionId;
         if (precisaAuth && !userId) {
@@ -982,13 +982,31 @@ export default async function handler(req, res) {
                 const historicoFiltrado = hasTruncated ? activeHistory.slice(-6) : (activeHistory || []);
                 const memoriaPrevia = hasTruncated ? `Contexto do RPG: A conversa atual é uma continuação do cenário definido pelo tópico '${tema}'. Mantenha a coerência com as interações anteriores.` : '';
 
+                // Determina o turno atual (pares de user+assistant = 1 turno)
+                const turnoAtual = Math.floor(activeHistory.filter(m => m.role === 'user').length);
+                const podeIntroduzirNovos = turnoAtual >= 3; // só após o turno 3
+
+                // Palavras em aprendizado enviadas pelo frontend
+                const palavrasAprendendoArr = Array.isArray(palavras_aprendendo) ? palavras_aprendendo : [];
+                const palavrasDificil = palavrasAprendendoArr.filter(p => p.status === 'aprendendo_dificil').map(p => p.item);
+                const palavrasMedio = palavrasAprendendoArr.filter(p => p.status === 'aprendendo_medio').map(p => p.item);
+
                 let limitacoesVocabCont = '';
                 if (vocabulario && vocabulario.length > 0) {
+                    const vocabBase = selectContextualVocab(vocabulario, tema, historicoFiltrado, resposta_usuario_jp, 50);
                     limitacoesVocabCont = `
-                    ATENÇÃO CRÍTICA: O aluno está filtrando a conversa apenas para palavras que ele já aprendeu.
-                    Você DEVE obrigatoriamente construir a sua resposta em japonês (mensagem_ia_jp) utilizando APENAS Kanjis e palavras presentes nesta lista de vocabulário: [${selectContextualVocab(vocabulario, tema, historicoFiltrado, resposta_usuario_jp, 50).join(', ')}]. 
-                    Para formar a frase, use apenas partículas gramaticais básicas e flexões verbais básicas.
-                    NÃO utilize em hipótese alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
+                    ATENÇÃO CRÍTICA: O aluno usa um filtro de vocabulário aprendido.
+                    Você DEVE construir a resposta usando PRINCIPALMENTE Kanjis e palavras desta lista: [${vocabBase.join(', ')}].
+                    Use apenas partículas gramaticais básicas e flexões verbais elementares.
+                    ${palavrasDificil.length > 0 ? `OBRIGATÓRIO: Inclua pelo menos UMA das seguintes palavras em aprendizado DIFÍCIL na sua resposta (elas são difíceis para o aluno e precisam de reforço urgente): [${palavrasDificil.join(', ')}].` : ''}
+                    ${palavrasMedio.length > 0 ? `TENTE incluir pelo menos uma das seguintes palavras em aprendizado MÉDIO (bom para reforço): [${palavrasMedio.join(', ')}].` : ''}
+                    ${podeIntroduzirNovos ? `GRADUAL: Você PODE (não obrigatório) introduzir NO MÁXIMO 1 palavra nova (não presente na lista do banco) que seja natural para o contexto. Se introduzir, inclua-a no array palavras_novas_introducidas da resposta.` : 'RESTRIÇÃO: NÃO introduza palavras novas fora da lista acima neste turno.'}`;
+                } else if (podeIntroduzirNovos) {
+                    const reforcoStr = [
+                        palavrasDificil.length > 0 ? `OBRIGATÓRIO: Inclua pelo menos UMA palavra difícil para o aluno: [${palavrasDificil.join(', ')}].` : '',
+                        palavrasMedio.length > 0 ? `TENTE incluir uma palavra em aprendizado médio: [${palavrasMedio.join(', ')}].` : ''
+                    ].filter(Boolean).join(' ');
+                    if (reforcoStr) limitacoesVocabCont = reforcoStr;
                 }
 
                 systemInstruction = `Você é um personagem de RPG conversando em japonês e um professor que avalia. Avalie a última fala do aluno em português, e responda no personagem em japonês. Retorne APENAS um JSON. Importante: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na mensagem_ia_jp para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>, e não fora (ou seja, nunca faça <ruby>Kanji</ruby><rt>furigana</rt>). O furigana deve ser escrito exclusivamente em Hiragana (ex: <ruby>私<rt>わたし</rt></ruby>, nunca romaji), e deve ser aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. Você DEVE separar os blocos lógicos/pedagógicos da frase japonesa usando a tag <w>. Agrupe partículas com seus substantivos se achar útil, ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>). Exemplo de formatação obrigatória: <w>私</w><w>は</w><w><ruby>見<rt>み</rt></ruby>てください</w>. Nunca use tags <span> ou qualquer outra tag HTML além de <ruby>, <rt> e <w>.`;
@@ -1018,12 +1036,18 @@ export default async function handler(req, res) {
                     {
                         "analise": "O que o aluno acertou/errou na frase dele (em português)",
                         "score": 90, // de 0 a 100
-                        "mensagem_ia_jp": "Sua resposta no personagem em japonês",
-                        "mensagem_ia_pt": "Tradução da sua resposta"
+                        "mensagem_ia_jp": "Sua resposta no personagem em japonês (com ruby e w tags)",
+                        "mensagem_ia_pt": "Tradução da sua resposta",
+                        "palavras_novas_introducidas": [] // Array de {item, leitura, significado, tipo} com palavras novas introduzidas nesta resposta. Deixe vazio [] se não houver palavras novas.
                     }`
                 });
 
                 result = await callAI(systemInstruction, msgs, geminiKey, openAIKey, groqKey, provider, 'llama-3.3-70b-versatile');
+
+                // Garante que palavras_novas_introducidas seja sempre um array
+                if (!Array.isArray(result.palavras_novas_introducidas)) {
+                    result.palavras_novas_introducidas = [];
+                }
 
                 // Atualiza o item do usuário correspondente no activeHistory
                 const userIdx = activeHistory.findIndex(m => m.role === 'user' && m.jp === userMsgText && m.analise === undefined);
@@ -1254,7 +1278,7 @@ export default async function handler(req, res) {
                 return res.status(200).json(result);
 
             case 'analisar_pratica':
-                systemInstruction = "Você é um professor de japonês avaliando a resposta do aluno no contexto de um diálogo. Retorne APENAS um JSON válido. O feedback (dica e erro) DEVE estar em Português. IMPORTANTE: Na propriedade 'traducao_correta', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes na frase (sem exceção). O furigana deve ser escrito exclusivamente em Hiragana e deve ser colocado apenas sobre os Kanjis, nunca sobre hiragana ou katakana puro. Não utilize nenhuma outra tag além de <ruby> e <rt>.";
+                systemInstruction = "Você é um professor de japonês avaliando a resposta do aluno no contexto de um diálogo. Retorne APENAS um JSON válido. O feedback (dica, explicação e regras) DEVE estar em Português (PT-BR). IMPORTANTE: Na propriedade 'traducao_correta', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes na frase (sem exceção). O furigana deve ser escrito exclusivamente em Hiragana e deve ser colocado apenas sobre os Kanjis, nunca sobre hiragana ou katakana puro. Não utilize nenhuma outra tag além de <ruby> e <rt>.";
                 prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
                 Resposta do aluno: "${body.resposta_usuario_jp}"
                 
@@ -1264,10 +1288,42 @@ export default async function handler(req, res) {
                     "score": 85, // número de 0 a 100
                     "correto": true, // true se for uma resposta aceitável e compreensível, false caso contrário
                     "erros": ["O aluno usou a partícula errada em X"], // array de strings com erros identificados (vazio se não houver)
+                    "erros_detalhados": [
+                        {
+                            "erro": "Trecho ou conceito errado",
+                            "regra_gramatical": "Nome da regra gramatical violada",
+                            "explicacao": "Explicação didática detalhada em português de por que está errado e como funciona a regra",
+                            "exemplo_correto": "Exemplo prático de frase ou expressão correta em japonês"
+                        }
+                    ],
                     "dica": "Dica de como soar mais natural ou corrigir o erro.",
                     "traducao_correta": "Sugestão de como o aluno poderia ter formulado essa mesma ideia de forma correta e natural em japonês"
                 }`;
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                
+                try {
+                    if (!result || typeof result !== 'object') {
+                        result = {};
+                    }
+                    if (!Array.isArray(result.erros_detalhados)) {
+                        result.erros_detalhados = [];
+                    } else {
+                        result.erros_detalhados = result.erros_detalhados.map(e => ({
+                            erro: String(e?.erro || ''),
+                            regra_gramatical: String(e?.regra_gramatical || 'Gramática'),
+                            explicacao: String(e?.explicacao || ''),
+                            exemplo_correto: String(e?.exemplo_correto || '')
+                        }));
+                    }
+                    if (!Array.isArray(result.erros)) {
+                        result.erros = result.erros_detalhados.map(e => e.erro).filter(Boolean);
+                    }
+                } catch (errNormalizacao) {
+                    console.error("Erro ao normalizar erros_detalhados:", errNormalizacao);
+                    if (!result || typeof result !== 'object') result = {};
+                    result.erros_detalhados = [];
+                    result.erros = result.erros || [];
+                }
                 return res.status(200).json(result);
 
             case 'sugerir_lacuna':
