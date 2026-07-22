@@ -1,130 +1,58 @@
-:root {
-  --bg-color: #f0f2f5;
-  --text-color: #2c3e50;
-  --card-bg: rgba(255, 255, 255, 0.95);
-  --primary-color: #2c3e50;
-  --secondary-color: #34495e;
-  --border-color: rgba(0, 0, 0, 0.06);
-  --highlight-color: #e67e22;
-  --shadow-subtle: 0 4px 15px rgba(0,0,0,0.03);
-  --shadow-hover: 0 10px 25px rgba(0,0,0,0.08);
-  --card-radius: 16px;
-  --glass-bg: rgba(255, 255, 255, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.4);
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
 }
 
-[data-theme="dark"], html[data-theme="dark"], body[data-theme="dark"] {
-  --bg-color: #0d0d10;
-  --text-color: #f0f0f0;
-  --card-bg: rgba(18, 18, 24, 0.75);
-  --primary-color: #2c3e50;
-  --secondary-color: #4b6584;
-  --border-color: rgba(255, 255, 255, 0.08);
-  --highlight-color: #d35400;
-  --shadow-subtle: 0 4px 15px rgba(0,0,0,0.3);
-  --shadow-hover: 0 10px 25px rgba(0,0,0,0.5);
-  --glass-bg: rgba(255, 255, 255, 0.05);
-  --glass-border: rgba(255, 255, 255, 0.10);
+@layer base {
+  :root {
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 40% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 40% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --radius: 0.5rem;
+  }
 }
 
-.interactive-text-container {
-  display: inline-block;
-  -webkit-user-drag: none;
-  user-drag: none;
-}
-
-.interactive-text-container .interactive-word { 
-  transition: all 0.2s ease; 
-  cursor: pointer; 
-  padding: 0 2px; 
-  border-radius: 4px; 
-  display: inline !important;
-  -webkit-user-drag: none;
-  user-drag: none;
-}
-
-.interactive-text-container ruby { 
-  transition: all 0.2s ease; 
-  cursor: pointer; 
-  padding: 0 2px; 
-  border-radius: 4px; 
-  display: ruby !important;
-  -webkit-user-drag: none;
-  user-drag: none;
-}
-
-.interactive-text-container:not(.selecting-text) .interactive-word:hover, 
-.interactive-text-container:not(.selecting-text) ruby:hover { 
-  background: linear-gradient(135deg, #ff6b6b, #c0392b) !important; 
-  color: #ffffff !important; 
-}
-
-/* Garante que sub-elementos como rt (furigana) e spans internos também fiquem brancos no hover */
-.interactive-text-container:not(.selecting-text) .interactive-word:hover *,
-.interactive-text-container:not(.selecting-text) ruby:hover rt {
-  color: #ffffff !important;
-}
-
-.interactive-text-container,
-.interactive-text-container ruby,
-.interactive-text-container .interactive-word,
-.interactive-text-container .non-interactive {
-  user-select: text !important;
-  -moz-user-select: text !important;
-  -webkit-user-select: text !important;
-}
-
-.interactive-text-container rt {
-  pointer-events: none;
-}
-
-.interactive-text-container ::selection {
-  background-color: var(--highlight-color, #ff6b6b);
-  color: white;
-}
-.interactive-text-container *::selection {
-  background-color: var(--highlight-color, #ff6b6b);
-  color: white;
-}
-.interactive-text-container ::-moz-selection {
-  background-color: var(--highlight-color, #ff6b6b);
-  color: white;
-}
-.interactive-text-container *::-moz-selection {
-  background-color: var(--highlight-color, #ff6b6b);
-  color: white;
-}
-
-/* Sub-navegação do Diálogo */
-.dialogo-sub-nav button {
-  background: transparent;
-  color: var(--text-color);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.dialogo-sub-nav button:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-[data-theme="dark"] .dialogo-sub-nav button:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.dialogo-sub-nav button.active {
-  background: var(--highlight-color) !important;
-  color: white !important;
-}
-
-@keyframes groqPulse {
-  0% { transform: scale(1); filter: drop-shadow(0 0 2px #e67e22); }
-  50% { transform: scale(1.12); filter: drop-shadow(0 0 12px #e67e22); }
-  100% { transform: scale(1); filter: drop-shadow(0 0 2px #e67e22); }
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
 }

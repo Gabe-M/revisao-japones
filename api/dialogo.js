@@ -1,5 +1,26 @@
+function cleanAndParseJson(text) {
+    if (!text || typeof text !== 'string') return {};
+    let clean = text.trim();
+    if (clean.startsWith('```json')) {
+        clean = clean.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+    } else if (clean.startsWith('```')) {
+        clean = clean.replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+    }
+    const firstBrace = clean.indexOf('{');
+    const lastBrace = clean.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        clean = clean.substring(firstBrace, lastBrace + 1);
+    }
+    try {
+        return JSON.parse(clean);
+    } catch (e) {
+        console.error("Erro ao fazer parse do JSON da IA:", e, "Texto:", text);
+        throw new Error(`A IA não retornou um JSON válido. Detalhes: ${e.message}`);
+    }
+}
+
 async function callAI(systemInstruction, messages, geminiKey, openAIKey, groqKey, provider = 'gemini', groqModel = 'llama-3.3-70b-versatile') {
-    const isJson = true; // Sempre esperamos JSON no diálogo
+    const isJson = true;
 
     if (provider === 'gemini') {
         if (!geminiKey) {
@@ -7,7 +28,6 @@ async function callAI(systemInstruction, messages, geminiKey, openAIKey, groqKey
         }
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiKey}`;
         
-        // Format messages for Gemini
         const geminiMessages = messages.map(msg => ({
             role: msg.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: msg.content }]
@@ -27,7 +47,7 @@ async function callAI(systemInstruction, messages, geminiKey, openAIKey, groqKey
         if (!response.ok) throw new Error(data?.error?.message || JSON.stringify(data));
         
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        return JSON.parse(text);
+        return cleanAndParseJson(text);
     }
 
     if (provider === 'openai') {
@@ -50,7 +70,7 @@ async function callAI(systemInstruction, messages, geminiKey, openAIKey, groqKey
         if (!response.ok) throw new Error(data?.error?.message || JSON.stringify(data));
         
         const content = data.choices?.[0]?.message?.content || "{}";
-        return JSON.parse(content);
+        return cleanAndParseJson(content);
     }
 
     if (provider === 'groq') {
@@ -73,7 +93,7 @@ async function callAI(systemInstruction, messages, geminiKey, openAIKey, groqKey
         if (!response.ok) throw new Error(data?.error?.message || JSON.stringify(data));
         
         const content = data.choices?.[0]?.message?.content || "{}";
-        return JSON.parse(content);
+        return cleanAndParseJson(content);
     }
 
     if (provider === 'pollinations') {
@@ -105,13 +125,7 @@ async function callAI(systemInstruction, messages, geminiKey, openAIKey, groqKey
         }
         
         const text = await response.text();
-        let cleanText = text.trim();
-        if (cleanText.startsWith('```json')) {
-            cleanText = cleanText.substring(7, cleanText.length - 3).trim();
-        } else if (cleanText.startsWith('```')) {
-            cleanText = cleanText.substring(3, cleanText.length - 3).trim();
-        }
-        return JSON.parse(cleanText);
+        return cleanAndParseJson(text);
     }
     
     throw new Error(`Provedor de IA inválido: ${provider}`);
@@ -221,21 +235,39 @@ async function obterUserIdDoToken(authHeader) {
     }
     const token = authHeader.substring(7);
     try {
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-        if (error || !user) {
-            console.error("Erro ao validar token com Supabase:", error);
-            return null;
+        const parts = token.split('.');
+        if (parts.length === 3) {
+            const base64Url = parts[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const payload = JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'));
+            if (payload && payload.sub) {
+                return payload.sub;
+            }
         }
-        return user.id;
     } catch (e) {
-        console.error("Exceção ao decodificar/validar token:", e);
-        return null;
+        console.error("Erro ao decodificar JWT localmente:", e);
     }
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (!error && user) return user.id;
+    } catch (e) {
+        console.error("Exceção ao validar token:", e);
+    }
+    return null;
 }
 
 function cleanFuriganaHtml(text) {
     if (typeof text !== 'string') return '';
     return text.replace(/<rt>.*?<\/rt>/g, '').replace(/<[^>]*>/g, '');
+}
+
+function sanitizeRubyHtml(text) {
+    if (typeof text !== 'string') return text;
+    return text
+        .replace(/<ruby>([\s\S]*?)<\/rt>/gi, '<ruby>$1<rt>')
+        .replace(/<\/rt>\s*<\/rt>/gi, '</rt>')
+        .replace(/<ruby>([\s\S]*?)<rt>([^<]*?)<\/ruby>/gi, '<ruby>$1<rt>$2</rt></ruby>')
+        .replace(/<ruby>([\s\S]*?)<\/ruby>\s*<rt>([\s\S]*?)<\/rt>/gi, '<ruby>$1<rt>$2</rt></ruby>');
 }
 
 export default async function handler(req, res) {
@@ -1056,7 +1088,7 @@ export default async function handler(req, res) {
                 return res.status(200).json(result);
 
             case 'analisar_mensagem':
-                systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Identifique o vocabulário chave na mensagem.";
+                systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Identifique o vocabulário chave na mensagem. IMPORTANTE: Não inclua pontuações, símbolos (como !, ., ?, etc.) ou itens com campo 'item' vazio no array de vocabulário.";
                 prompt = `Mensagem: "${body.mensagem_ia_jp}"
                 Tema: "${tema}"
                 ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
@@ -1064,11 +1096,74 @@ export default async function handler(req, res) {
                 Estrutura do JSON esperado:
                 {
                     "vocabulario": [
-                        { "item": "Kanji ou palavra", "leitura": "furigana/leitura", "significado": "Significado em português", "tipo": "Substantivo/Verbo/etc" }
+                        { "item": "Kanji ou palavra (NUNCA pontuação, marcador ou vazio)", "leitura": "furigana/leitura", "significado": "Significado em português", "tipo": "Substantivo/Verbo/etc" }
                     ]
                 }
                 Retorne no máximo 10 itens importantes.`;
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                
+                if (result && Array.isArray(result.vocabulario)) {
+                    const punctuationRegex = /^[.,\/#!$%\^&\*;:{}=\-_`~()!?\s、。！?？]+$/;
+                    result.vocabulario = result.vocabulario.filter(v => {
+                        if (!v || !v.item) return false;
+                        const itemClean = v.item.trim();
+                        if (itemClean === '') return false;
+                        if (punctuationRegex.test(itemClean)) return false;
+                        return true;
+                    });
+                }
+                return res.status(200).json(result);
+
+            case 'obter_vocabulario_relacionado':
+                systemInstruction = "Você é um professor de japonês auxiliando um estudante. Retorne APENAS um JSON válido contendo vocabulário individual em japonês. IMPORTANTE: Retorne APENAS palavras isoladas ou termos curtos (substantivos, verbos, adjetivos, partículas). É ESTRITAMENTE PROIBIDO retornar frases completas, orações ou junções de palavras.";
+                prompt = `Mensagem recebida da IA: "${body.mensagem_ia_jp}"
+                Tema do RPG: "${tema}"
+                ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
+                
+                Instruções Obrigatórias:
+                1. Sugira de 5 a 8 PALAVRAS OU TERMOS INDIVIDUAIS em japonês (ex: 勇者, 魔法, 探す, 一緒に, どこ) altamente adequados para o aluno USAR na resposta.
+                2. NUNCA gere frases completas ou orações (ex: NÃO gere "私の名前は山田です"). Cada item deve ser uma única palavra ou expressão curta isolada (máximo 1 a 3 palavras/conectivo).
+                3. REGRA CRÍTICA DE CONTEÚDO: NÃO inclua palavras, Kanjis ou junções de Kanjis que já estejam presentes na mensagem da IA ("${body.mensagem_ia_jp}"). Sugira APENAS NOVOS vocabulários.
+                4. Para cada item, indique a leitura (hiragana/furigana), o significado em português, o tipo (Substantivo, Verbo, Expressão, etc) e uma dica curta de uso.
+                
+                Estrutura do JSON esperado:
+                {
+                    "vocabulario": [
+                        { 
+                            "item": "Palavra ou termo isolado (NUNCA frase)", 
+                            "leitura": "furigana/hiragana", 
+                            "significado": "Significado em português", 
+                            "tipo": "Verbo/Substantivo/Expressão/etc",
+                            "dica_uso": "Explicação rápida de como usar na resposta"
+                        }
+                    ]
+                }`;
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                
+                if (result && Array.isArray(result.vocabulario)) {
+                    const punctuationRegex = /^[.,\/#!$%\^&\*;:{}=\-_`~()!?\s、。！?？]+$/;
+                    const msgLimpa = (body.mensagem_ia_jp || '').replace(/<[^>]*>/g, '');
+                    const kanjisInMsg = new Set(msgLimpa.match(/[\u4E00-\u9FFF]/g) || []);
+
+                    result.vocabulario = result.vocabulario.filter(v => {
+                        if (!v || !v.item) return false;
+                        const itemClean = v.item.trim().replace(/<[^>]*>/g, '');
+                        if (itemClean === '') return false;
+                        if (itemClean.length > 10) return false; // Rejeita frases longas
+                        if (/[。！!？?\n,]/.test(itemClean)) return false; // Rejeita frases com pontuação
+                        if (punctuationRegex.test(itemClean)) return false;
+                        if (msgLimpa.includes(itemClean)) return false; // Rejeita se já está na mensagem
+
+                        // Rejeita se for apenas uma recombinação de Kanjis que já apareceram na mensagem
+                        const kanjisInItem = itemClean.match(/[\u4E00-\u9FFF]/g) || [];
+                        if (kanjisInItem.length > 0) {
+                            const allKanjisExist = kanjisInItem.every(k => kanjisInMsg.has(k));
+                            if (allKanjisExist) return false;
+                        }
+
+                        return true;
+                    });
+                }
                 return res.status(200).json(result);
 
             case 'sugerir_resposta':
@@ -1076,40 +1171,74 @@ export default async function handler(req, res) {
                 if (vocabulario && vocabulario.length > 0) {
                     limitacoesVocabSugestao = `
                     IMPORTANTE: O aluno está utilizando um filtro de palavras aprendidas. 
-                    Você DEVE obrigatoriamente criar as frases utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${selectContextualVocab(vocabulario, tema, null, body.mensagem_ia_jp, 40).join(', ')}]. 
-                    Para ligar os termos e formar as frases, use apenas partículas gramaticais básicas e flexões verbais elementares. 
+                    Você DEVE obrigatoriamente criar a frase utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${selectContextualVocab(vocabulario, tema, null, body.mensagem_ia_jp, 40).join(', ')}]. 
+                    Para ligar os termos e formar a frase, use apenas partículas gramaticais básicas e flexões verbais elementares. 
                     NÃO introduza de forma alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
                 }
-                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}" e também um professor ajudando o aluno.
-Retorne APENAS um JSON válido seguindo estritamente a estrutura solicitada.
-Siga com rigor absoluto as seguintes regras pedagógicas para qualquer texto em japonês retornado (especialmente 'sugestao_jp'):
-1. Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes (sem exceção). A tag <rt> deve estar aninhada imediatamente dentro da tag <ruby>.
-2. O furigana dentro de <rt> deve ser escrito exclusivamente em Hiragana (ou Katakana se aplicável a palavras estrangeiras) e nunca em Romaji.
-3. Você deve envelopar todos os termos e blocos lógicos/pedagógicos em japonês usando a tag <w>. Nenhuma parte de texto japonês pode ficar fora de uma tag <w>.
-4. Agrupe partículas com seus substantivos precedentes (ex: <w>私は</w>), ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>).
-5. Exemplo de formatação japonesa obrigatória: <w>私</w><w>は</w><w><ruby>行<rt>い</rt></ruby>きます</w>.
-6. É estritamente proibido o uso de qualquer outra tag HTML (como <span>, <div>, etc.) nos campos em japonês. Apenas <ruby>, <rt> e <w> são permitidas.
-7. Garanta que o JSON retornado esteja bem-formado e não possua barras invertidas ou formatação quebrada nos campos de texto.`;
+                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}" e também um professor ajudando o aluno. Retorne APENAS um JSON válido. IMPORTANTE: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> na propriedade 'sugestao_jp' para TODOS os Kanjis presentes (sem exceção). Certifique-se de que a tag <rt> fica DENTRO da tag <ruby>. O furigana deve ser escrito exclusivamente em Hiragana e aplicado apenas sobre Kanjis, nunca sobre palavras que já estão em hiragana ou katakana. Você DEVE separar os blocos lógicos/pedagógicos da frase japonesa usando a tag <w>. Agrupe partículas com seus substantivos se achar útil, ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>). Exemplo de formatação obrigatória: <w>私</w><w>は</w><w><ruby>見<rt>み</rt></ruby>てください</w>. Nunca use tags <span> ou qualquer outra tag HTML além de <ruby>, <rt> e <w>.`;
                 prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
                 Tema do RPG: "${tema}"
                 ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
                 ${limitacoesVocabSugestao}
                 
-                Gere exatamente 3 opções de resposta variando em tom (sendo especificamente: "Formal", "Casual" e "Declínio Polido", ou tons equivalentes extremamente apropriados para o contexto de RPG).
-                
-                Estrutura exata do JSON esperado:
+                Estrutura do JSON esperado:
                 {
-                    "opcoes": [
+                    "sugestao_jp": "Sugestão de resposta do aluno em japonês (com ruby tags)",
+                    "sugestao_pt": "Tradução exata da sugestão",
+                    "dica": "Explicação curta do motivo dessa ser uma boa resposta"
+                }`;
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+                if (result && result.sugestao_jp) {
+                    result.sugestao_jp = sanitizeRubyHtml(result.sugestao_jp);
+                }
+                return res.status(200).json(result);
+
+            case 'sugerir_multiplas_respostas': {
+                let limitacoesVocabMulti = '';
+                if (vocabulario && vocabulario.length > 0) {
+                    limitacoesVocabMulti = `
+                    IMPORTANTE: O aluno está utilizando um filtro de palavras aprendidas. 
+                    Você DEVE obrigatoriamente criar as frases utilizando APENAS Kanjis e palavras que estejam presentes na seguinte lista: [${selectContextualVocab(vocabulario, tema, null, body.mensagem_ia_jp, 40).join(', ')}]. 
+                    Para ligar os termos e formar a frase, use apenas partículas gramaticais básicas e flexões verbais elementares. 
+                    NÃO introduza de forma alguma novos Kanjis ou palavras complexas que estejam fora dessa lista.`;
+                }
+                systemInstruction = `Você é um personagem em um RPG de conversa em japonês focado no tema: "${tema}" e também um professor ajudando o aluno. Retorne APENAS um JSON válido. IMPORTANTE: Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> em TODOS os campos '_jp' para TODOS os Kanjis presentes (sem exceção). O furigana deve ser escrito exclusivamente em Hiragana e aplicado apenas sobre Kanjis. Você DEVE separar os blocos lógicos/pedagógicos usando a tag <w>. Nunca use tags <span> ou qualquer outra tag HTML além de <ruby>, <rt> e <w>.`;
+                prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
+                Tema do RPG: "${tema}"
+                ${jlpt ? `Nível de dificuldade máximo: ${jlpt}.` : ''}
+                ${limitacoesVocabMulti}
+                
+                Gere 3 sugestões de resposta distintas e adequadas ao contexto: uma concordando/aceitando, uma discordando/recusando, e uma fazendo uma pergunta de volta. Adapte ao contexto do tema.
+                
+                Estrutura do JSON esperado:
+                {
+                    "sugestoes": [
                         {
-                            "tom": "Formal / Casual / Declínio Polido",
-                            "sugestao_jp": "Sugestão em japonês formatada estritamente com w e ruby tags",
-                            "sugestao_pt": "Tradução em português da sugestão",
-                            "dica": "Breve explicação didática em português de por que essa resposta e esse tom são apropriados"
+                            "intencao": "Concordar",
+                            "emoji": "✅",
+                            "jp": "Frase em japonês (com ruby tags e <w>)",
+                            "pt": "Tradução exata em português",
+                            "dica": "Por que essa é uma boa resposta neste contexto"
+                        },
+                        {
+                            "intencao": "Discordar",
+                            "emoji": "🙅",
+                            "jp": "Frase em japonês (com ruby tags e <w>)",
+                            "pt": "Tradução exata em português",
+                            "dica": "Por que essa é uma boa resposta neste contexto"
+                        },
+                        {
+                            "intencao": "Perguntar",
+                            "emoji": "🤔",
+                            "jp": "Frase em japonês (com ruby tags e <w>)",
+                            "pt": "Tradução exata em português",
+                            "dica": "Por que essa é uma boa resposta neste contexto"
                         }
                     ]
                 }`;
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
                 return res.status(200).json(result);
+            }
 
             case 'tirar_duvida':
                 systemInstruction = "Você é um professor de japonês. Retorne APENAS um JSON válido. Esclareça a dúvida do aluno de forma clara, didática e em português.";
@@ -1125,35 +1254,18 @@ Siga com rigor absoluto as seguintes regras pedagógicas para qualquer texto em 
                 return res.status(200).json(result);
 
             case 'analisar_pratica':
-                systemInstruction = `Você é um professor de japonês avaliando a resposta do aluno no contexto de um diálogo.
-Retorne APENAS um JSON válido. Todo o feedback textual explicativo e regras gramaticais devem ser escritos em português.
-Siga com rigor absoluto as seguintes regras pedagógicas para qualquer texto em japonês retornado (inclusive no array de 'erros' em 'trecho_errado' e 'correcao', e no campo 'traducao_correta'):
-1. Use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes (sem exceção). A tag <rt> deve estar aninhada imediatamente dentro da tag <ruby>.
-2. O furigana dentro de <rt> deve ser escrito exclusivamente em Hiragana (ou Katakana se aplicável a palavras estrangeiras) e nunca em Romaji.
-3. Você deve envelopar todos os termos e blocos lógicos/pedagógicos em japonês usando a tag <w>. Nenhuma parte de texto japonês pode ficar fora de uma tag <w>.
-4. Agrupe partículas com seus substantivos precedentes (ex: <w>写真は</w>), ou mantenha verbos auxiliares e conjugações unidos (ex: NUNCA separe 'kudasai', agrupe como <w>〜てください</w>).
-5. Exemplo de formatação japonesa obrigatória: <w>私</w><w>は</w><w><ruby>行<rt>い</rt></ruby>きます</w>.
-6. É estritamente proibido o uso de qualquer outra tag HTML (como <span>, <div>, etc.) nos campos em japonês. Apenas <ruby>, <rt> e <w> são permitidas.
-7. Garanta que o JSON retornado esteja bem-formado e não possua barras invertidas ou formatação quebrada nos campos de texto.`;
-                prompt = `Mensagem do personagem (contexto): "${body.mensagem_ia_jp}"
-                Resposta digitada pelo aluno: "${body.resposta_usuario_jp}"
+                systemInstruction = "Você é um professor de japonês avaliando a resposta do aluno no contexto de um diálogo. Retorne APENAS um JSON válido. O feedback (dica e erro) DEVE estar em Português. IMPORTANTE: Na propriedade 'traducao_correta', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes na frase (sem exceção). O furigana deve ser escrito exclusivamente em Hiragana e deve ser colocado apenas sobre os Kanjis, nunca sobre hiragana ou katakana puro. Não utilize nenhuma outra tag além de <ruby> e <rt>.";
+                prompt = `Mensagem do personagem: "${body.mensagem_ia_jp}"
+                Resposta do aluno: "${body.resposta_usuario_jp}"
                 
-                Avalie se a resposta do aluno é gramaticalmente correta, se faz sentido no contexto do diálogo e se soa natural.
-                Identifique erros específicos de gramática, ortografia, partículas ou escolha vocabular.
-                
-                Estrutura exata do JSON esperado:
+                Avalie se a resposta do aluno faz sentido no contexto da conversa e se a gramática/vocabulário estão corretos.
+                Estrutura do JSON esperado:
                 {
-                    "score": 85, // Pontuação de 0 a 100 baseada na qualidade e adequação da resposta
-                    "correto": true, // true se a resposta for aceitável e compreensível, false se possuir erros gramaticais ou for inadequada
-                    "erros": [
-                        {
-                            "trecho_errado": "Trecho incorreto ou inadequado digitado pelo aluno (formatado com w e ruby tags se contiver japonês)",
-                            "correcao": "Correção sugerida para o trecho específico (formatada com w e ruby tags)",
-                            "regra_gramatical": "Explicação pedagógica curta em português sobre a correção ou o motivo do erro"
-                        }
-                    ], // Array contendo cada erro identificado detalhadamente. Se a frase estiver 100% perfeita, o array deve ser vazio []
-                    "dica": "Conselho didático curto em português de como melhorar a fluência, a naturalidade ou a polidez.",
-                    "traducao_correta": "Como soaria uma formulação ideal e natural para expressar a mesma ideia em japonês (formatada estritamente com w e ruby tags)"
+                    "score": 85, // número de 0 a 100
+                    "correto": true, // true se for uma resposta aceitável e compreensível, false caso contrário
+                    "erros": ["O aluno usou a partícula errada em X"], // array de strings com erros identificados (vazio se não houver)
+                    "dica": "Dica de como soar mais natural ou corrigir o erro.",
+                    "traducao_correta": "Sugestão de como o aluno poderia ter formulado essa mesma ideia de forma correta e natural em japonês"
                 }`;
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
                 return res.status(200).json(result);

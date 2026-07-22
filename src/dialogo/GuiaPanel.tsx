@@ -6,6 +6,10 @@ import AiLoader from './components/AiLoader';
 import AiFallbackPopup from './components/AiFallbackPopup';
 import PhraseCard from './components/PhraseCard';
 import AdvancedAddModal from './components/AdvancedAddModal';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface GuiaPanelProps {
     context: any;
@@ -454,7 +458,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
 
     if (loading) {
         return (
-            <div style={{ padding: '20px' }}>
+            <div className="p-5">
                 <AiLoader 
                     provider={provider} 
                     message={`${provider.charAt(0).toUpperCase() + provider.slice(1)} está gerando seu Guia de Estudos`} 
@@ -465,7 +469,7 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
 
     if (!dados) {
         return (
-            <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', textAlign: 'center' }}>
+            <div className="max-w-[800px] mx-auto p-5 text-center">
                 {fallbackOpen ? (
                     <AiFallbackPopup 
                         isOpen={fallbackOpen} 
@@ -482,13 +486,13 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
                     />
                 ) : (
                     <div>
-                        <h2 style={{ color: 'var(--text-color)' }}>Ocorreu um erro ao carregar o Guia</h2>
-                        <button 
-                            onClick={() => carregarGuia(provider || context.provider || 'groq')} 
-                            style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer' }}
+                        <h2 className="text-foreground">Ocorreu um erro ao carregar o Guia</h2>
+                        <Button 
+                            onClick={() => carregarGuia(provider || context.provider || 'groq')}
+                            className="mt-4"
                         >
                             Tentar Novamente
-                        </button>
+                        </Button>
                     </div>
                 )}
             </div>
@@ -558,434 +562,205 @@ export default function GuiaPanel({ context, session, onNext, onBack, onUpdateCo
     const paginatedVocab = getPaginatedItems();
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <button onClick={onBack} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-color)', cursor: 'pointer' }}>← Voltar</button>
-                <h2 style={{ margin: 0 }}>Guia: {context.tema}</h2>
-                <button onClick={onNext} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'var(--highlight-color)', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Praticar Tradução →</button>
+        <div className="max-w-[800px] mx-auto">
+            {/* Top navigation */}
+            <div className="flex justify-between items-center mb-5">
+                <Button variant="outline" onClick={onBack}>← Voltar</Button>
+                <h2 className="text-foreground font-bold m-0">Guia: {context.tema}</h2>
+                <Button onClick={onNext} className="font-bold">Praticar Tradução →</Button>
             </div>
 
-            <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '16px', marginBottom: '20px', boxShadow: 'var(--shadow-subtle)' }}>
-                <div 
-                    onClick={() => setIsVocabOpen(!isVocabOpen)}
-                    style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                        padding: '4px 8px',
-                        borderRadius: '8px',
-                        margin: '-4px -8px',
-                        transition: 'background-color 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                    <h3 style={{ margin: 0, color: 'var(--highlight-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        📚 Vocabulário Chave
-                    </h3>
-                    <div style={{ 
-                        transform: isVocabOpen ? 'rotate(180deg)' : 'rotate(0deg)', 
-                        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '50%',
-                        backgroundColor: 'rgba(0, 0, 0, 0.03)',
-                        color: 'var(--highlight-color)',
-                        fontWeight: 'bold'
-                    }}>
-                        ▼
+            {/* Vocabulário chave */}
+            <Card className="mb-5">
+                <CardContent className="p-5">
+                    {/* Header colapsível */}
+                    <div
+                        onClick={() => setIsVocabOpen(!isVocabOpen)}
+                        className="flex justify-between items-center cursor-pointer select-none p-1 rounded-lg -mx-1 transition-colors hover:bg-black/[0.04]"
+                    >
+                        <h3 className="m-0 text-primary flex items-center gap-2 font-bold">
+                            📚 Vocabulário Chave
+                        </h3>
+                        <div
+                            className="flex items-center justify-center w-7 h-7 rounded-full bg-black/[0.03] text-primary font-bold transition-transform duration-300"
+                            style={{ transform: isVocabOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        >
+                            ▼
+                        </div>
                     </div>
-                </div>
 
-                <div style={{
-                    display: 'grid',
-                    gridTemplateRows: isVocabOpen ? '1fr' : '0fr',
-                    transition: 'grid-template-rows 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    opacity: isVocabOpen ? 1 : 0,
-                    overflow: 'hidden'
-                }}>
-                    <div style={{ minHeight: 0, paddingTop: '15px' }}>
-                        {/* Tab Bar */}
-                        <div style={{
-                            display: 'flex',
-                            gap: '8px',
-                            paddingBottom: '12px',
-                            marginBottom: '15px',
-                            borderBottom: '1px solid var(--border-color)',
-                            overflowX: 'auto',
-                            WebkitOverflowScrolling: 'touch',
-                            scrollbarWidth: 'none',
-                            msOverflowStyle: 'none'
-                        }}>
-                            {uniqueCategories.map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setActiveCategory(cat)}
-                                    style={activeCategory === cat 
-                                        ? {
-                                            background: 'var(--highlight-color)',
-                                            color: 'white',
-                                            borderRadius: '20px',
-                                            padding: '8px 16px',
-                                            fontSize: '0.88em',
-                                            fontWeight: '600',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            whiteSpace: 'nowrap',
-                                            flexShrink: 0,
-                                            boxShadow: '0 4px 10px rgba(230, 126, 34, 0.3)',
-                                            transition: 'all 0.2s ease',
-                                            outline: 'none'
-                                        } 
-                                        : {
-                                            background: 'rgba(0, 0, 0, 0.02)',
-                                            color: 'var(--text-color)',
-                                            borderRadius: '20px',
-                                            padding: '8px 16px',
-                                            fontSize: '0.88em',
-                                            border: '1px solid var(--border-color)',
-                                            cursor: 'pointer',
-                                            whiteSpace: 'nowrap',
-                                            flexShrink: 0,
-                                            opacity: 0.75,
-                                            transition: 'all 0.2s ease',
-                                            outline: 'none'
-                                        }
-                                    }
-                                    onMouseOver={(e) => {
-                                        if (activeCategory !== cat) {
-                                            e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
-                                            e.currentTarget.style.opacity = '1';
-                                        }
-                                    }}
-                                    onMouseOut={(e) => {
-                                        if (activeCategory !== cat) {
-                                            e.currentTarget.style.background = 'rgba(0,0,0,0.02)';
-                                            e.currentTarget.style.opacity = '0.75';
-                                        }
-                                    }}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
-                            <button
-                                onClick={() => alert("Função para criar novo tópico personalizado estará disponível em breve!")}
-                                style={{
-                                    background: 'transparent',
-                                    color: 'var(--highlight-color)',
-                                    borderRadius: '20px',
-                                    padding: '8px 16px',
-                                    fontSize: '0.88em',
-                                    border: '1px dashed var(--highlight-color)',
-                                    cursor: 'pointer',
-                                    whiteSpace: 'nowrap',
-                                    flexShrink: 0,
-                                    transition: 'all 0.2s ease',
-                                    outline: 'none'
-                                }}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'rgba(230, 126, 34, 0.08)';
-                                }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                }}
-                            >
-                                + Tópico
-                            </button>
-                        </div>
-
-                        {/* Toolbar */}
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                            gap: '12px',
-                            marginBottom: '20px'
-                        }}>
-                            <input 
-                                type="text"
-                                placeholder="Buscar termo, leitura ou tradução..."
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                style={{
-                                    flex: '1 1 200px',
-                                    maxWidth: '300px',
-                                    padding: '10px 14px',
-                                    borderRadius: '10px',
-                                    border: '1px solid var(--border-color)',
-                                    background: 'var(--bg-color)',
-                                    color: 'var(--text-color)',
-                                    fontSize: '0.9em',
-                                    outline: 'none',
-                                    transition: 'all 0.2s ease'
-                                }}
-                                onFocus={(e) => {
-                                    e.target.style.borderColor = 'var(--highlight-color)';
-                                    e.target.style.boxShadow = '0 0 0 3px rgba(230, 126, 34, 0.15)';
-                                }}
-                                onBlur={(e) => {
-                                    e.target.style.borderColor = 'var(--border-color)';
-                                    e.target.style.boxShadow = 'none';
-                                }}
-                            />
-
-                            <select
-                                value={filterStatus}
-                                onChange={e => setFilterStatus(e.target.value)}
-                                style={{
-                                    padding: '10px 14px',
-                                    borderRadius: '10px',
-                                    border: '1px solid var(--border-color)',
-                                    background: 'var(--bg-color)',
-                                    color: 'var(--text-color)',
-                                    fontSize: '0.9em',
-                                    outline: 'none',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease'
-                                }}
-                                onFocus={(e) => {
-                                    e.target.style.borderColor = 'var(--highlight-color)';
-                                }}
-                                onBlur={(e) => {
-                                    e.target.style.borderColor = 'var(--border-color)';
-                                }}
-                            >
-                                <option value="Todos">👁️ Mostrar Todos</option>
-                                <option value="Aprendidos">🟢 Já Aprendidos</option>
-                                <option value="Novos">🟡 Palavras Novas</option>
-                            </select>
-                        </div>
-
-                        {/* Grid */}
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))',
-                            gap: '12px'
-                        }}>
-                            {/* Card de Adição */}
-                            {currentPage === 1 && (
-                                <div 
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'stretch',
-                                        background: 'transparent',
-                                        borderRadius: '12px',
-                                        border: '1px dashed var(--highlight-color)',
-                                        minHeight: '62px',
-                                        overflow: 'hidden',
-                                        transition: 'all 0.2s ease',
-                                        boxSizing: 'border-box'
-                                    }}
-                                >
-                                    <button 
-                                        type="button"
-                                        onClick={handleGerarLote}
-                                        disabled={isGeneratingLote}
-                                        style={{
-                                            flex: 1,
-                                            background: 'transparent',
-                                            border: 'none',
-                                            color: 'var(--highlight-color)',
-                                            fontWeight: 'bold',
-                                            fontSize: '0.95em',
-                                            cursor: isGeneratingLote ? 'not-allowed' : 'pointer',
-                                            padding: '12px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '8px',
-                                            transition: 'background 0.2s'
-                                        }}
-                                        onMouseOver={(e) => {
-                                            if (!isGeneratingLote) e.currentTarget.style.background = 'rgba(230, 126, 34, 0.05)';
-                                        }}
-                                        onMouseOut={(e) => {
-                                            e.currentTarget.style.background = 'transparent';
-                                        }}
-                                    >
-                                        {isGeneratingLote ? (
-                                            <>⏳ Gerando...</>
-                                        ) : (
-                                            <>✨ Gerar Palavras Aqui</>
-                                        )}
-                                    </button>
-                                    <div style={{ width: '1px', background: 'var(--border-color)' }} />
+                    {/* Conteúdo colapsível via grid-rows */}
+                    <div
+                        className="grid overflow-hidden transition-all duration-300"
+                        style={{
+                            gridTemplateRows: isVocabOpen ? '1fr' : '0fr',
+                            opacity: isVocabOpen ? 1 : 0,
+                        }}
+                    >
+                        <div className="min-h-0 pt-4">
+                            {/* Tab Bar de categorias */}
+                            <div className="flex gap-2 pb-3 mb-4 border-b border-border overflow-x-auto [scrollbar-width:none] [-webkit-overflow-scrolling:touch]">
+                                {uniqueCategories.map(cat => (
                                     <button
-                                        type="button"
-                                        onClick={() => setIsAdvancedModalOpen(true)}
-                                        disabled={isGeneratingLote}
-                                        style={{
-                                            background: 'transparent',
-                                            border: 'none',
-                                            color: 'var(--text-color)',
-                                            opacity: 0.7,
-                                            cursor: isGeneratingLote ? 'not-allowed' : 'pointer',
-                                            padding: '0 16px',
-                                            fontSize: '1.1em',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            transition: 'all 0.2s'
-                                        }}
-                                        onMouseOver={(e) => {
-                                            if (!isGeneratingLote) {
-                                                e.currentTarget.style.background = 'rgba(0,0,0,0.03)';
-                                                e.currentTarget.style.opacity = '1';
-                                            }
-                                        }}
-                                        onMouseOut={(e) => {
-                                            e.currentTarget.style.background = 'transparent';
-                                            e.currentTarget.style.opacity = '0.7';
-                                        }}
-                                        title="Adição Avançada"
+                                        key={cat}
+                                        onClick={() => setActiveCategory(cat)}
+                                        className={[
+                                            'shrink-0 rounded-full px-4 py-2 text-[0.88em] font-semibold whitespace-nowrap outline-none transition-all duration-200',
+                                            activeCategory === cat
+                                                ? 'bg-primary text-primary-foreground shadow-md border-none'
+                                                : 'bg-black/[0.02] text-foreground border border-border opacity-75 hover:bg-black/[0.05] hover:opacity-100'
+                                        ].join(' ')}
                                     >
-                                        ⚙️
+                                        {cat}
                                     </button>
-                                </div>
-                            )}
-
-                            {/* Dynamic Chips rendering */}
-                            {paginatedVocab.map((t: any, i: number) => {
-                                const normalizedTerm = {
-                                    item: t.termo || t.item || '',
-                                    leitura: t.leitura || '',
-                                    significado: t.traducao || t.significado || '',
-                                    jlpt: t.jlpt
-                                };
-                                const jaPossui = context.vocabularioBanco.some((b: any) => b.item === normalizedTerm.item);
-                                return (
-                                    <VocabularioChip 
-                                        key={i}
-                                        item={normalizedTerm.item}
-                                        leitura={normalizedTerm.leitura}
-                                        significado={normalizedTerm.significado}
-                                        jlpt={normalizedTerm.jlpt}
-                                        jaPossui={jaPossui}
-                                        onAdd={() => adicionarAoBanco(normalizedTerm)}
-                                        onClickCard={() => addCard({ ...normalizedTerm, tipo: 'Vocabulário' })}
-                                    />
-                                );
-                            })}
-                        </div>
-
-                        {/* Pagination Navigation Controls */}
-                        {totalPages > 1 && (
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '16px',
-                                marginTop: '24px',
-                                paddingTop: '16px',
-                                borderTop: '1px solid var(--border-color)'
-                            }}>
+                                ))}
                                 <button
-                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                    disabled={currentPage === 1}
-                                    style={{
-                                        background: currentPage === 1 ? 'transparent' : 'rgba(0,0,0,0.02)',
-                                        color: currentPage === 1 ? 'gray' : 'var(--text-color)',
-                                        border: '1px solid var(--border-color)',
-                                        borderRadius: '8px',
-                                        padding: '8px 16px',
-                                        fontSize: '0.85em',
-                                        fontWeight: '600',
-                                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                                        opacity: currentPage === 1 ? 0.4 : 1,
-                                        transition: 'all 0.2s ease',
-                                        outline: 'none'
-                                    }}
-                                    onMouseOver={(e) => {
-                                        if (currentPage !== 1) {
-                                            e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
-                                        }
-                                    }}
-                                    onMouseOut={(e) => {
-                                        if (currentPage !== 1) {
-                                            e.currentTarget.style.background = 'rgba(0,0,0,0.02)';
-                                        }
-                                    }}
+                                    onClick={() => alert("Função para criar novo tópico personalizado estará disponível em breve!")}
+                                    className="shrink-0 rounded-full px-4 py-2 text-[0.88em] text-primary border border-dashed border-primary bg-transparent whitespace-nowrap outline-none transition-all hover:bg-primary/[0.08] cursor-pointer"
                                 >
-                                    Anterior
-                                </button>
-                                <span style={{
-                                    fontSize: '0.9em',
-                                    color: 'var(--text-color)',
-                                    opacity: 0.8,
-                                    fontWeight: '500'
-                                }}>
-                                    Página {currentPage} de {totalPages}
-                                </span>
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                    disabled={currentPage === totalPages}
-                                    style={{
-                                        background: currentPage === totalPages ? 'transparent' : 'rgba(0,0,0,0.02)',
-                                        color: currentPage === totalPages ? 'gray' : 'var(--text-color)',
-                                        border: '1px solid var(--border-color)',
-                                        borderRadius: '8px',
-                                        padding: '8px 16px',
-                                        fontSize: '0.85em',
-                                        fontWeight: '600',
-                                        cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                                        opacity: currentPage === totalPages ? 0.4 : 1,
-                                        transition: 'all 0.2s ease',
-                                        outline: 'none'
-                                    }}
-                                    onMouseOver={(e) => {
-                                        if (currentPage !== totalPages) {
-                                            e.currentTarget.style.background = 'rgba(0,0,0,0.05)';
-                                        }
-                                    }}
-                                    onMouseOut={(e) => {
-                                        if (currentPage !== totalPages) {
-                                            e.currentTarget.style.background = 'rgba(0,0,0,0.02)';
-                                        }
-                                    }}
-                                >
-                                    Próximo
+                                    + Tópico
                                 </button>
                             </div>
-                        )}
-                    </div>
-                </div>
-            </div>
 
-            <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '16px', marginBottom: '20px', boxShadow: 'var(--shadow-subtle)' }}>
-                <h3 style={{ marginTop: 0, color: 'var(--highlight-color)' }}>🧠 Regras Gramaticais Úteis</h3>
-                {dados.regras?.map((r: any, i: number) => (
-                    <div 
-                        key={i} 
-                        style={{ marginBottom: '15px', paddingBottom: '15px', borderBottom: i < dados.regras.length - 1 ? '1px solid var(--border-color)' : 'none', borderRadius: '8px', padding: '10px' }}
-                    >
-                        <strong style={{ fontSize: '1.1em' }}><InteractiveText text={r.titulo} /></strong>
-                        <div style={{ margin: '8px 0', lineHeight: '1.5' }}><InteractiveText text={r.explicacao} /></div>
-                        <div style={{ background: 'rgba(0,0,0,0.03)', padding: '10px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '1.2em' }}><InteractiveText text={r.exemplo_jp} /></div>
-                            <div style={{ color: 'gray', fontSize: '0.9em' }}><InteractiveText text={r.exemplo_pt} /></div>
+                            {/* Toolbar de busca e filtro */}
+                            <div className="flex justify-between items-center flex-wrap gap-3 mb-5">
+                                <Input
+                                    type="text"
+                                    placeholder="Buscar termo, leitura ou tradução..."
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    className="flex-[1_1_200px] max-w-[300px] text-[0.9em]"
+                                />
+                                <select
+                                    value={filterStatus}
+                                    onChange={e => setFilterStatus(e.target.value)}
+                                    className="px-3.5 py-2.5 rounded-xl border border-border bg-background text-foreground text-[0.9em] outline-none cursor-pointer transition-all"
+                                >
+                                    <option value="Todos">👁️ Mostrar Todos</option>
+                                    <option value="Aprendidos">🟢 Já Aprendidos</option>
+                                    <option value="Novos">🟡 Palavras Novas</option>
+                                </select>
+                            </div>
+
+                            {/* Grid de chips */}
+                            <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))' }}>
+                                {/* Card de Adição */}
+                                {currentPage === 1 && (
+                                    <div className="flex items-stretch bg-transparent rounded-xl border border-dashed border-primary min-h-[62px] overflow-hidden transition-all">
+                                        <button
+                                            type="button"
+                                            onClick={handleGerarLote}
+                                            disabled={isGeneratingLote}
+                                            className="flex-1 bg-transparent border-none text-primary font-bold text-[0.95em] cursor-pointer disabled:cursor-not-allowed p-3 flex items-center justify-center gap-2 transition-colors hover:bg-primary/[0.05]"
+                                        >
+                                            {isGeneratingLote ? <>⏳ Gerando...</> : <>✨ Gerar Palavras Aqui</>}
+                                        </button>
+                                        <div className="w-px bg-border" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAdvancedModalOpen(true)}
+                                            disabled={isGeneratingLote}
+                                            className="bg-transparent border-none text-foreground opacity-70 cursor-pointer disabled:cursor-not-allowed px-4 text-[1.1em] flex items-center justify-center transition-all hover:bg-black/[0.03] hover:opacity-100"
+                                            title="Adição Avançada"
+                                        >
+                                            ⚙️
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Dynamic Chips rendering */}
+                                {paginatedVocab.map((t: any, i: number) => {
+                                    const normalizedTerm = {
+                                        item: t.termo || t.item || '',
+                                        leitura: t.leitura || '',
+                                        significado: t.traducao || t.significado || '',
+                                        jlpt: t.jlpt
+                                    };
+                                    const jaPossui = context.vocabularioBanco.some((b: any) => b.item === normalizedTerm.item);
+                                    return (
+                                        <VocabularioChip 
+                                            key={i}
+                                            item={normalizedTerm.item}
+                                            leitura={normalizedTerm.leitura}
+                                            significado={normalizedTerm.significado}
+                                            jlpt={normalizedTerm.jlpt}
+                                            jaPossui={jaPossui}
+                                            onAdd={() => adicionarAoBanco(normalizedTerm)}
+                                            onClickCard={() => addCard({ ...normalizedTerm, tipo: 'Vocabulário' })}
+                                        />
+                                    );
+                                })}
+                            </div>
+
+                            {/* Paginação */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-4 mt-6 pt-4 border-t border-border">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="text-[0.85em] font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        Anterior
+                                    </Button>
+                                    <span className="text-[0.9em] text-muted-foreground font-medium">
+                                        Página {currentPage} de {totalPages}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="text-[0.85em] font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        Próximo
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
-                ))}
-            </div>
+                </CardContent>
+            </Card>
 
-            <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '16px', marginBottom: '20px', boxShadow: 'var(--shadow-subtle)' }}>
-                <h3 style={{ marginTop: 0, color: 'var(--highlight-color)', marginBottom: '20px' }}>💬 Frases Prontas</h3>
-                {dados.frases_uteis?.map((f: any, i: number) => (
-                    <PhraseCard 
-                        key={i}
-                        jp={f.jp}
-                        pt={f.pt}
-                        breakdown={f.breakdown}
-                        session={session}
-                    />
-                ))}
-            </div>
+            {/* Regras Gramaticais */}
+            <Card className="mb-5">
+                <CardContent className="p-5">
+                    <h3 className="mt-0 mb-4 text-primary font-bold">🧠 Regras Gramaticais Úteis</h3>
+                    {dados.regras?.map((r: any, i: number) => (
+                        <div
+                            key={i}
+                            className={[
+                                'p-2.5 rounded-lg',
+                                i < dados.regras.length - 1 ? 'mb-4 pb-4 border-b border-border' : ''
+                            ].join(' ')}
+                        >
+                            <strong className="text-[1.1em]"><InteractiveText text={r.titulo} /></strong>
+                            <div className="my-2 leading-relaxed"><InteractiveText text={r.explicacao} /></div>
+                            <div className="bg-black/[0.03] p-2.5 rounded-lg">
+                                <div className="text-[1.2em]"><InteractiveText text={r.exemplo_jp} /></div>
+                                <div className="text-muted-foreground text-[0.9em]"><InteractiveText text={r.exemplo_pt} /></div>
+                            </div>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+
+            {/* Frases Prontas */}
+            <Card className="mb-5">
+                <CardContent className="p-5">
+                    <h3 className="mt-0 mb-5 text-primary font-bold">💬 Frases Prontas</h3>
+                    {dados.frases_uteis?.map((f: any, i: number) => (
+                        <PhraseCard 
+                            key={i}
+                            jp={f.jp}
+                            pt={f.pt}
+                            breakdown={f.breakdown}
+                            session={session}
+                        />
+                    ))}
+                </CardContent>
+            </Card>
 
             {activeCards.map((card, index) => (
                 <DraggableCard 

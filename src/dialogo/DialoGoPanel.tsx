@@ -5,6 +5,10 @@ import * as wanakana from 'wanakana';
 import AiLoader from './components/AiLoader';
 import AiFallbackPopup from './components/AiFallbackPopup';
 import AjudaModal from './components/AjudaModal';
+import { Card } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface DialoGoPanelProps {
     context: any;
@@ -226,7 +230,7 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
 
     if (loading) {
         return (
-            <div style={{ padding: '20px' }}>
+            <div className="p-5">
                 <AiLoader 
                     provider={provider} 
                     message={`${provider.charAt(0).toUpperCase() + provider.slice(1)} está preparando o Cenário`} 
@@ -236,113 +240,140 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
     }
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto', height: '80vh', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <button onClick={onBack} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-color)', cursor: 'pointer' }}>← Voltar à Tradução</button>
-                <h2 style={{ margin: 0 }}>Diálogo</h2>
-                <div style={{ width: '130px' }}></div> {/* spacer for centering */}
+        <div className="flex flex-col w-full max-w-3xl mx-auto h-[calc(100vh-220px)] min-h-[500px]">
+            {/* Cabeçalho */}
+            <div className="flex items-center justify-between mb-5">
+                <Button
+                    variant="outline"
+                    onClick={onBack}
+                    className="text-sm"
+                >
+                    ← Voltar à Tradução
+                </Button>
+                <h2 className="text-lg font-bold text-foreground m-0">Diálogo</h2>
+                <div className="w-[130px]" /> {/* spacer for centering */}
             </div>
 
+            {/* Banner do cenário */}
             {contextoDialogo && (
-                <div style={{ background: 'var(--primary-color)', color: 'white', padding: '15px', borderRadius: '12px', marginBottom: '20px', textAlign: 'center', fontSize: '0.9em' }}>
+                <div className="bg-primary text-primary-foreground px-4 py-3 rounded-xl mb-5 text-center text-sm">
                     <strong>Cenário:</strong> {contextoDialogo}
                 </div>
             )}
 
-            <div style={{ flex: 1, background: 'var(--card-bg)', borderRadius: '16px', padding: '20px', overflowY: 'auto', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-subtle)', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {historico.map((msg, i) => {
-                    const isIA = msg.role === 'assistant';
-                    return (
-                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: isIA ? 'flex-start' : 'flex-end', width: '100%' }}>
-                            <div style={{ 
-                                maxWidth: '80%', 
-                                padding: '15px', 
-                                borderRadius: '16px', 
-                                borderBottomLeftRadius: isIA ? 0 : '16px',
-                                borderBottomRightRadius: isIA ? '16px' : 0,
-                                background: isIA ? 'rgba(0,0,0,0.05)' : 'var(--highlight-color)', 
-                                color: isIA ? 'var(--text-color)' : 'white' 
-                            }}>
-                                <div style={{ fontSize: '1.2em', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                    <InteractiveText text={msg.jp} />
-                                    {isIA && (
-                                        <div style={{ display: 'flex', gap: '5px' }}>
-                                            <button onClick={() => tocarAudio(msg.jp)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'gray', padding: '5px' }} title="Ouvir">🔊</button>
-                                            <button onClick={() => setAjudaModal({isOpen: true, mensagem: msg.jp})} style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', cursor: 'pointer', color: 'var(--text-color)', borderRadius: '8px', padding: '4px 10px', fontSize: '0.75em', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                💬 Ajuda
-                                            </button>
+            {/* Área de mensagens com ScrollArea do Radix */}
+            <Card className="flex-1 min-h-0 mb-5 overflow-hidden border border-border bg-card shadow-sm">
+                <ScrollArea className="h-full w-full">
+                    <div className="flex flex-col gap-5 p-5">
+                        {historico.map((msg, i) => {
+                            const isIA = msg.role === 'assistant';
+                            return (
+                                <div
+                                    key={i}
+                                    className={`flex flex-col w-full ${isIA ? 'items-start' : 'items-end'}`}
+                                >
+                                    {/* Balão de mensagem */}
+                                    <div
+                                        className={[
+                                            'max-w-[80%] px-4 py-3 rounded-2xl',
+                                            isIA
+                                                ? 'rounded-bl-none bg-muted text-foreground'
+                                                : 'rounded-br-none bg-primary text-primary-foreground',
+                                        ].join(' ')}
+                                    >
+                                        <div className="text-lg flex items-center gap-2 flex-wrap">
+                                            <InteractiveText text={msg.jp} />
+                                            {isIA && (
+                                                <div className="flex gap-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => tocarAudio(msg.jp)}
+                                                        title="Ouvir"
+                                                        className="h-7 w-7 text-muted-foreground"
+                                                    >
+                                                        🔊
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setAjudaModal({isOpen: true, mensagem: msg.jp})}
+                                                        className="h-7 px-2 text-xs font-bold border-accent-foreground/30 bg-accent/10 text-foreground"
+                                                    >
+                                                        💬 Ajuda
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {isIA && msg.pt && (
+                                            <details className="mt-2 text-sm text-muted-foreground">
+                                                <summary className="cursor-pointer">Tradução</summary>
+                                                <p className="mt-1 mb-0"><InteractiveText text={msg.pt} /></p>
+                                            </details>
+                                        )}
+                                    </div>
+
+                                    {/* Caixa de análise para mensagem do usuário */}
+                                    {!isIA && msg.analise && (
+                                        <div className="max-w-[80%] mt-2 p-4 rounded-xl bg-card border border-border flex gap-4 items-center">
+                                            <ScoreBadge score={msg.score || 0} />
+                                            <div className="text-sm">
+                                                <strong>Feedback do Sensei:</strong>
+                                                <p className="mt-1 mb-0"><InteractiveText text={msg.analise} /></p>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
-                                {isIA && msg.pt && (
-                                    <details style={{ marginTop: '10px', fontSize: '0.9em', color: 'gray' }}>
-                                        <summary style={{ cursor: 'pointer' }}>Tradução</summary>
-                                        <p style={{ margin: '5px 0 0 0' }}><InteractiveText text={msg.pt} /></p>
-                                    </details>
-                                )}
-                            </div>
-                            
-                            {/* Analysis box for user msg */}
-                            {!isIA && msg.analise && (
-                                <div style={{ maxWidth: '80%', marginTop: '10px', padding: '15px', borderRadius: '12px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                    <ScoreBadge score={msg.score || 0} />
-                                    <div style={{ fontSize: '0.9em' }}>
-                                        <strong>Feedback do Sensei:</strong>
-                                        <p style={{ margin: '5px 0 0 0' }}><InteractiveText text={msg.analise} /></p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-                {enviando && (
-                    <div style={{ 
-                        alignSelf: 'flex-start',
-                        maxWidth: '80%', 
-                        padding: '12px 18px', 
-                        borderRadius: '16px', 
-                        borderBottomLeftRadius: 0,
-                        background: 'rgba(0,0,0,0.05)', 
-                        color: 'var(--text-color)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px'
-                    }}>
-                        <img 
-                            src={provider === 'gemini' ? "https://cdnl.iconscout.com/lottie/premium/thumb/gemini-logo-animation-gif-download-10900314.gif" : provider === 'groq' ? "https://raw.githubusercontent.com/lobehub/lobe-icons/main/icons/groq.svg" : "https://cdnl.iconscout.com/lottie/premium/thumb/chatgpt-animation-gif-download-6633794.gif"} 
-                            alt={provider} 
-                            style={{ 
-                                width: '28px', 
-                                height: '28px', 
-                                objectFit: 'contain',
-                                animation: provider === 'groq' ? 'groqPulse 2s infinite ease-in-out' : 'none'
-                            }}
-                        />
-                        <span style={{ fontSize: '0.9em', fontStyle: 'italic', color: 'gray' }}>
-                            {`${provider.charAt(0).toUpperCase() + provider.slice(1)} está digitando...`}
-                        </span>
-                    </div>
-                )}
-                <div ref={chatEndRef} />
-            </div>
+                            );
+                        })}
 
-            <form onSubmit={(e) => enviarMensagem(e, provider || context.provider || 'groq')} style={{ display: 'flex', gap: '10px' }}>
-                <input 
+                        {/* Indicador "digitando..." */}
+                        {enviando && (
+                            <div className="self-start max-w-[80%] px-4 py-3 rounded-2xl rounded-bl-none bg-muted text-foreground flex items-center gap-2">
+                                <img
+                                    src={
+                                        provider === 'gemini'
+                                            ? 'https://cdnl.iconscout.com/lottie/premium/thumb/gemini-logo-animation-gif-download-10900314.gif'
+                                            : provider === 'groq'
+                                            ? 'https://raw.githubusercontent.com/lobehub/lobe-icons/main/icons/groq.svg'
+                                            : 'https://cdnl.iconscout.com/lottie/premium/thumb/chatgpt-animation-gif-download-6633794.gif'
+                                    }
+                                    alt={provider}
+                                    className={`w-7 h-7 object-contain ${provider === 'groq' ? 'groqPulse' : ''}`}
+                                />
+                                <span className="text-sm italic text-muted-foreground">
+                                    {`${provider.charAt(0).toUpperCase() + provider.slice(1)} está digitando...`}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Sentinela de autoscroll — deve ser o último elemento da lista */}
+                        <div ref={chatEndRef} />
+                    </div>
+                </ScrollArea>
+            </Card>
+
+            {/* Formulário de envio */}
+            <form
+                onSubmit={(e) => enviarMensagem(e, provider || context.provider || 'groq')}
+                className="flex gap-2"
+            >
+                <Input
                     ref={inputRef}
-                    type="text" 
+                    type="text"
                     value={inputUser}
                     onChange={e => setInputUser(e.target.value)}
                     placeholder="Digite em romaji (será convertido para hiragana/katakana automaticamente)..."
                     disabled={enviando}
-                    style={{ flex: 1, padding: '15px', borderRadius: '12px', border: '2px solid var(--border-color)', background: 'var(--card-bg)', color: 'var(--text-color)', fontSize: '1.1em' }}
+                    className="flex-1 text-base h-12 border-2 border-input bg-card text-foreground"
                 />
-                <button 
-                    type="submit" 
+                <Button
+                    type="submit"
                     disabled={enviando || !inputUser.trim()}
-                    style={{ padding: '0 30px', borderRadius: '12px', background: 'var(--primary-color)', color: 'white', border: 'none', fontSize: '1.1em', fontWeight: 'bold', cursor: enviando ? 'not-allowed' : 'pointer' }}
+                    className="h-12 px-7 text-base font-bold"
                 >
                     Enviar
-                </button>
+                </Button>
             </form>
 
             <AiFallbackPopup 

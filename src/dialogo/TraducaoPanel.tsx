@@ -3,6 +3,8 @@ import InteractiveText from '../components/InteractiveText';
 import ScoreBadge from './components/ScoreBadge';
 import AiLoader from './components/AiLoader';
 import AiFallbackPopup from './components/AiFallbackPopup';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface TraducaoPanelProps {
     context: any;
@@ -202,7 +204,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
 
     if (loading) {
         return (
-            <div style={{ padding: '20px' }}>
+            <div className="p-5">
                 <AiLoader 
                     provider={provider} 
                     message={`${provider.charAt(0).toUpperCase() + provider.slice(1)} está gerando sua Frase`} 
@@ -210,9 +212,10 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
             </div>
         );
     }
+
     if (!frase) {
         return (
-            <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', textAlign: 'center' }}>
+            <div className="max-w-[800px] mx-auto p-5 text-center">
                 {fallbackOpen ? (
                     <AiFallbackPopup 
                         isOpen={fallbackOpen} 
@@ -231,13 +234,13 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
                     />
                 ) : (
                     <div>
-                        <h2 style={{ color: 'var(--text-color)' }}>Ocorreu um erro ao carregar a Frase</h2>
-                        <button 
-                            onClick={() => carregarFrase(provider || context.provider || 'groq')} 
-                            style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer' }}
+                        <h2 className="text-foreground">Ocorreu um erro ao carregar a Frase</h2>
+                        <Button 
+                            onClick={() => carregarFrase(provider || context.provider || 'groq')}
+                            className="mt-4"
                         >
                             Tentar Novamente
-                        </button>
+                        </Button>
                     </div>
                 )}
             </div>
@@ -245,106 +248,128 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
     }
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <button onClick={onBack} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-color)', cursor: 'pointer' }}>← Voltar ao Guia</button>
-                <button onClick={onNext} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'var(--highlight-color)', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Ir para Diálogo →</button>
+        <div className="max-w-[800px] mx-auto">
+            {/* Top navigation */}
+            <div className="flex justify-between items-center mb-5">
+                <Button variant="outline" onClick={onBack}>← Voltar ao Guia</Button>
+                <Button onClick={onNext} className="font-bold">Ir para Diálogo →</Button>
             </div>
 
-            <div style={{ background: 'var(--card-bg)', padding: '30px', borderRadius: '16px', boxShadow: 'var(--shadow-subtle)', textAlign: 'center', marginBottom: '20px' }}>
-                <h3 style={{ marginTop: 0, color: 'gray', fontWeight: 'normal', fontSize: '1em' }}>Traduza esta frase para o português:</h3>
-                
-                <div style={{ fontSize: '2em', fontWeight: 'bold', margin: '20px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px' }}>
-                    <InteractiveText text={frase.frase_jp} />
-                    <button onClick={tocarAudio} style={{ border: 'none', fontSize: '1.2em', cursor: 'pointer', padding: '10px', borderRadius: '50%', background: 'rgba(0,0,0,0.05)' }}>🔊</button>
-                </div>
+            {/* Card de tradução */}
+            <Card className="mb-5">
+                <CardContent className="p-7 text-center">
+                    <h3 className="mt-0 text-muted-foreground font-normal text-[1em]">Traduza esta frase para o português:</h3>
 
-                <textarea 
-                    value={resposta}
-                    onChange={e => setResposta(e.target.value)}
-                    placeholder="Sua tradução aqui..."
-                    disabled={!!analise}
-                    style={{ width: '100%', minHeight: '100px', padding: '15px', borderRadius: '12px', border: '2px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-color)', fontSize: '1.1em', boxSizing: 'border-box', marginBottom: '15px', resize: 'vertical' }}
-                />
+                    <div className="text-[2em] font-bold my-5 flex items-center justify-center gap-4">
+                        <InteractiveText text={frase.frase_jp} />
+                        <button
+                            onClick={tocarAudio}
+                            className="border-none text-[1.2em] cursor-pointer p-2.5 rounded-full bg-black/[0.05] hover:bg-black/[0.1] transition-colors"
+                        >
+                            🔊
+                        </button>
+                    </div>
 
-                {!analise ? (
-                    analisando ? (
-                        <div style={{ marginTop: '20px' }}>
-                            <AiLoader provider={provider} message={`${provider.charAt(0).toUpperCase() + provider.slice(1)} está analisando sua tradução`} />
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap' }}>
-                            <button 
-                                onClick={() => verificarTraducao(provider)} 
-                                disabled={!resposta.trim()}
-                                style={{ padding: '12px 30px', fontSize: '1.1em', borderRadius: '8px', background: 'var(--primary-color)', color: 'white', border: 'none', cursor: resposta.trim() ? 'pointer' : 'not-allowed', opacity: resposta.trim() ? 1 : 0.6, fontWeight: 'bold' }}
-                            >
-                                Verificar Tradução
-                            </button>
-                            <button 
-                                onClick={revelarResposta}
-                                style={{ padding: '12px 20px', fontSize: '1.1em', borderRadius: '8px', background: 'transparent', color: 'var(--secondary-color)', border: '1px solid var(--border-color)', cursor: 'pointer', transition: 'background 0.2s', fontWeight: 'bold' }}
-                                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
-                                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                            >
-                                🤷 Revelar Resposta & Explicação
-                            </button>
-                        </div>
-                    )
-                ) : (
-                    <div style={{ 
-                        background: analise.revelado ? 'rgba(52, 152, 219, 0.08)' : (analise.correto ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)'), 
-                        padding: '20px', 
-                        borderRadius: '12px', 
-                        border: `2px solid ${analise.revelado ? '#3498db' : (analise.correto ? '#2ecc71' : '#e74c3c')}`, 
-                        textAlign: 'left', 
-                        marginTop: '20px' 
-                    }}>
-                        {analise.revelado ? (
-                            <div>
-                                <h3 style={{ margin: 0, color: '#2980b9', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    💡 Resposta Revelada
-                                </h3>
-                                <p style={{ margin: '5px 0 15px 0', fontSize: '1.1em', fontWeight: 'bold' }}>Tradução correta: <span style={{ color: 'var(--text-color)', fontWeight: 600 }}><InteractiveText text={analise.traducao_correta} /></span></p>
-                                
-                                {analise.explicacao && (
-                                    <div style={{ marginBottom: '15px', background: 'rgba(0,0,0,0.02)', padding: '15px', borderRadius: '8px', borderLeft: '3px solid #3498db' }}>
-                                        <strong>📖 Explicação Estrutural:</strong>
-                                        <p style={{ margin: '8px 0 0 0', lineHeight: '1.5em', fontSize: '0.95em', whiteSpace: 'pre-line' }}><InteractiveText text={analise.explicacao} /></p>
-                                    </div>
-                                )}
+                    <textarea
+                        value={resposta}
+                        onChange={e => setResposta(e.target.value)}
+                        placeholder="Sua tradução aqui..."
+                        disabled={!!analise}
+                        className="w-full min-h-[100px] p-4 rounded-xl border-2 border-border bg-background text-foreground text-[1.1em] box-border mb-4 resize-y outline-none transition-all focus:border-primary disabled:opacity-70 disabled:cursor-not-allowed"
+                    />
+
+                    {!analise ? (
+                        analisando ? (
+                            <div className="mt-5">
+                                <AiLoader provider={provider} message={`${provider.charAt(0).toUpperCase() + provider.slice(1)} está analisando sua tradução`} />
                             </div>
                         ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '15px' }}>
-                                <ScoreBadge score={analise.score} />
+                            <div className="flex justify-center gap-4 flex-wrap">
+                                <Button
+                                    onClick={() => verificarTraducao(provider)}
+                                    disabled={!resposta.trim()}
+                                    className="px-8 py-3 text-[1.1em] font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    Verificar Tradução
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={revelarResposta}
+                                    className="px-5 py-3 text-[1.1em] font-bold"
+                                >
+                                    🤷 Revelar Resposta & Explicação
+                                </Button>
+                            </div>
+                        )
+                    ) : (
+                        <div className={[
+                            'rounded-xl border-2 p-5 text-left mt-5',
+                            analise.revelado
+                                ? 'bg-blue-500/[0.08] border-blue-500'
+                                : analise.correto
+                                    ? 'bg-green-500/10 border-green-500'
+                                    : 'bg-red-500/10 border-red-500'
+                        ].join(' ')}>
+                            {analise.revelado ? (
                                 <div>
-                                    <h3 style={{ margin: 0, color: analise.correto ? '#27ae60' : '#c0392b' }}>
-                                        {analise.correto ? 'Muito bem!' : 'Precisa melhorar'}
+                                    <h3 className="m-0 text-blue-500 mb-2.5 flex items-center gap-2 font-bold">
+                                        💡 Resposta Revelada
                                     </h3>
-                                    <p style={{ margin: '5px 0 0 0', fontWeight: 'bold' }}>Correção ideal: <InteractiveText text={analise.traducao_correta} /></p>
+                                    <p className="my-1 mb-4 text-[1.1em] font-bold">
+                                        Tradução correta:{' '}
+                                        <span className="text-foreground font-semibold">
+                                            <InteractiveText text={analise.traducao_correta} />
+                                        </span>
+                                    </p>
+                                    {analise.explicacao && (
+                                        <div className="mb-4 bg-black/[0.02] p-4 rounded-lg border-l-[3px] border-blue-500">
+                                            <strong>📖 Explicação Estrutural:</strong>
+                                            <p className="mt-2 mb-0 leading-relaxed text-[0.95em] whitespace-pre-line">
+                                                <InteractiveText text={analise.explicacao} />
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="flex items-center gap-5 mb-4">
+                                    <ScoreBadge score={analise.score} />
+                                    <div>
+                                        <h3 className={['m-0 font-bold', analise.correto ? 'text-green-600' : 'text-red-600'].join(' ')}>
+                                            {analise.correto ? 'Muito bem!' : 'Precisa melhorar'}
+                                        </h3>
+                                        <p className="mt-1.5 mb-0 font-bold">
+                                            Correção ideal: <InteractiveText text={analise.traducao_correta} />
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
-                        {!analise.revelado && analise.erros && analise.erros.length > 0 && (
-                            <div style={{ marginBottom: '10px' }}>
-                                <strong>Pontos de atenção:</strong>
-                                <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                                    {analise.erros.map((erro: string, i: number) => <li key={i}><InteractiveText text={erro} /></li>)}
-                                </ul>
-                            </div>
-                        )}
-                        
-                        <div style={{ background: 'rgba(0,0,0,0.05)', padding: '10px', borderRadius: '8px', fontSize: '0.9em', marginBottom: '15px' }}>
-                            <strong>💡 Dica Rápida:</strong> <InteractiveText text={analise.dica || frase.dica} />
-                        </div>
+                            {!analise.revelado && analise.erros && analise.erros.length > 0 && (
+                                <div className="mb-2.5">
+                                    <strong>Pontos de atenção:</strong>
+                                    <ul className="mt-1 mb-0 pl-5">
+                                        {analise.erros.map((erro: string, i: number) => <li key={i}>{erro}</li>)}
+                                    </ul>
+                                </div>
+                            )}
 
-                        <div style={{ marginTop: '20px', textAlign: 'center' }}>
-                            <button onClick={() => carregarFrase(provider || context.provider || 'groq', true)} style={{ padding: '10px 20px', borderRadius: '8px', background: 'var(--highlight-color)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>Nova Frase</button>
+                            <div className="bg-black/[0.05] p-2.5 rounded-lg text-[0.9em] mb-4">
+                                <strong>💡 Dica Rápida:</strong>{' '}
+                                <InteractiveText text={analise.dica || frase.dica} />
+                            </div>
+
+                            <div className="mt-5 text-center">
+                                <Button
+                                    onClick={() => carregarFrase(provider || context.provider || 'groq', true)}
+                                    className="font-bold"
+                                >
+                                    Nova Frase
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <AiFallbackPopup 
                 isOpen={fallbackOpen} 

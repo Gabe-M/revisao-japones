@@ -1,4 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface ConfiguracaoPanelProps {
     onStart: (config: any) => void;
@@ -12,7 +23,6 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
     const [conjuntoSelecionado, setConjuntoSelecionado] = useState('');
     const [useConjuntos, setUseConjuntos] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
-
 
     // Novos estados para baralhos e filtros SRS
     const [bancoTipo, setBancoTipo] = useState<'conjuntos' | 'baralhos' | 'ambos'>('conjuntos');
@@ -313,909 +323,306 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
         });
     };
 
+    /* ── helper: botão de tab segmentado ── */
+    const SegTab = ({ active, onClick, children, disabled }: { active: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean }) => (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            className={[
+                'flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold transition-all duration-200',
+                active
+                    ? 'bg-card text-foreground shadow-md opacity-100'
+                    : 'bg-transparent text-foreground opacity-60 hover:opacity-80',
+                disabled ? 'cursor-not-allowed opacity-35' : 'cursor-pointer'
+            ].join(' ')}
+        >
+            {children}
+        </button>
+    );
+
     return (
-        <div style={{ 
-            maxWidth: '600px', 
-            margin: '0 auto', 
-            background: 'var(--card-bg)', 
-            padding: '35px 30px', 
-            borderRadius: '16px', 
-            boxShadow: 'var(--shadow-subtle)', 
-            border: '1px solid var(--border-color)',
-            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)'
-        }}>
-            <h2 style={{ 
-                marginTop: 0, 
-                fontWeight: 800, 
-                letterSpacing: '-0.5px', 
-                fontSize: '1.8em',
-                textAlign: 'center',
-                background: 'linear-gradient(90deg, var(--primary-color), var(--highlight-color))',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                borderBottom: '2px solid var(--border-color)', 
-                paddingBottom: '15px',
-                marginBottom: '25px'
-            }}>
-                💬 Configurar Diálogo
-            </h2>
+        <Card className="max-w-[600px] mx-auto backdrop-blur-sm">
+            <CardHeader className="pb-4 border-b border-border">
+                <CardTitle className="text-center text-[1.8em] font-extrabold tracking-tight bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">
+                    💬 Configurar Diálogo
+                </CardTitle>
+            </CardHeader>
 
-            {/* Escolha de Sessão */}
-            {session && (
-                <div style={{ marginBottom: '25px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <label style={{ display: 'block', fontWeight: 'bold', color: 'var(--text-color)', fontSize: '0.95em' }}>
-                        Modo de Sessão:
-                    </label>
-                    <div style={{
-                        display: 'flex',
-                        background: 'rgba(0, 0, 0, 0.03)',
-                        borderRadius: '24px',
-                        padding: '4px',
-                        gap: '4px',
-                        border: '1px solid var(--border-color)',
-                        width: '100%',
-                        boxSizing: 'border-box'
-                    }}>
-                        <button 
-                            type="button"
-                            onClick={() => setTipoExibicaoSessao('nova')} 
-                            style={{
-                                flex: 1,
-                                padding: '10px 16px',
-                                fontSize: '0.92em',
-                                fontWeight: 700,
-                                border: 'none',
-                                borderRadius: '20px',
-                                cursor: 'pointer',
-                                background: tipoExibicaoSessao === 'nova' ? 'var(--card-bg)' : 'transparent',
-                                color: 'var(--text-color)',
-                                opacity: tipoExibicaoSessao === 'nova' ? 1 : 0.6,
-                                boxShadow: tipoExibicaoSessao === 'nova' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px'
-                            }}
-                        >
-                            ➕ Nova Sessão
-                        </button>
-                        <button 
-                            type="button"
-                            onClick={() => setTipoExibicaoSessao('existente')} 
-                            style={{
-                                flex: 1,
-                                padding: '10px 16px',
-                                fontSize: '0.92em',
-                                fontWeight: 700,
-                                border: 'none',
-                                borderRadius: '20px',
-                                cursor: 'pointer',
-                                background: tipoExibicaoSessao === 'existente' ? 'var(--card-bg)' : 'transparent',
-                                color: 'var(--text-color)',
-                                opacity: tipoExibicaoSessao === 'existente' ? 1 : 0.6,
-                                boxShadow: tipoExibicaoSessao === 'existente' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px'
-                            }}
-                        >
-                            📂 Sessão Existente
-                        </button>
-                    </div>
-                </div>
-            )}
+            <CardContent className="flex flex-col gap-6 pt-6">
 
-            {tipoExibicaoSessao === 'existente' && session && (
-                <div style={{ marginBottom: '25px' }}>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-color)', fontSize: '0.95em' }}>
-                        Selecione a Sessão:
-                    </label>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <select 
-                            value={sessaoSelecionadaId} 
-                            onChange={e => setSessaoSelecionadaId(e.target.value)}
-                            disabled={isLoadingSessions}
-                            style={{ 
-                                flex: 1, 
-                                padding: '14px 18px', 
-                                borderRadius: '12px', 
-                                background: 'var(--bg-color)', 
-                                color: 'var(--text-color)', 
-                                border: '2px solid var(--border-color)', 
-                                fontSize: '1.05em',
-                                fontWeight: '600',
-                                outline: 'none',
-                                cursor: isLoadingSessions ? 'not-allowed' : 'pointer',
-                                transition: 'all 0.2s ease',
-                                boxShadow: 'var(--shadow-subtle)'
-                            }}
-                        >
-                            {isLoadingSessions ? (
-                                <option>Carregando sessões...</option>
-                            ) : sessoesExistentes.length === 0 ? (
-                                <option value="">Nenhuma sessão encontrada</option>
-                            ) : (
-                                sessoesExistentes.map(s => (
-                                    <option key={s.id} value={s.id}>
-                                        {s.nome} ({s.config?.tema || s.tema}) - {new Date(s.created_at).toLocaleDateString()}
-                                    </option>
-                                ))
-                            )}
-                        </select>
-                        {sessaoSelecionadaId && sessoesExistentes.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={handleDeletarSessao}
-                                style={{
-                                    background: '#e74c3c',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    padding: '0 20px',
-                                    fontSize: '1em',
-                                    fontWeight: 'bold',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    boxShadow: '0 4px 10px rgba(231, 76, 60, 0.2)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px'
-                                }}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.background = '#c0392b';
-                                    e.currentTarget.style.boxShadow = '0 6px 15px rgba(231, 76, 60, 0.4)';
-                                }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.background = '#e74c3c';
-                                    e.currentTarget.style.boxShadow = '0 4px 10px rgba(231, 76, 60, 0.2)';
-                                }}
-                            >
-                                🗑️ Apagar
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {tipoExibicaoSessao === 'nova' && session && (
-                <div style={{ marginBottom: '25px' }}>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-color)', fontSize: '0.95em' }}>
-                        Nome da Sessão (Opcional):
-                    </label>
-                    <input 
-                        type="text" 
-                        value={nomeSessao} 
-                        onChange={e => setNomeSessao(e.target.value)} 
-                        placeholder="Ex: Minha conversa no restaurante"
-                        style={{ 
-                            width: '100%', 
-                            padding: '14px 18px', 
-                            borderRadius: '12px', 
-                            border: '2px solid var(--border-color)', 
-                            background: 'var(--bg-color)', 
-                            color: 'var(--text-color)', 
-                            fontSize: '1.05em',
-                            boxSizing: 'border-box', 
-                            outline: 'none', 
-                            transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
-                        }}
-                    />
-                </div>
-            )}
-            
-            <div style={{ marginBottom: '25px' }}>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-color)', fontSize: '0.95em' }}>
-                    Tema da Conversa:
-                </label>
-                <input 
-                    type="text" 
-                    value={tema} 
-                    onChange={e => setTema(e.target.value)} 
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
-                    placeholder="Ex: Como pedir comida num restaurante..."
-                    disabled={tipoExibicaoSessao === 'existente'}
-                    style={{ 
-                        width: '100%', 
-                        padding: '14px 18px', 
-                        borderRadius: '12px', 
-                        border: isFocused ? '2px solid var(--highlight-color)' : '2px solid var(--border-color)', 
-                        background: 'var(--bg-color)', 
-                        color: 'var(--text-color)', 
-                        fontSize: '1.05em',
-                        boxSizing: 'border-box', 
-                        outline: 'none', 
-                        transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-                        boxShadow: isFocused ? '0 0 0 4px rgba(230, 126, 34, 0.15)' : 'none',
-                        transform: isFocused ? 'translateY(-2px)' : 'none',
-                        cursor: tipoExibicaoSessao === 'existente' ? 'not-allowed' : 'text',
-                        opacity: tipoExibicaoSessao === 'existente' ? 0.7 : 1
-                    }}
-                />
-                <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {temasRapidos.map(t => (
-                        <button 
-                            key={t} 
-                            type="button"
-                            onClick={() => setTema(t)}
-                            disabled={tipoExibicaoSessao === 'existente'}
-                            style={{ 
-                                padding: '8px 16px', 
-                                borderRadius: '20px', 
-                                border: '1px solid var(--border-color)', 
-                                background: tema === t ? 'var(--highlight-color)' : 'transparent', 
-                                color: tema === t ? '#fff' : 'var(--text-color)', 
-                                cursor: tipoExibicaoSessao === 'existente' ? 'not-allowed' : 'pointer',
-                                fontWeight: '600',
-                                fontSize: '0.88em',
-                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                boxShadow: tema === t ? '0 4px 10px rgba(230, 126, 34, 0.3)' : 'none',
-                                transform: tema === t ? 'scale(1.03)' : 'scale(1)',
-                                opacity: tipoExibicaoSessao === 'existente' ? 0.5 : 1
-                            }}
-                            onMouseOver={(e) => {
-                                if (tema !== t) {
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.background = 'rgba(0,0,0,0.03)';
-                                }
-                            }}
-                            onMouseOut={(e) => {
-                                if (tema !== t) {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.background = 'transparent';
-                                }
-                            }}
-                        >
-                            {t}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div style={{ marginBottom: '25px' }}>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-color)', fontSize: '0.95em' }}>
-                    Fonte de Vocabulário:
-                </label>
-                
-                <div style={{
-                    display: 'flex',
-                    background: 'rgba(0, 0, 0, 0.03)',
-                    borderRadius: '24px',
-                    padding: '4px',
-                    gap: '4px',
-                    border: '1px solid var(--border-color)',
-                    marginBottom: '20px',
-                    width: '100%',
-                    boxSizing: 'border-box'
-                }}>
-                    <button 
-                        type="button"
-                        onClick={() => setUseConjuntos(false)} 
-                        style={{
-                            flex: 1,
-                            padding: '10px 16px',
-                            fontSize: '0.92em',
-                            fontWeight: 700,
-                            border: 'none',
-                            borderRadius: '20px',
-                            cursor: 'pointer',
-                            background: !useConjuntos ? 'var(--card-bg)' : 'transparent',
-                            color: 'var(--text-color)',
-                            opacity: !useConjuntos ? 1 : 0.6,
-                            boxShadow: !useConjuntos ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px'
-                        }}
-                    >
-                        🌐 Qualquer palavra (Livre)
-                    </button>
-                    <button 
-                        type="button"
-                        onClick={() => {
-                            if (session) setUseConjuntos(true);
-                        }} 
-                        disabled={!session}
-                        style={{
-                            flex: 1,
-                            padding: '10px 16px',
-                            fontSize: '0.92em',
-                            fontWeight: 700,
-                            border: 'none',
-                            borderRadius: '20px',
-                            cursor: session ? 'pointer' : 'not-allowed',
-                            background: useConjuntos ? 'var(--card-bg)' : 'transparent',
-                            color: 'var(--text-color)',
-                            opacity: useConjuntos ? 1 : (session ? 0.6 : 0.35),
-                            boxShadow: useConjuntos ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px'
-                        }}
-                    >
-                        📁 Meu Banco {session ? '' : '(Requer Login)'}
-                    </button>
-                </div>
-
-                {!useConjuntos ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ display: 'block', fontSize: '0.9em', color: 'var(--text-color)', opacity: 0.85 }}>
-                            Nível de dificuldade máximo (JLPT):
-                        </label>
-                        <select 
-                            value={jlpt} 
-                            onChange={e => setJlpt(e.target.value)}
-                            style={{ 
-                                width: '100%', 
-                                padding: '12px 16px', 
-                                borderRadius: '10px', 
-                                background: 'var(--bg-color)', 
-                                color: 'var(--text-color)', 
-                                border: '2px solid var(--border-color)', 
-                                fontSize: '1em',
-                                fontWeight: '600',
-                                outline: 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                boxShadow: 'var(--shadow-subtle)'
-                            }}
-                        >
-                            <option value="N5">🟢 N5 (Iniciante)</option>
-                            <option value="N4">🔵 N4 (Básico)</option>
-                            <option value="N3">🟡 N3 (Intermediário)</option>
-                            <option value="N2">🟠 N2 (Avançado)</option>
-                            <option value="N1">🔴 N1 (Fluente)</option>
-                        </select>
-                    </div>
-                ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.9em', color: 'var(--text-color)', opacity: 0.85, marginBottom: '8px' }}>
-                                Filtrar banco por:
-                            </label>
-                            <div style={{
-                                display: 'flex',
-                                background: 'rgba(0, 0, 0, 0.03)',
-                                borderRadius: '24px',
-                                padding: '4px',
-                                gap: '4px',
-                                border: '1px solid var(--border-color)',
-                                width: '100%',
-                                boxSizing: 'border-box'
-                            }}>
-                                <button 
-                                    type="button"
-                                    onClick={() => setBancoTipo('conjuntos')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '8px 12px',
-                                        fontSize: '0.85em',
-                                        fontWeight: 700,
-                                        border: 'none',
-                                        borderRadius: '20px',
-                                        cursor: 'pointer',
-                                        background: bancoTipo === 'conjuntos' ? 'var(--card-bg)' : 'transparent',
-                                        color: 'var(--text-color)',
-                                        opacity: bancoTipo === 'conjuntos' ? 1 : 0.6,
-                                        boxShadow: bancoTipo === 'conjuntos' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '4px'
-                                    }}
-                                >
-                                    📁 Conjuntos
-                                </button>
-                                <button 
-                                    type="button"
-                                    onClick={() => setBancoTipo('baralhos')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '8px 12px',
-                                        fontSize: '0.85em',
-                                        fontWeight: 700,
-                                        border: 'none',
-                                        borderRadius: '20px',
-                                        cursor: 'pointer',
-                                        background: bancoTipo === 'baralhos' ? 'var(--card-bg)' : 'transparent',
-                                        color: 'var(--text-color)',
-                                        opacity: bancoTipo === 'baralhos' ? 1 : 0.6,
-                                        boxShadow: bancoTipo === 'baralhos' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '4px'
-                                    }}
-                                >
-                                    🎴 Baralhos
-                                </button>
-                                <button 
-                                    type="button"
-                                    onClick={() => setBancoTipo('ambos')}
-                                    style={{
-                                        flex: 1,
-                                        padding: '8px 12px',
-                                        fontSize: '0.85em',
-                                        fontWeight: 700,
-                                        border: 'none',
-                                        borderRadius: '20px',
-                                        cursor: 'pointer',
-                                        background: bancoTipo === 'ambos' ? 'var(--card-bg)' : 'transparent',
-                                        color: 'var(--text-color)',
-                                        opacity: bancoTipo === 'ambos' ? 1 : 0.6,
-                                        boxShadow: bancoTipo === 'ambos' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '4px'
-                                    }}
-                                >
-                                    🌀 Ambos
-                                </button>
-                            </div>
+                {/* Escolha de Sessão */}
+                {session && (
+                    <div className="flex flex-col gap-2.5">
+                        <label className="font-bold text-foreground text-[0.95em]">Modo de Sessão:</label>
+                        <div className="flex gap-1 p-1 rounded-full border border-border bg-black/[0.03] w-full">
+                            <SegTab active={tipoExibicaoSessao === 'nova'} onClick={() => setTipoExibicaoSessao('nova')}>
+                                ➕ Nova Sessão
+                            </SegTab>
+                            <SegTab active={tipoExibicaoSessao === 'existente'} onClick={() => setTipoExibicaoSessao('existente')}>
+                                📂 Sessão Existente
+                            </SegTab>
                         </div>
-
-                        {(bancoTipo === 'conjuntos' || bancoTipo === 'ambos') && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <label style={{ display: 'block', fontSize: '0.9em', color: 'var(--text-color)', opacity: 0.85 }}>
-                                    Escolha um conjunto:
-                                </label>
-                                <select 
-                                    value={conjuntoSelecionado} 
-                                    onChange={e => setConjuntoSelecionado(e.target.value)}
-                                    style={{ 
-                                        width: '100%', 
-                                        padding: '12px 16px', 
-                                        borderRadius: '10px', 
-                                        background: 'var(--bg-color)', 
-                                        color: 'var(--text-color)', 
-                                        border: '2px solid var(--border-color)', 
-                                        fontSize: '1em',
-                                        fontWeight: '600',
-                                        outline: 'none',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s ease',
-                                        boxShadow: 'var(--shadow-subtle)'
-                                    }}
-                                >
-                                    {conjuntosDisp.map(c => (
-                                        <option key={c} value={c}>📁 {c}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-
-                        {(bancoTipo === 'baralhos' || bancoTipo === 'ambos') && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <label style={{ display: 'block', fontSize: '0.9em', color: 'var(--text-color)', opacity: 0.85 }}>
-                                    Escolha um baralho (Anki):
-                                </label>
-                                <select 
-                                    value={baralhoSelecionado} 
-                                    onChange={e => setBaralhoSelecionado(e.target.value)}
-                                    style={{ 
-                                        width: '100%', 
-                                        padding: '12px 16px', 
-                                        borderRadius: '10px', 
-                                        background: 'var(--bg-color)', 
-                                        color: 'var(--text-color)', 
-                                        border: '2px solid var(--border-color)', 
-                                        fontSize: '1em',
-                                        fontWeight: '600',
-                                        outline: 'none',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s ease',
-                                        boxShadow: 'var(--shadow-subtle)'
-                                    }}
-                                >
-                                    {baralhosDisp.map(b => (
-                                        <option key={b} value={b}>🎴 {b}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-
-                        {(bancoTipo === 'baralhos' || bancoTipo === 'ambos') && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                <label style={{ display: 'block', fontSize: '0.9em', color: 'var(--text-color)', opacity: 0.85 }}>
-                                    Filtro de Progresso SRS:
-                                </label>
-                                <div style={{
-                                    display: 'flex',
-                                    background: 'rgba(0, 0, 0, 0.03)',
-                                    borderRadius: '24px',
-                                    padding: '4px',
-                                    gap: '4px',
-                                    border: '1px solid var(--border-color)',
-                                    width: '100%',
-                                    boxSizing: 'border-box'
-                                }}>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setSrsFiltro('Todos')}
-                                        style={{
-                                            flex: 1,
-                                            padding: '8px 12px',
-                                            fontSize: '0.82em',
-                                            fontWeight: 700,
-                                            border: 'none',
-                                            borderRadius: '20px',
-                                            cursor: 'pointer',
-                                            background: srsFiltro === 'Todos' ? 'var(--card-bg)' : 'transparent',
-                                            color: 'var(--text-color)',
-                                            opacity: srsFiltro === 'Todos' ? 1 : 0.6,
-                                            boxShadow: srsFiltro === 'Todos' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '4px'
-                                        }}
-                                    >
-                                        🧠 Todos
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setSrsFiltro('Aprendidos')} /* normal placeholder but let's use Aprendidos */
-                                        style={{
-                                            display: 'none'
-                                        }}
-                                    />
-                                    <button 
-                                        type="button"
-                                        onClick={() => setSrsFiltro('Aprendidos')}
-                                        style={{
-                                            flex: 1,
-                                            padding: '8px 12px',
-                                            fontSize: '0.82em',
-                                            fontWeight: 700,
-                                            border: 'none',
-                                            borderRadius: '20px',
-                                            cursor: 'pointer',
-                                            background: srsFiltro === 'Aprendidos' ? 'var(--card-bg)' : 'transparent',
-                                            color: 'var(--text-color)',
-                                            opacity: srsFiltro === 'Aprendidos' ? 1 : 0.6,
-                                            boxShadow: srsFiltro === 'Aprendidos' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '4px'
-                                        }}
-                                    >
-                                        🔵 Aprendidos
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={() => setSrsFiltro('Novos')}
-                                        style={{
-                                            flex: 1,
-                                            padding: '8px 12px',
-                                            fontSize: '0.82em',
-                                            fontWeight: 700,
-                                            border: 'none',
-                                            borderRadius: '20px',
-                                            cursor: 'pointer',
-                                            background: srsFiltro === 'Novos' ? 'var(--card-bg)' : 'transparent',
-                                            color: 'var(--text-color)',
-                                            opacity: srsFiltro === 'Novos' ? 1 : 0.6,
-                                            boxShadow: srsFiltro === 'Novos' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '4px'
-                                        }}
-                                    >
-                                        🟡 Novos
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
-            </div>
 
-            <div style={{ marginBottom: '25px', marginTop: '20px' }}>
-                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-color)', fontSize: '0.95em' }}>
-                    🤖 Provedor de Inteligência Artificial:
-                </label>
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                    background: 'rgba(0, 0, 0, 0.03)',
-                    borderRadius: '16px',
-                    padding: '4px',
-                    gap: '4px',
-                    border: '1px solid var(--border-color)',
-                }}>
-                    <button 
-                        type="button"
-                        onClick={() => setSelectedProvider('gemini')}
-                        style={{
-                            padding: '10px 8px',
-                            fontSize: '0.82em',
-                            fontWeight: 700,
-                            border: 'none',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            background: selectedProvider === 'gemini' ? 'var(--card-bg)' : 'transparent',
-                            color: 'var(--text-color)',
-                            opacity: selectedProvider === 'gemini' ? 1 : 0.6,
-                            boxShadow: selectedProvider === 'gemini' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                            transition: 'all 0.2s ease',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '4px'
-                        }}
-                    >
-                        <span>✨ Gemini</span>
-                        <span style={{ fontSize: '0.75em', fontWeight: 'normal', color: 'gray' }}>Grátis (Instável)</span>
-                    </button>
-                    
-                    <button 
-                        type="button"
-                        onClick={() => setSelectedProvider('pollinations')}
-                        style={{
-                            padding: '10px 8px',
-                            fontSize: '0.82em',
-                            fontWeight: 700,
-                            border: 'none',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            background: selectedProvider === 'pollinations' ? 'var(--card-bg)' : 'transparent',
-                            color: 'var(--text-color)',
-                            opacity: selectedProvider === 'pollinations' ? 1 : 0.6,
-                            boxShadow: selectedProvider === 'pollinations' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                            transition: 'all 0.2s ease',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '4px'
-                        }}
-                    >
-                        <span>🪐 Pollinations</span>
-                        <span style={{ fontSize: '0.75em', fontWeight: 'normal', color: 'gray' }}>Grátis (Sem Chave)</span>
-                    </button>
-
-                    <button 
-                        type="button"
-                        onClick={() => setSelectedProvider('groq')}
-                        style={{
-                            padding: '10px 8px',
-                            fontSize: '0.82em',
-                            fontWeight: 700,
-                            border: 'none',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            background: selectedProvider === 'groq' ? 'var(--card-bg)' : 'transparent',
-                            color: 'var(--text-color)',
-                            opacity: selectedProvider === 'groq' ? 1 : 0.6,
-                            boxShadow: selectedProvider === 'groq' ? '0 4px 10px rgba(0,0,0,0.06)' : 'none',
-                            transition: 'all 0.2s ease',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '4px'
-                        }}
-                    >
-                        <span>⚡ Groq</span>
-                        <span style={{ fontSize: '0.75em', fontWeight: 'normal', color: 'gray' }}>Llama 3.3 (Grátis)</span>
-                    </button>
-                </div>
-            </div>
-
-            <button 
-                onClick={handleStart}
-                disabled={isLoadingSessions && !!session}
-                style={{ 
-                    width: '100%', 
-                    padding: '16px', 
-                    borderRadius: '12px', 
-                    border: 'none', 
-                    background: isLoadingSessions && !!session ? 'gray' : 'linear-gradient(135deg, var(--highlight-color) 0%, #d35400 100%)', 
-                    color: '#fff', 
-                    fontSize: '1.15em', 
-                    fontWeight: '800', 
-                    cursor: isLoadingSessions && !!session ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: isLoadingSessions && !!session ? 'none' : '0 4px 15px rgba(230, 126, 34, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    marginTop: '15px',
-                    opacity: isLoadingSessions && !!session ? 0.6 : 1
-                }}
-                onMouseOver={(e) => {
-                    if (!(isLoadingSessions && !!session)) {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 8px 25px rgba(230, 126, 34, 0.45)';
-                    }
-                }}
-                onMouseOut={(e) => {
-                    if (!(isLoadingSessions && !!session)) {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(230, 126, 34, 0.3)';
-                    }
-                }}
-            >
-                {isLoadingSessions && !!session ? '⏳ Carregando Sessões...' : '🚀 Iniciar Diálogo'}
-            </button>
-
-            {modalConfig.isOpen && (
-                <div 
-                    onClick={() => {
-                        if (modalConfig.tipo === 'alert') {
-                            setModalConfig(prev => ({ ...prev, isOpen: false }));
-                        }
-                    }}
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        backdropFilter: 'blur(8px)',
-                        WebkitBackdropFilter: 'blur(8px)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 11000,
-                        padding: '16px',
-                        animation: 'fadeIn 0.2s ease-out'
-                    }}
-                >
-                    <div
-                        style={{
-                            animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '100%',
-                            height: '100%',
-                            pointerEvents: 'none'
-                        }}
-                    >
-                        <div 
-                            onClick={e => e.stopPropagation()}
-                            onMouseDown={handleMouseDown}
-                            style={{
-                                pointerEvents: 'auto',
-                                background: 'var(--card-bg)',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '16px',
-                                boxShadow: 'var(--shadow-hover)',
-                                width: '100%',
-                                maxWidth: '400px',
-                                padding: '24px',
-                                color: 'var(--text-color)',
-                                fontFamily: "'Inter', sans-serif",
-                                textAlign: 'center',
-                                cursor: isDragging ? 'grabbing' : 'grab',
-                                userSelect: 'none',
-                                transform: `translate(${modalPosition.x}px, ${modalPosition.y}px)`
-                            }}
-                        >
-                            <div style={{ fontSize: '2.5em', marginBottom: '15px' }}>
-                                {modalConfig.tipo === 'confirm' ? '🗑️' : '🔔'}
-                            </div>
-                            <h3 style={{ margin: '0 0 15px 0', fontSize: '1.2em', fontWeight: 700 }}>
-                                {modalConfig.tipo === 'confirm' ? 'Confirmar Ação' : 'Aviso'}
-                            </h3>
-                            <p style={{ margin: '0 0 24px 0', fontSize: '0.95em', lineHeight: 1.5, opacity: 0.9 }}>
-                                {modalConfig.mensagem}
-                            </p>
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                {modalConfig.tipo === 'confirm' ? (
-                                    <>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
-                                            style={{
-                                                flex: 1,
-                                                padding: '12px',
-                                                borderRadius: '10px',
-                                                border: '1px solid var(--border-color)',
-                                                background: 'transparent',
-                                                color: 'var(--text-color)',
-                                                fontWeight: 600,
-                                                cursor: 'pointer',
-                                                transition: 'background 0.2s'
-                                            }}
-                                            onMouseOver={e => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
-                                            onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                                        >
-                                            Cancelar
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={modalConfig.onConfirm}
-                                            style={{
-                                                flex: 1,
-                                                padding: '12px',
-                                                borderRadius: '10px',
-                                                border: 'none',
-                                                background: '#e74c3c',
-                                                color: 'white',
-                                                fontWeight: 700,
-                                                cursor: 'pointer',
-                                                boxShadow: '0 4px 10px rgba(231, 76, 60, 0.2)',
-                                                transition: 'transform 0.2s, background 0.2s'
-                                            }}
-                                            onMouseOver={e => {
-                                                e.currentTarget.style.background = '#c0392b';
-                                                e.currentTarget.style.transform = 'translateY(-1px)';
-                                            }}
-                                            onMouseOut={e => {
-                                                e.currentTarget.style.background = '#e74c3c';
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                            }}
-                                        >
-                                            Confirmar
-                                        </button>
-                                    </>
+                {tipoExibicaoSessao === 'existente' && session && (
+                    <div className="flex flex-col gap-2.5">
+                        <label className="font-bold text-foreground text-[0.95em]">Selecione a Sessão:</label>
+                        <div className="flex gap-2.5">
+                            <select
+                                value={sessaoSelecionadaId}
+                                onChange={e => setSessaoSelecionadaId(e.target.value)}
+                                disabled={isLoadingSessions}
+                                className="flex-1 px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground font-semibold text-[1.05em] outline-none transition-all cursor-pointer disabled:cursor-not-allowed shadow-sm"
+                            >
+                                {isLoadingSessions ? (
+                                    <option>Carregando sessões...</option>
+                                ) : sessoesExistentes.length === 0 ? (
+                                    <option value="">Nenhuma sessão encontrada</option>
                                 ) : (
-                                    <button
-                                        type="button"
-                                        onClick={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
-                                        style={{
-                                            minWidth: '120px',
-                                            padding: '12px 24px',
-                                            borderRadius: '10px',
-                                            border: 'none',
-                                            background: 'var(--highlight-color)',
-                                            color: 'white',
-                                            fontWeight: 700,
-                                            cursor: 'pointer',
-                                            boxShadow: '0 4px 10px rgba(230, 126, 34, 0.2)',
-                                            transition: 'transform 0.2s, background 0.2s'
-                                        }}
-                                        onMouseOver={e => {
-                                            e.currentTarget.style.transform = 'translateY(-1px)';
-                                            e.currentTarget.style.filter = 'brightness(1.1)';
-                                        }}
-                                        onMouseOut={e => {
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                            e.currentTarget.style.filter = 'none';
-                                        }}
-                                    >
-                                        OK
-                                    </button>
+                                    sessoesExistentes.map(s => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.nome} ({s.config?.tema || s.tema}) - {new Date(s.created_at).toLocaleDateString()}
+                                        </option>
+                                    ))
                                 )}
-                            </div>
+                            </select>
+                            {sessaoSelecionadaId && sessoesExistentes.length > 0 && (
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    onClick={handleDeletarSessao}
+                                    className="px-5 gap-1.5"
+                                >
+                                    🗑️ Apagar
+                                </Button>
+                            )}
                         </div>
                     </div>
-                    
-                    <style dangerouslySetInnerHTML={{ __html: `
-                        @keyframes fadeIn {
-                            from { opacity: 0; }
-                            to { opacity: 1; }
-                        }
-                        @keyframes slideUp {
-                            from { transform: translateY(15px); opacity: 0; }
-                            to { transform: translateY(0); opacity: 1; }
-                        }
-                    `}} />
+                )}
+
+                {tipoExibicaoSessao === 'nova' && session && (
+                    <div className="flex flex-col gap-2.5">
+                        <label className="font-bold text-foreground text-[0.95em]">Nome da Sessão (Opcional):</label>
+                        <Input
+                            type="text"
+                            value={nomeSessao}
+                            onChange={e => setNomeSessao(e.target.value)}
+                            placeholder="Ex: Minha conversa no restaurante"
+                            className="w-full text-[1.05em]"
+                        />
+                    </div>
+                )}
+
+                {/* Tema */}
+                <div className="flex flex-col gap-2.5">
+                    <label className="font-bold text-foreground text-[0.95em]">Tema da Conversa:</label>
+                    <Input
+                        type="text"
+                        value={tema}
+                        onChange={e => setTema(e.target.value)}
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={() => setIsFocused(false)}
+                        placeholder="Ex: Como pedir comida num restaurante..."
+                        disabled={tipoExibicaoSessao === 'existente'}
+                        className={[
+                            'w-full text-[1.05em] transition-all duration-300',
+                            tipoExibicaoSessao === 'existente' ? 'cursor-not-allowed opacity-70' : ''
+                        ].join(' ')}
+                    />
+                    <div className="flex flex-wrap gap-2 mt-1">
+                        {temasRapidos.map(t => (
+                            <button
+                                key={t}
+                                type="button"
+                                onClick={() => setTema(t)}
+                                disabled={tipoExibicaoSessao === 'existente'}
+                                className={[
+                                    'px-4 py-2 rounded-full border border-border text-[0.88em] font-semibold transition-all duration-200',
+                                    tema === t
+                                        ? 'bg-primary text-primary-foreground shadow-md scale-[1.03] border-primary'
+                                        : 'bg-transparent text-foreground hover:bg-black/[0.03] hover:-translate-y-0.5',
+                                    tipoExibicaoSessao === 'existente' ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                                ].join(' ')}
+                            >
+                                {t}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            )}
-        </div>
+
+                {/* Fonte de Vocabulário */}
+                <div className="flex flex-col gap-2.5">
+                    <label className="font-bold text-foreground text-[0.95em]">Fonte de Vocabulário:</label>
+
+                    <div className="flex gap-1 p-1 rounded-full border border-border bg-black/[0.03] w-full mb-2">
+                        <SegTab active={!useConjuntos} onClick={() => setUseConjuntos(false)}>
+                            🌐 Qualquer palavra (Livre)
+                        </SegTab>
+                        <SegTab
+                            active={useConjuntos}
+                            onClick={() => { if (session) setUseConjuntos(true); }}
+                            disabled={!session}
+                        >
+                            📁 Meu Banco {session ? '' : '(Requer Login)'}
+                        </SegTab>
+                    </div>
+
+                    {!useConjuntos ? (
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[0.9em] text-muted-foreground">Nível de dificuldade máximo (JLPT):</label>
+                            <select
+                                value={jlpt}
+                                onChange={e => setJlpt(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground font-semibold text-[1em] outline-none cursor-pointer transition-all shadow-sm"
+                            >
+                                <option value="N5">🟢 N5 (Iniciante)</option>
+                                <option value="N4">🔵 N4 (Básico)</option>
+                                <option value="N3">🟡 N3 (Intermediário)</option>
+                                <option value="N2">🟠 N2 (Avançado)</option>
+                                <option value="N1">🔴 N1 (Fluente)</option>
+                            </select>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-4">
+                            <div>
+                                <label className="block text-[0.9em] text-muted-foreground mb-2">Filtrar banco por:</label>
+                                <div className="flex gap-1 p-1 rounded-full border border-border bg-black/[0.03] w-full">
+                                    <SegTab active={bancoTipo === 'conjuntos'} onClick={() => setBancoTipo('conjuntos')}>📁 Conjuntos</SegTab>
+                                    <SegTab active={bancoTipo === 'baralhos'} onClick={() => setBancoTipo('baralhos')}>🎴 Baralhos</SegTab>
+                                    <SegTab active={bancoTipo === 'ambos'} onClick={() => setBancoTipo('ambos')}>🌀 Ambos</SegTab>
+                                </div>
+                            </div>
+
+                            {(bancoTipo === 'conjuntos' || bancoTipo === 'ambos') && (
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[0.9em] text-muted-foreground">Escolha um conjunto:</label>
+                                    <select
+                                        value={conjuntoSelecionado}
+                                        onChange={e => setConjuntoSelecionado(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground font-semibold text-[1em] outline-none cursor-pointer transition-all shadow-sm"
+                                    >
+                                        {conjuntosDisp.map(c => (
+                                            <option key={c} value={c}>📁 {c}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {(bancoTipo === 'baralhos' || bancoTipo === 'ambos') && (
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[0.9em] text-muted-foreground">Escolha um baralho (Anki):</label>
+                                    <select
+                                        value={baralhoSelecionado}
+                                        onChange={e => setBaralhoSelecionado(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background text-foreground font-semibold text-[1em] outline-none cursor-pointer transition-all shadow-sm"
+                                    >
+                                        {baralhosDisp.map(b => (
+                                            <option key={b} value={b}>🎴 {b}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {(bancoTipo === 'baralhos' || bancoTipo === 'ambos') && (
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[0.9em] text-muted-foreground">Filtro de Progresso SRS:</label>
+                                    <div className="flex gap-1 p-1 rounded-full border border-border bg-black/[0.03] w-full">
+                                        <SegTab active={srsFiltro === 'Todos'} onClick={() => setSrsFiltro('Todos')}>🧠 Todos</SegTab>
+                                        <SegTab active={srsFiltro === 'Aprendidos'} onClick={() => setSrsFiltro('Aprendidos')}>🔵 Aprendidos</SegTab>
+                                        <SegTab active={srsFiltro === 'Novos'} onClick={() => setSrsFiltro('Novos')}>🟡 Novos</SegTab>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Provedor de IA */}
+                <div className="flex flex-col gap-2.5">
+                    <label className="font-bold text-foreground text-[0.95em]">🤖 Provedor de Inteligência Artificial:</label>
+                    <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-1 p-1 rounded-2xl border border-border bg-black/[0.03]">
+                        {([
+                            { key: 'gemini', label: '✨ Gemini', sub: 'Grátis (Instável)' },
+                            { key: 'openai', label: '🧠 OpenAI', sub: 'GPT-4o (Pago)' },
+                            { key: 'pollinations', label: '🪐 Pollinations', sub: 'Grátis (Sem Chave)' },
+                            { key: 'groq', label: '⚡ Groq', sub: 'Llama 3.3 (Grátis)' },
+                        ] as { key: typeof selectedProvider; label: string; sub: string }[]).map(p => (
+                            <button
+                                key={p.key}
+                                type="button"
+                                onClick={() => setSelectedProvider(p.key)}
+                                className={[
+                                    'flex flex-col items-center gap-1 px-2 py-2.5 text-[0.82em] font-bold rounded-xl transition-all duration-200',
+                                    selectedProvider === p.key
+                                        ? 'bg-card text-foreground shadow-md opacity-100'
+                                        : 'bg-transparent text-foreground opacity-60 hover:opacity-80'
+                                ].join(' ')}
+                            >
+                                <span>{p.label}</span>
+                                <span className="text-[0.75em] font-normal text-muted-foreground">{p.sub}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Botão Iniciar */}
+                <Button
+                    onClick={handleStart}
+                    disabled={isLoadingSessions && !!session}
+                    className="w-full py-6 text-[1.15em] font-extrabold mt-2 bg-gradient-to-br from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 hover:-translate-y-0.5 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
+                >
+                    {isLoadingSessions && !!session ? '⏳ Carregando Sessões...' : '🚀 Iniciar Diálogo'}
+                </Button>
+
+            </CardContent>
+
+            {/* Modal de confirmação/alerta (Dialog shadcn) */}
+            <Dialog open={modalConfig.isOpen} onOpenChange={(open) => { if (!open) setModalConfig(prev => ({ ...prev, isOpen: false })); }}>
+                <DialogContent
+                    className="max-w-[400px] text-center z-[11000]"
+                    onMouseDown={handleMouseDown}
+                    style={{ transform: `translate(${modalPosition.x}px, ${modalPosition.y}px)`, cursor: isDragging ? 'grabbing' : 'grab', userSelect: 'none' }}
+                >
+                    <DialogHeader>
+                        <DialogTitle className="text-center">
+                            <span className="text-4xl block mb-2">{modalConfig.tipo === 'confirm' ? '🗑️' : '🔔'}</span>
+                            {modalConfig.tipo === 'confirm' ? 'Confirmar Ação' : 'Aviso'}
+                        </DialogTitle>
+                        <DialogDescription className="text-[0.95em] leading-relaxed opacity-90 text-center">
+                            {modalConfig.mensagem}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex gap-2.5 justify-center mt-2">
+                        {modalConfig.tipo === 'confirm' ? (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    className="flex-1"
+                                    onClick={modalConfig.onConfirm}
+                                >
+                                    Confirmar
+                                </Button>
+                            </>
+                        ) : (
+                            <Button
+                                className="min-w-[120px]"
+                                onClick={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+                            >
+                                OK
+                            </Button>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </Card>
     );
 }

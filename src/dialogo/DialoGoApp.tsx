@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import ConfiguracaoPanel from './ConfiguracaoPanel';
 import GuiaPanel from './GuiaPanel';
 import TraducaoPanel from './TraducaoPanel';
@@ -238,92 +239,70 @@ export default function DialoGoApp() {
         setMode('guia');
     };
 
-    const renderSubNav = () => {
-        if (mode === 'config') return null;
-        return (
-            <div 
-                className="dialogo-sub-nav"
-                style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '12px',
-                    marginBottom: '25px',
-                    background: 'var(--card-bg)',
-                    padding: '8px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--border-color)',
-                    boxShadow: 'var(--shadow-subtle)',
-                    backdropFilter: 'blur(10px)',
-                    maxWidth: '800px',
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                    flexWrap: 'wrap'
-                }}
-            >
-                <button 
-                    onClick={() => setMode('config')} 
-                    style={{ opacity: 0.8 }}
-                >
-                    ⚙️ Configuração
-                </button>
-                <div style={{ width: '1px', background: 'var(--border-color)', margin: '4px 0' }} className="hidden sm:block" />
-                <button 
-                    onClick={() => setMode('guia')} 
-                    className={mode === 'guia' ? 'active' : ''}
-                >
-                    📖 Guia
-                </button>
-                <button 
-                    onClick={() => setMode('traducao')} 
-                    className={mode === 'traducao' ? 'active' : ''}
-                >
-                    ✍️ Praticar
-                </button>
-                <button 
-                    onClick={() => setMode('dialogo')} 
-                    className={mode === 'dialogo' ? 'active' : ''}
-                >
-                    💬 Diálogo
-                </button>
-            </div>
-        );
-    };
-
     return (
-        <div style={{ paddingBottom: '60px' }}>
-            {renderSubNav()}
-            {mode === 'config' && (
-                <ConfiguracaoPanel 
-                    onStart={handleStart} 
-                    session={session} 
-                />
-            )}
-            {mode === 'guia' && (
-                <GuiaPanel 
-                    context={contextData} 
-                    session={session}
-                    onNext={() => setMode('traducao')}
-                    onBack={() => setMode('config')}
-                    onUpdateContext={(newData) => setContextData(prev => ({ ...prev, ...newData }))}
-                />
-            )}
-            {mode === 'traducao' && (
-                <TraducaoPanel 
-                    context={contextData} 
-                    session={session}
-                    onNext={() => setMode('dialogo')}
-                    onBack={() => setMode('guia')}
-                    onUpdateContext={(newData) => setContextData(prev => ({ ...prev, ...newData }))}
-                />
-            )}
-            {mode === 'dialogo' && (
-                <DialoGoPanel 
-                    context={contextData} 
-                    session={session}
-                    onBack={() => setMode('traducao')}
-                    onUpdateContext={(newData) => setContextData(prev => ({ ...prev, ...newData }))}
-                />
-            )}
+        <div className="flex flex-col w-full pb-16">
+            <Tabs
+                value={mode}
+                onValueChange={(value) => setMode(value as DialogoMode)}
+                className="w-full"
+            >
+                <TabsList className="flex w-full max-w-2xl mx-auto mb-6 h-auto flex-wrap gap-1 rounded-xl bg-card border border-border p-1 shadow-sm">
+                    <TabsTrigger value="config" className="flex-1 rounded-lg text-sm font-semibold">
+                        ⚙️ Configuração
+                    </TabsTrigger>
+                    <TabsTrigger value="guia" className="flex-1 rounded-lg text-sm font-semibold">
+                        📖 Guia
+                    </TabsTrigger>
+                    <TabsTrigger value="traducao" className="flex-1 rounded-lg text-sm font-semibold">
+                        ✍️ Praticar
+                    </TabsTrigger>
+                    <TabsTrigger value="dialogo" className="flex-1 rounded-lg text-sm font-semibold">
+                        💬 Diálogo
+                    </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="config" className="mt-0">
+                    <ConfiguracaoPanel
+                        onStart={handleStart}
+                        session={session}
+                    />
+                </TabsContent>
+
+                <TabsContent value="guia" className="mt-0">
+                    {mode === 'guia' && (
+                        <GuiaPanel
+                            context={contextData}
+                            session={session}
+                            onNext={() => setMode('traducao')}
+                            onBack={() => setMode('config')}
+                            onUpdateContext={(newData) => setContextData(prev => ({ ...prev, ...newData }))}
+                        />
+                    )}
+                </TabsContent>
+
+                <TabsContent value="traducao" className="mt-0">
+                    {mode === 'traducao' && (
+                        <TraducaoPanel
+                            context={contextData}
+                            session={session}
+                            onNext={() => setMode('dialogo')}
+                            onBack={() => setMode('guia')}
+                            onUpdateContext={(newData) => setContextData(prev => ({ ...prev, ...newData }))}
+                        />
+                    )}
+                </TabsContent>
+
+                <TabsContent value="dialogo" className="mt-0">
+                    {mode === 'dialogo' && (
+                        <DialoGoPanel
+                            context={contextData}
+                            session={session}
+                            onBack={() => setMode('traducao')}
+                            onUpdateContext={(newData) => setContextData(prev => ({ ...prev, ...newData }))}
+                        />
+                    )}
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
