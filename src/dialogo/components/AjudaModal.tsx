@@ -3,13 +3,16 @@ import InteractiveText from '../../components/InteractiveText';
 import AiLoader from './AiLoader';
 import ScoreBadge from './ScoreBadge';
 import * as wanakana from 'wanakana';
-import { Book, MessageCircle, HelpCircle, Dumbbell, Check, Send, Play, ChevronDown, ChevronUp, Sparkles, X } from 'lucide-react';
+import { Book, MessageCircle, HelpCircle, Dumbbell, Check, Send, Play, ChevronDown, ChevronUp, Sparkles, X, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Card } from '@/components/ui/card';
+import { adicionarAoAnki } from '../services/ankiService';
+import { buscarExemploETradução } from '../utils/sentenceMining';
+import { toast } from '../../components/ui/use-toast';
 
 interface AjudaModalProps {
     isOpen: boolean;
@@ -34,6 +37,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, session
     // Vocabulário Extraído - Salvamento (R3)
     const [salvandoMap, setSalvandoMap] = useState<Record<string, boolean>>({});
     const [salvosMap, setSalvosMap] = useState<Record<string, boolean>>({});
+    const [adicionandoAnkiMap, setAdicionandoAnkiMap] = useState<Record<string, boolean>>({});
 
     // Campo de prática
     const [praticaInput, setPraticaInput] = useState('');
@@ -194,7 +198,7 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, session
                     // Rejeita se for apenas a recombinação de Kanjis que já apareceram na mensagem
                     const kanjisInItem = itemClean.match(/[\u4E00-\u9FFF]/g) || [];
                     if (kanjisInItem.length > 0) {
-                        const allKanjisExist = kanjisInItem.every(k => kanjisInMsg.has(k));
+                        const allKanjisExist = kanjisInItem.every((k: string) => kanjisInMsg.has(k));
                         if (allKanjisExist) return false;
                     }
 
@@ -262,6 +266,55 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, session
             alert(`Falha ao salvar "${itemVocab.item}": ${e.message || e}`);
         } finally {
             setSalvandoMap(prev => ({ ...prev, [key]: false }));
+        }
+    };
+
+    const handleAdicionarAnki = async (itemStr: string) => {
+        if (!itemStr) return;
+        setAdicionandoAnkiMap(prev => ({ ...prev, [itemStr]: true }));
+        try {
+            const historico = context?.dialogoDados?.historico || context?.historico || [{ jp: mensagem }];
+            const { exemplo_jp, exemplo_pt } = buscarExemploETradução(historico, itemStr);
+
+            const body: Record<string, any> = {
+                acao: 'enriquecer_card',
+                item: itemStr,
+                exemplo_jp: exemplo_jp || null,
+                exemplo_pt: exemplo_pt || null,
+                provider: context?.provider || 'groq'
+            };
+
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (session?.access_token) {
+                headers['Authorization'] = `Bearer ${session.access_token}`;
+            }
+
+            const response = await fetch('/api/dialogo', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                throw new Error('Anki não está aberto ou AnkiConnect falhou');
+            }
+
+            const enrichedItem = await response.json();
+            await adicionarAoAnki(enrichedItem);
+
+            toast({
+                title: "Anki",
+                description: "Card adicionado ao Anki com sucesso!",
+                variant: "default"
+            });
+        } catch (err: any) {
+            console.error("Erro ao adicionar ao Anki:", err);
+            toast({
+                title: "Anki não está aberto ou AnkiConnect falhou",
+                variant: "destructive"
+            });
+        } finally {
+            setAdicionandoAnkiMap(prev => ({ ...prev, [itemStr]: false }));
         }
     };
 
@@ -759,8 +812,23 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, session
                                                             {v.tipo}
                                                         </div>
                                                     )}
-                                                    {/* R3: Botão Salvar (Jisho + SRS) */}
-                                                    <div className="flex items-center justify-end mt-1 pt-2 border-t border-border/40">
+                                                    {/* R3: Botão Salvar (Jisho + SRS) & Anki */}
+                                                    <div className="flex items-center justify-end mt-1 pt-2 border-t border-border/40 gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={adicionandoAnkiMap[v.item]}
+                                                            onClick={() => handleAdicionarAnki(v.item)}
+                                                            className="h-7 px-2.5 text-xs font-semibold hover:bg-purple-500/10 hover:text-purple-400 border-purple-500/30"
+                                                        >
+                                                            {adicionandoAnkiMap[v.item] ? (
+                                                                <span className="flex items-center gap-1">
+                                                                    <Loader2 className="h-3 w-3 animate-spin" /> Adicionando...
+                                                                </span>
+                                                            ) : (
+                                                                '🎴 Adicionar ao Anki'
+                                                            )}
+                                                        </Button>
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
@@ -803,6 +871,21 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, session
                                                             <InteractiveText text={`<ruby>${v.item}<rt>${v.leitura}</rt></ruby>`} />
                                                         </div>
                                                         <div className="flex items-center gap-2 shrink-0">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                disabled={adicionandoAnkiMap[v.item]}
+                                                                onClick={() => handleAdicionarAnki(v.item)}
+                                                                className="h-7 px-2 text-[0.7rem] font-semibold border-purple-500/20 text-purple-400 hover:bg-purple-600 hover:text-white"
+                                                            >
+                                                                {adicionandoAnkiMap[v.item] ? (
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                                    </span>
+                                                                ) : (
+                                                                    '🎴 Adicionar ao Anki'
+                                                                )}
+                                                            </Button>
                                                             {v.tipo && (
                                                                 <span className="text-[0.65rem] font-bold uppercase px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">
                                                                     {v.tipo}

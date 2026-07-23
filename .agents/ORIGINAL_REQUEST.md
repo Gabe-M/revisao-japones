@@ -1,98 +1,41 @@
 # Original User Request
 
-## Initial Request — 2026-07-21T22:47:12Z
+## Initial Request — 2026-07-22T10:44:02Z
 
-Implementar explicações gramaticais, múltiplas sugestões, persistência dupla no banco de vocabulário/SRS e painel de progresso no DialoGo.
+Implementar pipeline de enriquecimento de dados (Jisho + LLM) e envio automático via AnkiConnect com auto-criação de Modelo e Baralho no aplicativo de estudo de japonês.
 
 Working directory: `c:\Users\Fabiano\Downloads\sites\japones`
 Integrity mode: development
 
----
+## Requirements
 
-## ⚠️ Diretivas Globais de Arquitetura e UI (Obrigatório)
+### R1. Sentence Mining (Frontend)
+Implementar função utilitária para varrer o `historico` da sessão de trás para frente, buscando a última ocorrência da string `palavra`. Extrair a frase `Exemplo_JP` (limpando tags ruby/HTML) e `Exemplo_PT` correspondente (ou `null` se não houver).
 
-1. Stack Restrita: Utilize exclusivamente Shadcn UI e Tailwind CSS v4. Se os componentes não existirem, instale via CLI (ex: `npx shadcn@latest add drawer accordion card hover-card`). Proibido usar CSS customizado.
-2. Tratamento de Falhas (Resiliência): Envolva todas as chamadas de API (`/api/dialogo`, `/api/jisho`, `/api/srs`) em blocos `try/catch`. Caso ocorra erro HTTP 500 ou 400, exiba um feedback visual seguro no frontend (ex: Toast ou alerta) sem quebrar o componente.
-3. Autenticação Fixa (Prop Drilling): O projeto não usa Context API. O objeto `session` já gerido pelo `DialoGoApp.tsx` deve ser repassado ou utilizado nos componentes filhos. Todas as chamadas autenticadas devem incluir o header obrigatório: `headers['Authorization'] = 'Bearer ' + session.access_token`.
+### R2. Camada de Enriquecimento (Backend)
+Adicionar `case 'enriquecer_card'` em `api/dialogo.js`.
+1. Efetuar fetch em `https://jisho.org/api/v1/search/words?keyword=${palavra}` e isolar `leitura`, `categoria`, `jlpt` e definições em inglês.
+2. Usar LLM (`callAI`) com prompt de dicionário para traduzir definições para português estrito.
+3. Se `exemplo_pt` for nulo, instruir LLM a traduzir também o `exemplo_jp`.
+4. Retornar JSON `{ item, leitura, significado, categoria, jlpt, exemplo_jp, exemplo_pt }`.
 
----
+### R3. Integração AnkiConnect (`ankiService.ts`)
+Criar `src/dialogo/services/ankiService.ts`.
+1. Executar `createDeck` com nome `"DialoGo::Vocabulario"`.
+2. Verificar `modelNames`. Se `"DialoGo Japones"` não existir, executar `createModel` contendo os 7 campos: `Item`, `Leitura`, `Significado`, `Categoria`, `JLPT`, `Exemplo_JP`, `Exemplo_PT`.
+3. Executar `addNote` mapeando o JSON enriquecido para o modelo e baralho.
+4. Em chamadas locais (`http://127.0.0.1:8765`), capturar `ERR_CONNECTION_REFUSED` em `try/catch` e disparar toast de erro: `"Anki não está aberto ou AnkiConnect falhou"`.
 
-## 🎯 Escopo de Execução
-
-### R1. Explicações Gramaticais Estruturadas
-- Backend (`api/dialogo.js`): Altere o prompt (system instructions) do case `analisar_pratica`. A IA deve retornar a chave `erros_detalhados` contendo um array de objetos: `{ erro: string, regra_gramatical: string, explicacao: string, exemplo_correto: string }`. Adicione parse JSON seguro antes de enviar a resposta.
-- Frontend (`AjudaModal.tsx`): Remova a renderização simples de string de erros. Mapeie o array `erros_detalhados` utilizando o componente `Accordion` do Shadcn UI. O título (trigger) deve ser o `erro`. O conteúdo (content) deve conter a `regra_gramatical`, a `explicacao` (em PT-BR) e o `exemplo_correto`.
-
-### R2. Refatoração de Sugestões de Resposta (Contextuais)
-- Frontend (`AjudaModal.tsx`): Altere o fluxo do botão "Sugestão" para lidar com o payload da ação `sugerir_multiplas_respostas` já existente no backend (que retorna array de opções).
-- UI: Renderize 3 `Card`s do Shadcn UI (Concordar, Discordar, Perguntar).
-- Interação: Cada card deve incluir um botão "✏️ Praticar" (que envia o texto para o input do usuário) e um botão "✅ Usar direto" (que envia a mensagem diretamente ao chat).
-
-### R3. Integração e Persistência de Vocabulário (Jisho + SRS)
-- Frontend (`AjudaModal.tsx`): Na aba "Vocabulário Extraído", inclua um botão "💾 Salvar" ao lado de cada palavra.
-- Lógica de Fluxo: Ao clicar em "Salvar", execute uma dupla chamada utilizando `session.access_token`:
-  1. `POST /api/jisho?acao=salvar`: Envie o payload `{ item, leitura, significado, categoria, jlpt }` para persistir na tabela `vocabulario`.
-  2. `POST /api/srs?acao=salvar`: Envie o payload `{ item, repetitions: 0, due: Date.now() }` (e dados adicionais requeridos) para inicializar a tabela `srs_progresso`.
-- Estado UI: Durante o request, mostre um loading state. Em caso de sucesso, mude o botão para "✅ Salvo" e aplique `disabled`.
-
-### R4. Drawer de Estatísticas (Dashboard da Sessão)
-- Frontend (`DialoGoPanel.tsx`): Adicione um botão "📊 Progresso" na interface principal do chat.
-- UI: Ao clicar, dispare um componente `Sheet` ou `Drawer` do Shadcn UI. A abertura deste Drawer não pode desmontar ou alterar o estado atual do `AjudaModal` ou do fluxo do chat.
-- Conteúdo do Drawer:
-  - Sessão Atual: Calcule dados localmente lendo o array de `historico` da sessão ativa (ex: Contagem de turnos, % de acerto/score médio).
-  - Histórico Geral: Faça um fetch via Supabase na tabela `dialogo_sessoes` para listar as últimas práticas do usuário (exibindo data, tema/nome e score final).
-  - Feedback Agrupado: Agrupe os tipos de erros (baseado em `regra_gramatical` do R1) cometidos na sessão atual e exiba os mais frequentes.
-
----
+### R4. Integração de UI
+Criar/configurar hook `useToast` do Shadcn UI.
+Atualizar `AjudaModal.tsx` e `PalavraNovaPopover.tsx` para importar `ankiService.ts` e `useToast`.
+Adicionar botão "🎴 Adicionar ao Anki" com estado `disabled` e spinner durante a execução, e toast de confirmação ao finalizar.
 
 ## Acceptance Criteria
 
-### R1 — Erros Gramaticais
-- [ ] O response de `analisar_pratica` contém campo `erros_detalhados` com estrutura `{ erro, regra_gramatical, explicacao, exemplo_correto }[]`
-- [ ] A UI renderiza os erros em Accordion (Shadcn): título = erro, conteúdo = regra + explicação + exemplo
-- [ ] Respostas sem erros renderizam normalmente (array vazio não quebra o componente)
-
-### R2 — Múltiplas Sugestões
-- [ ] Botão "Sugestão" aciona `sugerir_multiplas_respostas` e renderiza 3 cards distintos
-- [ ] Cada card tem botões "Praticar" e "Usar direto" funcionais
-- [ ] Build do projeto passa sem erros de TypeScript
-
-### R3 — Salvar Vocabulário
-- [ ] Botão "💾 Salvar" visível em cada card da aba "Vocabulário Extraído"
-- [ ] Clicar executa as duas chamadas (jisho + srs) com o token correto
-- [ ] Estado do botão muda para "✅ Salvo" e fica desabilitado após sucesso
-
-### R4 — Drawer de Progresso
-- [ ] Botão "📊 Progresso" visível no DialoGoPanel
-- [ ] Sheet/Drawer abre sem desmontar o estado do chat ou do AjudaModal
-- [ ] Drawer exibe score médio, número de turnos e lista de sessões anteriores do Supabase
-
-### Geral
-- [ ] `npm run build` executa sem erros após todas as mudanças
-- [ ] Nenhuma chamada de API sem tratamento de erro (try/catch ausente)
-
-## Follow-up — 2026-07-21T23:34:20-03:00
-
-Implementar componente KanaKanjiInput no DialoGoPanel utilizando arquitetura IME controlada por React e gatilho de barra de espaço.
-
-Working directory: `c:\Users\Fabiano\Downloads\sites\japones`
-Integrity mode: development
-
----
-
-## ⚠️ Diretivas Globais de Arquitetura (Obrigatório)
-
-1. Proibição de Mutação de DOM: É estritamente proibido utilizar `wanakana.bind()`. O input no novo componente `KanaKanjiInput.tsx` deve ser 100% controlled. A conversão romaji-kana deve ocorrer interceptando o `onChange` e aplicando `wanakana.toKana()` antes de atualizar o estado do React.
-2. Modelo de Interação IME Autêntico: Não utilize debouncing para abrir o popup. O fluxo deve ser:
-   - O usuário digita os caracteres (que viram kana automaticamente).
-   - O usuário pressiona a tecla `Space` (Espaço).
-   - O evento `onKeyDown` intercepta o `Space`, previne o comportamento padrão e dispara a requisição de busca de Kanji para a palavra atual.
-3. Gerenciamento de Buffer (Segmentação): O componente deve separar logicamente o texto "commitado" (já confirmado) do "buffer de composição" (a palavra final que está sendo digitada atualmente). A requisição para a API só envia o conteúdo do buffer.
-4. Proxy de API e Fallback de Resiliência: 
-   - Backend (`api/dialogo.js`): Adicione a ação `converter_kanji` para fazer o proxy da requisição GET para `http://www.google.com/transliterate?langpair=ja-Hira|ja&text={texto}`.
-   - Frontend: A chamada para `converter_kanji` deve estar em um bloco `try/catch` com timeout. Se a API não oficial falhar, retornar HTTP 500 ou demorar demais, o sistema deve capturar o erro silenciosamente, fechar o popup e aceitar o buffer atual em kana bruto sem travar a interface.
-5. Navegação por Teclado: Quando o popup de sugestões estiver aberto:
-   - `ArrowDown` / `ArrowUp`: Navegam pelo array de resultados.
-   - `Enter`: Seleciona o Kanji destacado, substitui o buffer de composição na string principal e fecha o popup. O `Enter` NÃO deve disparar o envio da mensagem no chat enquanto o popup estiver ativo (use `e.preventDefault()`).
-   - `Escape`: Fecha o popup e mantém o kana original.
-
+### Verification & Quality
+- [ ] Backend `api/dialogo.js` possui tratamento seguro para `acao === 'enriquecer_card'`.
+- [ ] `session.access_token` é propagado via `Authorization` header em todas as chamadas para o backend.
+- [ ] `ankiService.ts` cria baralho `DialoGo::Vocabulario` e modelo `DialoGo Japones` automaticamente caso não existam.
+- [ ] Se o Anki estiver fechado, o erro é capturado e exibe o toast `"Anki não está aberto ou AnkiConnect falhou"` via Shadcn `useToast`.
+- [ ] Build TypeScript / Vite compila sem erros (`npx tsc --noEmit`).

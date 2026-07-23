@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+import { adicionarAoAnki } from '../services/ankiService';
+import { toast } from '../../components/ui/use-toast';
 
 export type StatusAdaptativo = 'novo' | 'aprendendo_medio' | 'aprendendo_dificil' | 'aprendido';
 
@@ -23,9 +26,11 @@ interface PalavraNovaPopoverProps {
 }
 
 export default function PalavraNovaPopover({ palavra, x, y, onAvaliar, onClose }: PalavraNovaPopoverProps) {
+    const [adicionandoAnki, setAdicionandoAnki] = useState(false);
+
     // Position the popover: try to keep it within viewport
     const popoverWidth = 260;
-    const popoverHeight = 200;
+    const popoverHeight = 250;
     const margin = 12;
 
     const vpW = window.innerWidth;
@@ -44,6 +49,45 @@ export default function PalavraNovaPopover({ palavra, x, y, onAvaliar, onClose }
     }
 
     const jaAvaliada = palavra.status !== 'novo';
+
+    const handleAdicionarAnki = async () => {
+        if (!palavra?.item) return;
+        setAdicionandoAnki(true);
+        try {
+            const response = await fetch('/api/dialogo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    acao: 'enriquecer_card',
+                    item: palavra.item,
+                    leitura: palavra.leitura || '',
+                    significado: palavra.significado || '',
+                    categoria: palavra.tipo || ''
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Anki não está aberto ou AnkiConnect falhou');
+            }
+
+            const enrichedItem = await response.json();
+            await adicionarAoAnki(enrichedItem);
+
+            toast({
+                title: "Anki",
+                description: "Card adicionado ao Anki com sucesso!",
+                variant: "default"
+            });
+        } catch (err: any) {
+            console.error("Erro ao adicionar ao Anki:", err);
+            toast({
+                title: "Anki não está aberto ou AnkiConnect falhou",
+                variant: "destructive"
+            });
+        } finally {
+            setAdicionandoAnki(false);
+        }
+    };
 
     return (
         <>
@@ -78,6 +122,24 @@ export default function PalavraNovaPopover({ palavra, x, y, onAvaliar, onClose }
                         {palavra.significado}
                     </p>
                 </div>
+
+                {/* Button: Adicionar ao Anki */}
+                <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={adicionandoAnki}
+                    onClick={handleAdicionarAnki}
+                    className="w-full h-8 text-xs font-semibold border-purple-500/30 hover:bg-purple-500/10 hover:text-purple-400 flex items-center justify-center gap-1.5"
+                >
+                    {adicionandoAnki ? (
+                        <>
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span>Enviando ao Anki...</span>
+                        </>
+                    ) : (
+                        <span>🎴 Adicionar ao Anki</span>
+                    )}
+                </Button>
 
                 {/* Difficulty buttons */}
                 {!jaAvaliada ? (
@@ -138,3 +200,4 @@ export default function PalavraNovaPopover({ palavra, x, y, onAvaliar, onClose }
         </>
     );
 }
+

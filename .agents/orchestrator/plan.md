@@ -1,57 +1,35 @@
-# Execution Plan: KanaKanjiInput Component Implementation (Controlled React IME)
+# Execution Plan: AnkiConnect Data Enrichment & Export Pipeline
 
-## Overview
-Implement the `KanaKanjiInput` component in `DialoGoPanel` using controlled React IME architecture and spacebar trigger. Proxy Kanji conversions through `converter_kanji` in `api/dialogo.js` to Google Transliterate API with timeout/fallback resilience and full keyboard navigation.
+## Milestone Overview
 
-## Execution Steps
+### Milestone 1: R1 Sentence Mining (Frontend)
+- Task: Implement utility function searching `historico` backwards for the last occurrence of `palavra`.
+- Extract `Exemplo_JP` (cleaning ruby `<ruby>...<rt>...</rt></ruby>` and HTML tags) and `Exemplo_PT` (or null).
+- Location: frontend utility in `src/dialogo/` directory.
 
-### Phase 1: Deep Codebase Investigation & Dependency Verification
-- **Step 1.1**: Dispatch 3 Explorers in parallel:
-  - **Explorer 1 (Backend API & Proxy)**: Inspect `api/dialogo.js` to determine exact action dispatching, request/response format, parameters, and proxy implementation details for `http://www.google.com/transliterate?langpair=ja-Hira|ja&text={texto}`.
-  - **Explorer 2 (Frontend IME & Input Architecture)**: Inspect `src/dialogo/DialoGoPanel.tsx`, `wanakana` package import/usage, and input field structure to plan `KanaKanjiInput.tsx` controlled component, buffer segmentation state (`committedText`, `compositionBuffer`), `wanakana.toKana()` in `onChange`, and event propagation.
-  - **Explorer 3 (UI Popup & Keyboard Navigation)**: Inspect existing Shadcn UI components and design candidate popup UI, keyboard navigation (`ArrowUp`, `ArrowDown`, `Enter`, `Escape`), and error fallback/timeout state management.
+### Milestone 2: R2 Enrichment Layer (Backend `api/dialogo.js`)
+- Task: Add `case 'enriquecer_card'` in `api/dialogo.js`.
+- Fetch `https://jisho.org/api/v1/search/words?keyword=${palavra}`.
+- Extract reading, category, JLPT level, English definitions.
+- Call LLM (`callAI`) to translate definitions to strict Portuguese (and translate `exemplo_jp` if `exemplo_pt` is null).
+- Ensure authorization via `session.access_token` in `Authorization` header.
+- Return JSON `{ item, leitura, significado, categoria, jlpt, exemplo_jp, exemplo_pt }`.
 
-### Phase 2: Milestone Execution
+### Milestone 3: R3 AnkiConnect Integration (`ankiService.ts`)
+- Task: Create `src/dialogo/services/ankiService.ts`.
+- Auto-create deck `"DialoGo::Vocabulario"`.
+- Auto-create model `"DialoGo Japones"` with 7 fields (`Item`, `Leitura`, `Significado`, `Categoria`, `JLPT`, `Exemplo_JP`, `Exemplo_PT`) if not present.
+- `addNote` function mapping enriched JSON payload.
+- Catch `ERR_CONNECTION_REFUSED` / fetch errors on local calls (`http://127.0.0.1:8765`) and fire toast error `"Anki não está aberto ou AnkiConnect falhou"`.
 
-#### Milestone 6: Backend Proxy Action (`converter_kanji`)
-- **Worker 1**: Update `api/dialogo.js` to handle `converter_kanji` action.
-  - Accept `texto` (or `text`) query/body parameter.
-  - Fetch `http://www.google.com/transliterate?langpair=ja-Hira|ja&text=${encodeURIComponent(texto)}`.
-  - Handle response formatting e.g. return candidate array e.g. `[["かな", ["仮名", "金", "かな"]]]` or structured JSON `{ status: 'SUCCESS', candidates: [...] }`.
-  - Wrap in try/catch with proper HTTP status codes.
+### Milestone 4: R4 UI Integration (`AjudaModal.tsx`, `PalavraNovaPopover.tsx` & Toast)
+- Task: Set up/verify Shadcn UI `useToast` hook.
+- Integrate `ankiService.ts` and `useToast` in `AjudaModal.tsx` and `PalavraNovaPopover.tsx`.
+- Add "🎴 Adicionar ao Anki" button with disabled state & spinner during processing, and success toast notification upon completion.
 
-#### Milestone 7: Controlled IME `KanaKanjiInput` Component
-- **Worker 1 / Worker 2**: Create `src/dialogo/components/KanaKanjiInput.tsx`.
-  - Controlled React input state management:
-    - NO `wanakana.bind()`.
-    - Intercept `onChange`: convert user input using `wanakana.toKana(val, { IMEMode: true })` before React state update.
-    - Buffer segmentation: tracking `committedText` (text before active word) and `compositionBuffer` (active word being edited).
-    - `Spacebar` trigger on `onKeyDown`:
-      - Intercept `Space` key (`e.key === ' '`).
-      - Prevent default behavior (`e.preventDefault()`).
-      - Check if `compositionBuffer` is non-empty. If non-empty, initiate `converter_kanji` fetch for active buffer.
-    - Candidate popup:
-      - Floating candidate popup positioned below/near input (Shadcn/Tailwind UI).
-      - Keyboard navigation when popup is open:
-        - `ArrowDown` / `ArrowUp`: navigate highlight index in candidates list.
-        - `Enter`: select highlighted candidate, replace active composition buffer with selected candidate, append to committed text, close popup, and call `e.preventDefault()` to PREVENT chat message submission while popup is active.
-        - `Escape`: close popup, keep raw kana in composition buffer.
-    - Frontend resilience:
-      - Wrap `converter_kanji` fetch in `try/catch` with a 3-5 second `AbortController` timeout.
-      - If proxy fails, returns error, or times out: silently close popup and commit/keep raw kana buffer without crashing the interface.
+### Milestone 5: Verification & E2E Validation
+- Verification: `npx tsc --noEmit` build test.
+- Forensic audit: Integrity check for genuine implementation (no facade, no hardcoded values).
 
-#### Milestone 8: Integration in `DialoGoPanel.tsx`
-- **Worker 2**: Integrate `KanaKanjiInput` into `src/dialogo/DialoGoPanel.tsx`.
-  - Replace raw input/textarea with `<KanaKanjiInput value={...} onChange={...} onSend={...} ... />`.
-  - Ensure regular message submission (pressing `Enter` when candidate popup is NOT active) triggers `onSendMessage`.
-  - Verify styling fits existing Tailwind CSS v4 design.
-
-#### Phase 3: Review, Stress Verification & Forensic Audit
-- **Reviewer 1 & 2**: Code review for IME control, `wanakana` usage (verify NO `wanakana.bind()`), buffer segmentation, keyboard event handlers, try/catch timeout, and TS types.
-- **Challenger 1 & 2**: Stress test candidate selection, Spacebar trigger, fast typing, API failure/timeout simulation, Enter key chat prevention when popup active, Escape cancellation.
-- **Forensic Auditor**: Integrity verification (no dummy/hardcoded candidate returns, no DOM mutations via `wanakana.bind()`, genuine API proxy calls).
-- **Build Verification**: Run `npm run build` to verify no compilation/TypeScript errors.
-
-### Phase 4: Final Reporting & Handoff
-- Update `progress.md` and `PROJECT.md`.
-- Produce final `handoff.md` and report project completion.
+## Execution Strategy
+Each milestone will be executed using the Explorer -> Worker -> Reviewer -> Challenger -> Auditor cycle.

@@ -331,7 +331,7 @@ export default async function handler(req, res) {
         const provider = body.provider || query.provider || 'gemini';
         const { tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp, sessionId, palavras_aprendendo } = body;
 
-        const precisaAuth = ['listar_sessoes', 'criar_sessao'].includes(acao) || !!sessionId;
+        const precisaAuth = ['listar_sessoes', 'criar_sessao', 'enriquecer_card'].includes(acao) || !!sessionId;
         if (precisaAuth && !userId) {
             return res.status(401).json({ error: 'Não autorizado. Token de autenticação ausente ou inválido.' });
         }
@@ -1409,6 +1409,90 @@ export default async function handler(req, res) {
                     console.error("Erro na ação converter_kanji:", err);
                     return res.status(500).json({ error: 'Erro ao converter texto para kanji', message: err.message });
                 }
+            }
+
+            case 'enriquecer_card': {
+                const palavra = body.item || body.palavra || body.termo;
+                if (!palavra || typeof palavra !== 'string' || !palavra.trim()) {
+                    return res.status(400).json({ error: 'Palavra ou item não informado para enriquecimento.' });
+                }
+
+                const itemStr = palavra.trim();
+                let leituraJisho = body.leitura || '';
+                let categoriaJisho = body.categoria || '';
+                let jlptJisho = body.jlpt || '';
+                let englishDefs = [];
+
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    const urlJisho = `https://jisho.org/api/v1/search/words?keyword=${encodeURIComponent(itemStr)}`;
+                    const resJisho = await fetch(urlJisho, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (resJisho.ok) {
+                        const jishoData = await resJisho.json();
+                        if (jishoData && Array.isArray(jishoData.data) && jishoData.data.length > 0) {
+                            const firstMatch = jishoData.data[0];
+                            if (Array.isArray(firstMatch.japanese) && firstMatch.japanese[0]) {
+                                leituraJisho = firstMatch.japanese[0].reading || firstMatch.japanese[0].word || leituraJisho;
+                            }
+                            if (Array.isArray(firstMatch.senses) && firstMatch.senses[0]) {
+                                if (Array.isArray(firstMatch.senses[0].parts_of_speech) && firstMatch.senses[0].parts_of_speech.length > 0) {
+                                    categoriaJisho = firstMatch.senses[0].parts_of_speech[0];
+                                }
+                                if (Array.isArray(firstMatch.senses[0].english_definitions)) {
+                                    englishDefs = firstMatch.senses[0].english_definitions;
+                                }
+                            }
+                            if (Array.isArray(firstMatch.jlpt) && firstMatch.jlpt.length > 0) {
+                                jlptJisho = firstMatch.jlpt[0].replace(/^jlpt-/, '').toUpperCase();
+                            }
+                        }
+                    }
+                } catch (errJisho) {
+                    console.warn("Aviso: Falha ou timeout ao consultar Jisho API para enriquecimento:", errJisho.message);
+                }
+
+                const precisaTraduzirExemplo = body.exemplo_jp && (!body.exemplo_pt || !body.exemplo_pt.trim());
+
+                systemInstruction = "Você é um dicionário e assistente pedagógico de japonês para português. Retorne APENAS um JSON válido em português (PT-BR).";
+                prompt = `Termo em japonês: "${itemStr}"
+Leitura identificada: "${leituraJisho}"
+Categoria identificada no Jisho: "${categoriaJisho}"
+Nível JLPT: "${jlptJisho}"
+Definições em inglês do Jisho: ${englishDefs.length > 0 ? JSON.stringify(englishDefs) : 'Nenhuma (não encontrada no Jisho)'}
+${body.exemplo_jp ? `Frase de exemplo em japonês: "${body.exemplo_jp}"` : ''}
+${body.exemplo_pt ? `Tradução existente do exemplo: "${body.exemplo_pt}"` : ''}
+
+Instruções:
+1. "significado": Traduza as definições em inglês acima para o português (PT-BR) de forma direta, concisa e natural. Se não houver definições em inglês, forneça o significado em português mais preciso para o termo "${itemStr}".
+2. "categoria": Traduza a categoria gramatical para o português (ex: "Noun" -> "Substantivo", "Na-adjective" -> "Adjetivo Na", "Ichidan verb" -> "Verbo", "Suru verb" -> "Verbo Suru"). Se vazia, deduza a classe gramatical em português.
+3. "leitura": Se a leitura estiver vazia, forneça a leitura em hiragana correspondente.
+4. "jlpt": Se o nível JLPT estiver vazio, informe o nível estimado (ex: "N5", "N4", "N3", etc).
+${precisaTraduzirExemplo ? `5. "exemplo_pt": Traduza a frase de exemplo em japonês "${body.exemplo_jp}" para o português de forma natural.` : ''}
+
+Estrutura do JSON esperado:
+{
+    "leitura": "${leituraJisho || 'leitura em hiragana'}",
+    "significado": "Tradução concisa em português",
+    "categoria": "Substantivo/Verbo/etc",
+    "jlpt": "${jlptJisho || 'N5'}"${precisaTraduzirExemplo ? ',\n    "exemplo_pt": "Tradução em português da frase de exemplo"' : ''}
+}`;
+
+                result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
+
+                const cardEnriquecido = {
+                    item: itemStr,
+                    leitura: result.leitura || leituraJisho || body.leitura || '',
+                    significado: result.significado || (englishDefs.length > 0 ? englishDefs.join(', ') : body.significado || ''),
+                    categoria: result.categoria || categoriaJisho || body.categoria || 'Geral',
+                    jlpt: result.jlpt || jlptJisho || body.jlpt || '',
+                    exemplo_jp: body.exemplo_jp || null,
+                    exemplo_pt: (body.exemplo_pt && body.exemplo_pt.trim()) || result.exemplo_pt || null
+                };
+
+                return res.status(200).json(cardEnriquecido);
             }
 
             default:

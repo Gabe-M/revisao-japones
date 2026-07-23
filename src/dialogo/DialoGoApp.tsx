@@ -5,6 +5,7 @@ import GuiaPanel from './GuiaPanel';
 import TraducaoPanel from './TraducaoPanel';
 import DialoGoPanel from './DialoGoPanel';
 import { supabase } from '../supabase';
+import { Toaster } from '../components/ui/toaster';
 
 export type DialogoMode = 'config' | 'guia' | 'traducao' | 'dialogo';
 
@@ -15,6 +16,8 @@ export interface DialogoContextData {
     vocabularioBanco: any[];
     provider: 'gemini' | 'openai' | 'groq' | 'pollinations';
     sessionId?: string | null;
+    baralhoDestino?: string;
+    conjuntoDestino?: string;
 
     traducaoDados?: {
         frase: any;
@@ -37,6 +40,8 @@ export default function DialoGoApp() {
         vocabularioBanco: [],
         provider: (localStorage.getItem('selected_provider') as any) || 'groq',
         sessionId: null,
+        baralhoDestino: '',
+        conjuntoDestino: 'Geral',
 
         traducaoDados: null,
         dialogoDados: null
@@ -201,7 +206,8 @@ export default function DialoGoApp() {
                             conjuntoSelecionado: config.conjuntoSelecionado,
                             baralhoSelecionado: config.baralhoSelecionado,
                             srsFiltro: config.srsFiltro,
-
+                            baralhoDestino: config.baralhoDestino,
+                            conjuntoDestino: config.conjuntoDestino,
                         }
                     })
                 });
@@ -223,6 +229,8 @@ export default function DialoGoApp() {
             provider: config.provider || (localStorage.getItem('selected_provider') as any) || 'groq',
             conjuntos: config.useBanco ? (config.bancoTipo === 'conjuntos' || config.bancoTipo === 'ambos' ? [config.conjuntoSelecionado] : []) : [],
             sessionId: activeSessionId,
+            baralhoDestino: config.baralhoDestino,
+            conjuntoDestino: config.conjuntoDestino,
 
             traducaoDados: null,
             dialogoDados: null
@@ -303,6 +311,7 @@ export default function DialoGoApp() {
                     )}
                 </TabsContent>
             </Tabs>
+            <Toaster />
         </div>
     );
 }

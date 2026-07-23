@@ -1,30 +1,26 @@
-# DialoGo KanaKanjiInput Component Implementation Progress
+# Progress Log — AnkiConnect Data Enrichment & Export Pipeline
 
 ## Current Status
-Last visited: 2026-07-21T23:41:35Z
+Last visited: 2026-07-22T08:02:46-03:00
 
 ## Iteration Status
 Current iteration: 1 / 32
 
-## Checklist
-- [x] Initialized orchestrator state files (`BRIEFING.md`, `PROJECT.md`, `plan.md`, `progress.md`, `ORIGINAL_REQUEST.md`)
-- [x] Phase 1: Explorer investigation of IME architecture, `api/dialogo.js`, `DialoGoPanel.tsx`, and candidate popup UI (Explorers 1, 2, 3 complete)
-- [x] Milestone 6 (M6): Backend Proxy Action (`converter_kanji`) in `api/dialogo.js` — PASS
-- [x] Milestone 7 (M7): Frontend `KanaKanjiInput` Controlled IME Component — PASS
-- [x] Milestone 8 (M8): Integration of `KanaKanjiInput` in `DialoGoPanel.tsx` — PASS
-- [x] Milestone 9 (M9): Build verification (`npm run build`), Reviewer review (Reviewers 1 & 2 PASS), Challenger stress tests (Challengers 1 & 2 PASS), Forensic Auditor integrity audit (Auditor 1 VERDICT: CLEAN)
-- [x] Phase 4: Final Handoff Report & Sentinel Victory Claim
+## Milestones Summary
+- [x] Milestone 1: R1 Sentence Mining (Frontend) — PASSED (Verified by Reviewers 1&2, Challenger 2, Auditor)
+- [x] Milestone 2: R2 Enrichment Layer (Backend `api/dialogo.js`) — PASSED (Verified by Reviewers 1&2, Challengers 1&2, Auditor CLEAN)
+- [x] Milestone 3: R3 AnkiConnect Integration (`ankiService.ts`) — PASSED (Verified by Reviewers 1&2, Challenger 1, Auditor CLEAN)
+- [/] Milestone 4: R4 UI Integration & Toast notifications — IN-PROGRESS
+- [ ] Milestone 5: Verification & E2E Validation (`npx tsc --noEmit`)
 
-## Event Log
-- 2026-07-21T23:34:31Z: Received follow-up request for `KanaKanjiInput` component with Controlled React IME architecture and Spacebar trigger.
-- 2026-07-21T23:35:00Z: Started heartbeat cron (task-15).
-- 2026-07-21T23:35:45Z: Explorers 1, 2, 3 dispatched and completed investigation.
-- 2026-07-21T23:36:30Z: Workers 1 & 2 created `converter_kanji` proxy in `api/dialogo.js`, `KanaKanjiInput.tsx` controlled component, refactored `DialoGoPanel.tsx`, and passed `npm run build`.
-- 2026-07-21T23:38:35Z: Verification subagents dispatched (Reviewer 1, Reviewer 2, Challenger 1, Challenger 2, Auditor 1).
-- 2026-07-21T23:39:30Z: Reviewer 1 delivered verdict: PASS (Controlled React IME, buffer segmentation, key handlers).
-- 2026-07-21T23:39:54Z: Challenger 1 delivered verdict: PASS (Keyboard nav, Enter intercept, Space trigger, Escape cancel).
-- 2026-07-21T23:40:01Z: Challenger 2 delivered verdict: PASS (3s AbortController timeout, silent failure fallback, raw Kana preservation).
-- 2026-07-21T23:40:25Z: Worker 1 confirmed all backend unit tests passed.
-- 2026-07-21T23:41:26Z: Reviewer 2 delivered verdict: PASS (Backend proxy & integration, 11/11 tests pass).
-- 2026-07-21T23:41:26Z: Forensic Auditor 1 delivered verdict: CLEAN (Authentic implementation, NO hardcoded mocks, NO `wanakana.bind()` DOM mutations).
-- 2026-07-21T23:41:31Z: Cancelled heartbeat cron (task-15). Project completed successfully.
+## Activity Log
+- 2026-07-22T07:45:00-03:00: Orchestrator initialized. BRIEFING.md, PROJECT.md, plan.md, and progress.md created. Starting Heartbeat Cron.
+- 2026-07-22T07:45:30-03:00: Milestone 1 Explorers 1, 2, 3 completed analysis reports.
+- 2026-07-22T07:47:50-03:00: Worker 1 completed initial implementation of `src/dialogo/utils/sentenceMining.ts`.
+- 2026-07-22T07:51:40-03:00: Worker 2 remediated false positive matching and attribute-aware regexes.
+- 2026-07-22T07:55:30-03:00: Milestone 1 Re-evaluation gate PASSED (Reviewers 1 & 2 PASS, Challenger 2 PASS, Auditor CLEAN). Milestone 1 marked DONE.
+- 2026-07-22T07:59:30-03:00: Orchestrator Gen 2 resumed. Dispatching Worker for Milestone 2 (`case 'enriquecer_card'` in `api/dialogo.js`).
+- 2026-07-22T08:00:50-03:00: Milestone 2 evaluation gate PASSED (Reviewers 1 & 2 PASS, Challengers 1 & 2 PASS, Auditor CLEAN). Milestone 2 marked DONE.
+- 2026-07-22T08:01:38-03:00: Milestone 3 evaluation gate PASSED (Reviewers 1 & 2 PASS, Challenger 1 PASS, Auditor CLEAN). Milestone 3 marked DONE.
+- 2026-07-22T08:02:46-03:00: Spawn count threshold reached (16/16). Orchestrator Gen 2 executing self-succession protocol to Gen 3.
+- 2026-07-22T08:03:30-03:00: Orchestrator Gen 3 resumed. Heartbeat cron started. Dispatched Worker 4 (`6f994947-c23b-4e2b-9a84-405b63f0140a`) for Milestone 4 UI Integration & `api/dialogo.js` whitespace fix.

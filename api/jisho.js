@@ -154,6 +154,12 @@ export default async function handler(req, res) {
                         itemNovo.user_id = userId;
                     }
                     if (!itemNovo.baralhos) itemNovo.baralhos = [];
+                    // Adiciona conjuntos no campo notas se especificado
+                    const conjuntosNovos = Array.isArray(itemNovo.conjuntos) ? itemNovo.conjuntos : [];
+                    if (conjuntosNovos.length > 0) {
+                        const notasLimpa = removerTagConjuntosInterno(itemNovo.notas || '');
+                        itemNovo.notas = formatarNotasComConjuntosInterno(notasLimpa, conjuntosNovos);
+                    }
                     payloadFinal.push(itemNovo);
                 }
             }

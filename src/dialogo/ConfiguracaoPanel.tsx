@@ -32,6 +32,8 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
     // Destino das palavras novas aprendidas no diálogo
     const [baralhoDestino, setBaralhoDestino] = useState('');
     const [conjuntoDestino, setConjuntoDestino] = useState('Geral');
+    const [novoConjuntoNome, setNovoConjuntoNome] = useState('');
+    const [novoBaralhoNome, setNovoBaralhoNome] = useState('');
     const [selectedProvider, setSelectedProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(
         () => (localStorage.getItem('selected_provider') as any) || 'groq'
     );
@@ -217,7 +219,8 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                 if (conf.conjuntoSelecionado) setConjuntoSelecionado(conf.conjuntoSelecionado);
                 if (conf.baralhoSelecionado) setBaralhoSelecionado(conf.baralhoSelecionado);
                 if (conf.srsFiltro) setSrsFiltro(conf.srsFiltro);
-
+                if (conf.baralhoDestino) setBaralhoDestino(conf.baralhoDestino);
+                if (conf.conjuntoDestino) setConjuntoDestino(conf.conjuntoDestino);
             }
         }
     }, [sessaoSelecionadaId, sessoesExistentes]);
@@ -282,11 +285,18 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
             
             const listaConjuntos = Array.from(todosConjuntos).sort();
             setConjuntosDisp(listaConjuntos);
-            if (listaConjuntos.length > 0) setConjuntoSelecionado(listaConjuntos[0]);
+            if (listaConjuntos.length > 0) {
+                setConjuntoSelecionado(listaConjuntos[0]);
+                setConjuntoDestino(prev => prev || listaConjuntos[0]);
+            }
             
             const listaBaralhos = Array.from(todosBaralhos).sort();
             setBaralhosDisp(listaBaralhos);
-            if (listaBaralhos.length > 0) setBaralhoSelecionado(listaBaralhos[0]);
+            if (listaBaralhos.length > 0) {
+                setBaralhoSelecionado(listaBaralhos[0]);
+                const defaultDeck = listaBaralhos.find(b => b !== 'Geral') || listaBaralhos[0] || '';
+                setBaralhoDestino(prev => prev || defaultDeck);
+            }
         } catch (error) {
             console.error("Erro ao carregar dados do banco", error);
         }
@@ -310,6 +320,34 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
             return;
         }
 
+        let conjuntoFinal = conjuntoDestino;
+        if (conjuntoDestino === 'novo_conjunto') {
+            const nomeLimpado = novoConjuntoNome.trim();
+            if (!nomeLimpado) {
+                setModalConfig({
+                    isOpen: true,
+                    tipo: 'alert',
+                    mensagem: 'Por favor, digite o nome do novo conjunto.'
+                });
+                return;
+            }
+            conjuntoFinal = nomeLimpado;
+        }
+
+        let baralhoFinal = baralhoDestino;
+        if (baralhoDestino === 'novo_baralho') {
+            const nomeLimpado = novoBaralhoNome.trim();
+            if (!nomeLimpado) {
+                setModalConfig({
+                    isOpen: true,
+                    tipo: 'alert',
+                    mensagem: 'Por favor, digite o nome do novo baralho no Anki.'
+                });
+                return;
+            }
+            baralhoFinal = nomeLimpado;
+        }
+
         onStart({
             tema,
             useBanco: useConjuntos,
@@ -322,8 +360,8 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
             criarNovaSessao: session ? (tipoExibicaoSessao === 'nova') : false,
             nomeSessao: nomeSessao || tema,
             sessionId: session ? (tipoExibicaoSessao === 'existente' ? sessaoSelecionadaId : null) : null,
-            baralhoDestino: baralhoDestino || '',
-            conjuntoDestino: conjuntoDestino || 'Geral',
+            baralhoDestino: baralhoFinal,
+            conjuntoDestino: conjuntoFinal,
         });
     };
 
@@ -572,38 +610,76 @@ export default function ConfiguracaoPanel({ onStart, session }: ConfiguracaoPane
                 </div>
 
                 {/* Destino das palavras novas aprendidas */}
-                <div className="flex flex-col gap-2.5">
-                    <label className="font-bold text-foreground text-[0.95em]">📥 Destino das palavras novas aprendidas:</label>
-                    {baralhosDisp.length > 1 ? (
-                        // Se há baralhos Anki disponíveis, mostrar seletor de baralho
-                        <div className="flex flex-col gap-1.5">
-                            <p className="text-xs text-muted-foreground">Palavras avaliadas como Fácil/Médio/Difícil serão salvas no baralho Anki:</p>
-                            <select
-                                value={baralhoDestino}
-                                onChange={e => setBaralhoDestino(e.target.value)}
-                                className="w-full px-3 py-2.5 rounded-xl border-2 border-border bg-background text-foreground font-semibold text-[1em] outline-none transition-all cursor-pointer shadow-sm"
-                            >
-                                {baralhosDisp.map(b => (
-                                    <option key={b} value={b}>{b}</option>
-                                ))}
-                            </select>
-                        </div>
-                    ) : (
-                        // Sem baralhos Anki: salvar em conjunto
-                        <div className="flex flex-col gap-1.5">
-                            <p className="text-xs text-muted-foreground">Palavras avaliadas serão salvas no conjunto de vocabulário:</p>
-                            <select
-                                value={conjuntoDestino}
-                                onChange={e => setConjuntoDestino(e.target.value)}
-                                className="w-full px-3 py-2.5 rounded-xl border-2 border-border bg-background text-foreground font-semibold text-[1em] outline-none transition-all cursor-pointer shadow-sm"
-                            >
-                                {conjuntosDisp.map(c => (
-                                    <option key={c} value={c}>{c}</option>
-                                ))}
-                                <option value="DialoGo">🎌 DialoGo (novo)</option>
-                            </select>
-                        </div>
-                    )}
+                <div className="flex flex-col gap-4 p-4 rounded-2xl border border-border bg-card/50">
+                    <label className="font-bold text-foreground text-[0.95em] flex items-center gap-2">
+                        📥 Destino das palavras novas aprendidas:
+                    </label>
+
+                    {/* Opção 1: Conjunto de Destino */}
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-xs font-semibold text-muted-foreground">📁 Conjunto de Vocabulário (Local/Supabase):</span>
+                        <select
+                            value={conjuntoDestino}
+                            onChange={e => {
+                                setConjuntoDestino(e.target.value);
+                                if (e.target.value !== 'novo_conjunto') {
+                                    setNovoConjuntoNome('');
+                                }
+                            }}
+                            className="w-full px-3 py-2.5 rounded-xl border-2 border-border bg-background text-foreground font-semibold text-[1em] outline-none transition-all cursor-pointer shadow-sm focus:border-primary"
+                        >
+                            {conjuntosDisp.map(c => (
+                                <option key={c} value={c}>{c}</option>
+                            ))}
+                            {!conjuntosDisp.includes('DialoGo') && <option value="DialoGo">🎌 DialoGo</option>}
+                            <option value="novo_conjunto">➕ Criar Novo Conjunto...</option>
+                        </select>
+                        
+                        {conjuntoDestino === 'novo_conjunto' && (
+                            <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <Input
+                                    type="text"
+                                    placeholder="Nome do novo conjunto..."
+                                    value={novoConjuntoNome}
+                                    onChange={e => setNovoConjuntoNome(e.target.value)}
+                                    className="w-full rounded-xl border-2 border-border"
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Opção 2: Baralho Anki de Destino */}
+                    <div className="flex flex-col gap-1.5">
+                        <span className="text-xs font-semibold text-muted-foreground">🎴 Baralho do Anki (AnkiConnect):</span>
+                        <select
+                            value={baralhoDestino}
+                            onChange={e => {
+                                setBaralhoDestino(e.target.value);
+                                if (e.target.value !== 'novo_baralho') {
+                                    setNovoBaralhoNome('');
+                                }
+                            }}
+                            className="w-full px-3 py-2.5 rounded-xl border-2 border-border bg-background text-foreground font-semibold text-[1em] outline-none transition-all cursor-pointer shadow-sm focus:border-primary"
+                        >
+                            <option value="">🚫 Nenhum (Não salvar no Anki)</option>
+                            {baralhosDisp.filter(b => b !== 'Geral').map(b => (
+                                <option key={b} value={b}>{b}</option>
+                            ))}
+                            <option value="novo_baralho">➕ Criar Novo Baralho...</option>
+                        </select>
+
+                        {baralhoDestino === 'novo_baralho' && (
+                            <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <Input
+                                    type="text"
+                                    placeholder="Nome do novo baralho no Anki..."
+                                    value={novoBaralhoNome}
+                                    onChange={e => setNovoBaralhoNome(e.target.value)}
+                                    className="w-full rounded-xl border-2 border-border"
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Botão Iniciar */}

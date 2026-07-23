@@ -211,7 +211,7 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                     if ((p.status === 'aprendendo_medio' || p.status === 'aprendendo_dificil') &&
                         textoJp.includes(p.item)) {
                         const novasVezes = p.vezesUsadaPeloAluno + 1;
-                        let novoStatus = p.status;
+                        let novoStatus: StatusAdaptativo = p.status;
                         if (p.status === 'aprendendo_dificil' && novasVezes >= 2) novoStatus = 'aprendendo_medio';
                         else if (p.status === 'aprendendo_medio' && novasVezes >= 3) novoStatus = 'aprendido';
                         return { ...p, vezesUsadaPeloAluno: novasVezes, status: novoStatus };
