@@ -7,6 +7,7 @@ import AiFallbackPopup from './components/AiFallbackPopup';
 import AjudaModal from './components/AjudaModal';
 import ProgressoDrawer from './components/ProgressoDrawer';
 import PalavraNovaPopover, { PalavraAdaptativa, StatusAdaptativo } from './components/PalavraNovaPopover';
+import GuiaLateral from './components/GuiaLateral';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
     const [loading, setLoading] = useState(true);
     const [contextoDialogo, setContextoDialogo] = useState('');
     const [historico, setHistorico] = useState<any[]>([]);
+    const [guiaLateralOpen, setGuiaLateralOpen] = useState(false);
     const [inputUser, setInputUser] = useState('');
     const [enviando, setEnviando] = useState(false);
     const [provider, setProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(context.provider || (localStorage.getItem('selected_provider') as any) || 'groq');
@@ -346,7 +348,11 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
     }
 
     return (
-        <div className="flex flex-col w-full max-w-3xl mx-auto h-[calc(100vh-220px)] min-h-[500px]">
+        <>
+        <div
+            className="flex flex-col w-full max-w-3xl mx-auto h-[calc(100vh-220px)] min-h-[500px] transition-all duration-300"
+            style={{ marginRight: guiaLateralOpen ? '340px' : undefined }}
+        >
             {/* Cabeçalho */}
             <div className="flex items-center justify-between mb-5">
                 <Button
@@ -357,13 +363,23 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                     ← Voltar à Tradução
                 </Button>
                 <h2 className="text-lg font-bold text-foreground m-0">Diálogo</h2>
-                <Button
-                    variant="outline"
-                    onClick={() => setProgressoOpen(true)}
-                    className="text-sm flex items-center gap-1.5 font-semibold hover:bg-accent"
-                >
-                    📊 Progresso
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setGuiaLateralOpen(v => !v)}
+                        className="text-sm flex items-center gap-1.5 font-semibold hover:bg-accent"
+                        title="Abrir Guia da Sessão"
+                    >
+                        📖 Guia
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => setProgressoOpen(true)}
+                        className="text-sm flex items-center gap-1.5 font-semibold hover:bg-accent"
+                    >
+                        📊 Progresso
+                    </Button>
+                </div>
             </div>
 
             {/* Banner do cenário */}
@@ -543,5 +559,14 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                 />
             )}
         </div>
+
+        {/* Painel Lateral do Guia — fora do container de chat para ficar fixo na tela */}
+        <GuiaLateral
+            context={context}
+            session={session}
+            isOpen={guiaLateralOpen}
+            onToggle={() => setGuiaLateralOpen(v => !v)}
+        />
+        </>
     );
 }
