@@ -329,7 +329,7 @@ export default async function handler(req, res) {
 
         const acao = body.acao || query.acao;
         const provider = body.provider || query.provider || 'gemini';
-        const { tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp, sessionId, palavras_aprendendo } = body;
+        const { tema, jlpt, vocabulario, frase_jp, resposta_pt, historico, resposta_usuario_jp, sessionId, palavras_aprendendo, direcao } = body;
 
         const precisaAuth = ['listar_sessoes', 'criar_sessao', 'enriquecer_card'].includes(acao) || !!sessionId;
         if (precisaAuth && !userId) {
@@ -822,18 +822,35 @@ export default async function handler(req, res) {
                 return res.status(200).json(result);
 
             case 'analisar_traducao':
-                systemInstruction = "Você é um professor de japonês avaliando uma tradução. Retorne APENAS um JSON válido. O feedback (dica e erro) DEVE estar em Português.";
-                prompt = `Frase original: "${frase_jp}"
-                Tradução do aluno: "${resposta_pt}"
-                
-                Estrutura do JSON esperado:
-                {
-                    "score": 85, // número de 0 a 100
-                    "correto": true, // true se o sentido principal passou, false se errou feito
-                    "erros": ["O aluno esqueceu de traduzir a palavra X"], // array de strings
-                    "dica": "A partícula に aqui indica direção.",
-                    "traducao_correta": "Tradução ideal"
-                }`;
+                if (direcao === 'pt_jp') {
+                    systemInstruction = "Você é um professor de japonês avaliando a tradução de um aluno de Português para Japonês. Retorne APENAS um JSON válido. O feedback (dica e erros) DEVE estar em Português (PT-BR). Na propriedade 'traducao_correta', use obrigatoriamente tags HTML no formato correto <ruby>Kanji<rt>furigana</rt></ruby> para TODOS os Kanjis presentes (sem exceção). O furigana deve estar em Hiragana.";
+                    prompt = `Frase original em português: "${body.frase_pt || ''}"
+                    Tradução de referência em japonês: "${frase_jp || ''}"
+                    Tradução do aluno em japonês: "${resposta_pt || ''}"
+                    
+                    Avalie se a tradução do aluno em japonês está gramaticalmente correta, se soa natural e se transmite fielmente o sentido da frase em português.
+                    Estrutura do JSON esperado:
+                    {
+                        "score": 85, // número de 0 a 100
+                        "correto": true, // true se for gramaticalmente correto e natural, false se tiver erros graves
+                        "erros": ["O aluno usou a partícula errada em X"], // array de strings
+                        "dica": "A partícula に aqui indica direção.",
+                        "traducao_correta": "Tradução ideal ou de referência com ruby tags (<ruby>Kanji<rt>furigana</rt></ruby>)"
+                    }`;
+                } else {
+                    systemInstruction = "Você é um professor de japonês avaliando uma tradução de Japonês para Português. Retorne APENAS um JSON válido. O feedback (dica e erro) DEVE estar em Português.";
+                    prompt = `Frase original: "${frase_jp}"
+                    Tradução do aluno: "${resposta_pt}"
+                    
+                    Estrutura do JSON esperado:
+                    {
+                        "score": 85, // número de 0 a 100
+                        "correto": true, // true se o sentido principal passou, false se errou feito
+                        "erros": ["O aluno esqueceu de traduzir a palavra X"], // array de strings
+                        "dica": "A partícula に aqui indica direção.",
+                        "traducao_correta": "Tradução ideal"
+                    }`;
+                }
                 
                 result = await callAI(systemInstruction, [{ role: 'user', content: prompt }], geminiKey, openAIKey, groqKey, provider, 'llama-3.1-8b-instant');
 

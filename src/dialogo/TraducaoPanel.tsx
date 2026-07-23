@@ -5,6 +5,7 @@ import AiLoader from './components/AiLoader';
 import AiFallbackPopup from './components/AiFallbackPopup';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import KanaKanjiInput from './components/KanaKanjiInput';
 
 interface TraducaoPanelProps {
     context: any;
@@ -24,6 +25,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
     const [fallbackOpen, setFallbackOpen] = useState(false);
     const [fallbackError, setFallbackError] = useState('');
     const [pendingAction, setPendingAction] = useState<'carregar' | 'analisar' | null>(null);
+    const [direcao, setDirecao] = useState<'jp_pt' | 'pt_jp'>((localStorage.getItem('direcao_traducao') as any) || 'jp_pt');
 
     const stateRef = React.useRef({ frase, resposta, analise });
     useEffect(() => {
@@ -127,7 +129,9 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
                     provider: targetProvider,
                     acao: 'analisar_traducao',
                     frase_jp: frase.frase_jp,
+                    frase_pt: frase.frase_pt,
                     resposta_pt: resposta,
+                    direcao: direcao,
                     sessionId: context.sessionId
                 })
             });
@@ -170,7 +174,7 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
             revelado: true,
             correto: false,
             score: 0,
-            traducao_correta: frase.frase_pt,
+            traducao_correta: direcao === 'pt_jp' ? frase.frase_jp : frase.frase_pt,
             explicacao: frase.explicacao || 'Nenhuma explicação detalhada disponível.',
             dica: frase.dica,
             erros: []
@@ -258,25 +262,93 @@ export default function TraducaoPanel({ context, session, onNext, onBack, onUpda
             {/* Card de tradução */}
             <Card className="mb-5">
                 <CardContent className="p-7 text-center">
-                    <h3 className="mt-0 text-muted-foreground font-normal text-[1em]">Traduza esta frase para o português:</h3>
-
-                    <div className="text-[2em] font-bold my-5 flex items-center justify-center gap-4">
-                        <InteractiveText text={frase.frase_jp} />
-                        <button
-                            onClick={tocarAudio}
-                            className="border-none text-[1.2em] cursor-pointer p-2.5 rounded-full bg-black/[0.05] hover:bg-black/[0.1] transition-colors"
+                    {/* Direção da Tradução */}
+                    <div className="flex justify-center gap-2 mb-6 bg-black/[0.03] dark:bg-white/[0.03] p-1.5 rounded-xl w-fit mx-auto border border-border/40">
+                        <Button 
+                            variant={direcao === 'jp_pt' ? 'default' : 'ghost'} 
+                            size="sm"
+                            onClick={() => {
+                                setDirecao('jp_pt');
+                                localStorage.setItem('direcao_traducao', 'jp_pt');
+                                setResposta('');
+                                setAnalise(null);
+                            }}
+                            className="rounded-lg font-semibold text-xs py-1.5 h-auto"
                         >
-                            🔊
-                        </button>
+                            🇯🇵 ➔ 🇧🇷 Japonês para Português
+                        </Button>
+                        <Button 
+                            variant={direcao === 'pt_jp' ? 'default' : 'ghost'} 
+                            size="sm"
+                            onClick={() => {
+                                setDirecao('pt_jp');
+                                localStorage.setItem('direcao_traducao', 'pt_jp');
+                                setResposta('');
+                                setAnalise(null);
+                            }}
+                            className="rounded-lg font-semibold text-xs py-1.5 h-auto"
+                        >
+                            🇧🇷 ➔ 🇯🇵 Português para Japonês
+                        </Button>
                     </div>
 
-                    <textarea
-                        value={resposta}
-                        onChange={e => setResposta(e.target.value)}
-                        placeholder="Sua tradução aqui..."
-                        disabled={!!analise}
-                        className="w-full min-h-[100px] p-4 rounded-xl border-2 border-border bg-background text-foreground text-[1.1em] box-border mb-4 resize-y outline-none transition-all focus:border-primary disabled:opacity-70 disabled:cursor-not-allowed"
-                    />
+                    <h3 className="mt-0 text-muted-foreground font-normal text-[1em]">
+                        {direcao === 'jp_pt' ? 'Traduza esta frase para o português:' : 'Traduza esta frase para o japonês:'}
+                    </h3>
+
+                    <div className="text-[2em] font-bold my-5 flex items-center justify-center gap-4 flex-wrap">
+                        {direcao === 'jp_pt' ? (
+                            <>
+                                <InteractiveText text={frase.frase_jp} />
+                                <button
+                                    onClick={tocarAudio}
+                                    className="border-none text-[1.2em] cursor-pointer p-2.5 rounded-full bg-black/[0.05] dark:bg-white/[0.05] hover:bg-black/[0.1] dark:hover:bg-white/[0.1] transition-colors flex items-center justify-center w-12 h-12"
+                                    title="Ouvir Japonês"
+                                >
+                                    🔊
+                                </button>
+                            </>
+                        ) : (
+                            <div className="flex flex-col items-center gap-2">
+                                <span className="text-[0.7em] font-semibold text-foreground px-4 py-2 bg-black/[0.01] dark:bg-white/[0.01] rounded-xl leading-relaxed">
+                                    {frase.frase_pt}
+                                </span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={tocarAudio}
+                                    className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-1.5"
+                                >
+                                    🔊 Ouvir áudio de referência
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+
+                    {direcao === 'jp_pt' ? (
+                        <textarea
+                            value={resposta}
+                            onChange={e => setResposta(e.target.value)}
+                            placeholder="Sua tradução para o português aqui..."
+                            disabled={!!analise}
+                            className="w-full min-h-[100px] p-4 rounded-xl border-2 border-border bg-background text-foreground text-[1.1em] box-border mb-4 resize-y outline-none transition-all focus:border-primary disabled:opacity-70 disabled:cursor-not-allowed"
+                        />
+                    ) : (
+                        <div className="text-left w-full mb-4">
+                            <KanaKanjiInput
+                                value={resposta}
+                                onChange={setResposta}
+                                placeholder="Digite em romaji... Espaço para Kanji/Katakana"
+                                disabled={!!analise}
+                                className="text-[1.1em] h-14 bg-background text-foreground border-2 border-border focus:border-primary"
+                                onSendMessage={() => {
+                                    if (resposta.trim() && !analisando && !analise) {
+                                        verificarTraducao(provider);
+                                    }
+                                }}
+                            />
+                        </div>
+                    )}
 
                     {!analise ? (
                         analisando ? (
