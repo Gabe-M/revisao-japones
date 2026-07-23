@@ -8,6 +8,8 @@ import AjudaModal from './components/AjudaModal';
 import ProgressoDrawer from './components/ProgressoDrawer';
 import PalavraNovaPopover, { PalavraAdaptativa, StatusAdaptativo } from './components/PalavraNovaPopover';
 import GuiaLateral from './components/GuiaLateral';
+import VocabularioLateral from './components/VocabularioLateral';
+import AvatarIcon from './components/AvatarIcon';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -25,6 +27,10 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
     const [contextoDialogo, setContextoDialogo] = useState('');
     const [historico, setHistorico] = useState<any[]>([]);
     const [guiaLateralOpen, setGuiaLateralOpen] = useState(false);
+    const [vocabLateralOpen, setVocabLateralOpen] = useState(false);
+    const [vocabWidth, setVocabWidth] = useState(360);
+    const [guiaWidth, setGuiaWidth] = useState(380);
+    const [isResizing, setIsResizing] = useState(false);
     const [inputUser, setInputUser] = useState('');
     const [enviando, setEnviando] = useState(false);
     const [provider, setProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(context.provider || (localStorage.getItem('selected_provider') as any) || 'groq');
@@ -98,7 +104,8 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                     tema: context.tema,
                     jlpt: context.jlpt,
                     vocabulario: context.vocabularioBanco || [],
-                    sessionId: context.sessionId
+                    sessionId: context.sessionId,
+                    personagem: context.personagem
                 })
             });
 
@@ -175,6 +182,7 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                     jlpt: context.jlpt,
                     vocabulario: context.vocabularioBanco || [],
                     sessionId: context.sessionId,
+                    personagem: context.personagem,
                     palavras_aprendendo: vocabularioAdaptativo.filter(p =>
                         p.status === 'aprendendo_medio' || p.status === 'aprendendo_dificil'
                     )
@@ -347,11 +355,22 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
         );
     }
 
+    const charConfig = context.personagem || {
+        nome: 'Tutor de Japonês',
+        avatar: '💬',
+        personalidade: 'Amigável e paciente',
+        relacao: 'Tutor'
+    };
+
     return (
         <>
         <div
-            className="flex flex-col w-full max-w-3xl mx-auto h-[calc(100vh-220px)] min-h-[500px] transition-all duration-300"
-            style={{ marginRight: guiaLateralOpen ? '340px' : undefined }}
+            className="flex flex-col w-full max-w-3xl mx-auto h-[calc(100vh-220px)] min-h-[500px]"
+            style={{
+                marginRight: guiaLateralOpen ? `${guiaWidth}px` : undefined,
+                marginLeft: vocabLateralOpen ? `${vocabWidth}px` : undefined,
+                transition: isResizing ? 'none' : 'all 0.3s ease-in-out'
+            }}
         >
             {/* Cabeçalho */}
             <div className="flex items-center justify-between mb-5">
@@ -362,15 +381,32 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                 >
                     ← Voltar à Tradução
                 </Button>
-                <h2 className="text-lg font-bold text-foreground m-0">Diálogo</h2>
                 <div className="flex items-center gap-2">
+                    <AvatarIcon avatar={charConfig.avatar} size="lg" />
+                    <div className="flex flex-col text-left">
+                        <h2 className="text-base font-extrabold text-foreground m-0 leading-tight flex items-center gap-1.5">
+                            <span>{charConfig.nome}</span>
+                            {charConfig.obra && <span className="text-xs font-normal text-muted-foreground">({charConfig.obra})</span>}
+                        </h2>
+                        <span className="text-xs text-muted-foreground">{charConfig.relacao || 'Tutor de Diálogo'}</span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => setVocabLateralOpen(v => !v)}
+                        className="text-sm flex items-center gap-1.5 font-semibold hover:bg-accent"
+                        title="Abrir Vocabulário do Aluno (Esquerda)"
+                    >
+                        📚 Vocab
+                    </Button>
                     <Button
                         variant="outline"
                         onClick={() => setGuiaLateralOpen(v => !v)}
                         className="text-sm flex items-center gap-1.5 font-semibold hover:bg-accent"
-                        title="Abrir Guia da Sessão"
+                        title="Abrir Guia / Kit de Exploração (Direita)"
                     >
-                        📖 Guia
+                        📖 Kit
                     </Button>
                     <Button
                         variant="outline"
@@ -400,6 +436,12 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
                                     key={i}
                                     className={`flex flex-col w-full ${isIA ? 'items-start' : 'items-end'}`}
                                 >
+                                    {isIA && (
+                                        <div className="flex items-center gap-1.5 mb-1 ml-1 text-xs font-bold text-muted-foreground">
+                                            <AvatarIcon avatar={charConfig.avatar} size="sm" />
+                                            <span>{charConfig.nome}</span>
+                                        </div>
+                                    )}
                                     {/* Balão de mensagem */}
                                     <div
                                         className={[
@@ -560,12 +602,31 @@ export default function DialoGoPanel({ context, session, onBack, onUpdateContext
             )}
         </div>
 
-        {/* Painel Lateral do Guia — fora do container de chat para ficar fixo na tela */}
+        {/* Painel Lateral do Guia (Direita) */}
         <GuiaLateral
             context={context}
             session={session}
             isOpen={guiaLateralOpen}
             onToggle={() => setGuiaLateralOpen(v => !v)}
+            historico={historico}
+            onInjetarResposta={(texto) => setInputUser(texto)}
+            width={guiaWidth}
+            onWidthChange={setGuiaWidth}
+            onIsResizingChange={setIsResizing}
+        />
+
+        {/* Painel Lateral do Vocabulário (Esquerda) */}
+        <VocabularioLateral
+            context={context}
+            session={session}
+            isOpen={vocabLateralOpen}
+            onToggle={() => setVocabLateralOpen(v => !v)}
+            vocabularioAdaptativo={vocabularioAdaptativo}
+            onAvaliarPalavra={handleAvaliarPalavra}
+            onInjetarResposta={(texto) => setInputUser(texto)}
+            width={vocabWidth}
+            onWidthChange={setVocabWidth}
+            onIsResizingChange={setIsResizing}
         />
         </>
     );

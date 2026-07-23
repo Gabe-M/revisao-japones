@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import InteractiveText from '../../components/InteractiveText';
+import AnkiPreviewModal from './AnkiPreviewModal';
+import { toast } from '../../components/ui/use-toast';
 
 interface DraggableCardProps {
     card: any;
@@ -8,6 +10,7 @@ interface DraggableCardProps {
     tema?: string;
     provider?: 'gemini' | 'openai' | 'groq' | 'pollinations';
     onUpdateSignificado?: (item: string, novoSignificado: string) => void;
+    session?: any;
 }
 
 export default function DraggableCard({ card, onClose, initialIndex, tema, provider, onUpdateSignificado }: DraggableCardProps) {
@@ -18,6 +21,11 @@ export default function DraggableCard({ card, onClose, initialIndex, tema, provi
     const [significado, setSignificado] = useState(card.significado);
     const [isAdjusting, setIsAdjusting] = useState(false);
     const [cardProvider, setCardProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(provider || 'gemini');
+    
+    // Status adaptativo & Conjunto
+    const [status, setStatus] = useState<'aprendido' | 'aprendendo_medio' | 'aprendendo_dificil' | 'novo'>(card.status || 'novo');
+    const [conjunto, setConjunto] = useState(card.conjunto || tema || 'Geral');
+    const [ankiModalOpen, setAnkiModalOpen] = useState(false);
 
     useEffect(() => {
         setSignificado(card.significado);
@@ -119,7 +127,7 @@ export default function DraggableCard({ card, onClose, initialIndex, tema, provi
                 padding: '20px', 
                 width: '300px', 
                 boxShadow: isDragging ? '0 15px 35px rgba(0,0,0,0.4)' : '0 10px 25px rgba(0,0,0,0.2)', 
-                display: 'flex', 
+                display: ankiModalOpen ? 'none' : 'flex', 
                 flexDirection: 'column',
                 cursor: isDragging ? 'grabbing' : 'grab',
                 userSelect: 'none',
@@ -247,16 +255,100 @@ export default function DraggableCard({ card, onClose, initialIndex, tema, provi
                 </div>
             )}
             
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
-                <span style={{ background: 'rgba(52, 73, 94, 0.1)', color: 'var(--secondary-color)', padding: '4px 8px', borderRadius: '8px', fontWeight: 700, fontSize: '0.7em', textTransform: 'uppercase' }}>
-                    {card.tipo || 'Vocabulário'}
-                </span>
-                {card.jlpt && (
-                    <span style={{ backgroundColor: 'rgba(230, 126, 34, 0.12)', color: 'var(--highlight-color)', padding: '4px 8px', borderRadius: '8px', fontWeight: 700, fontSize: '0.7em' }}>
-                        {card.jlpt}
+            {/* Dificuldade & Status Adaptativo */}
+            <div style={{ margin: '10px 0', padding: '10px', background: 'rgba(0,0,0,0.03)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75em', fontWeight: 700, color: 'var(--text-color)' }}>
+                    <span>Marcar como Aprendendo / Dificuldade:</span>
+                    <span style={{ fontSize: '0.9em' }}>
+                        {status === 'aprendido' ? '🟢 Aprendido' : status === 'aprendendo_dificil' ? '🔴 Difícil' : status === 'aprendendo_medio' ? '🟡 Médio' : '🆕 Nova'}
                     </span>
-                )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                    <button
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={async () => {
+                            setStatus('aprendido');
+                            toast({ title: '🟢 Marcado como Aprendido', description: `Palavra '${card.item}' salva como aprendida.` });
+                        }}
+                        style={{ padding: '6px', fontSize: '0.75em', fontWeight: 'bold', background: 'rgba(46, 204, 113, 0.15)', color: '#27ae60', border: '1px solid rgba(46, 204, 113, 0.3)', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                        🟢 Fácil
+                    </button>
+                    <button
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={async () => {
+                            setStatus('aprendendo_medio');
+                            toast({ title: '🟡 Marcado em Aprendizado (Médio)', description: `Palavra '${card.item}' em reforço médio.` });
+                        }}
+                        style={{ padding: '6px', fontSize: '0.75em', fontWeight: 'bold', background: 'rgba(241, 196, 15, 0.15)', color: '#d35400', border: '1px solid rgba(241, 196, 15, 0.3)', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                        🟡 Médio
+                    </button>
+                    <button
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={async () => {
+                            setStatus('aprendendo_dificil');
+                            toast({ title: '🔴 Marcado em Aprendizado (Difícil)', description: `Palavra '${card.item}' priorizada para reforço urgente.` });
+                        }}
+                        style={{ padding: '6px', fontSize: '0.75em', fontWeight: 'bold', background: 'rgba(231, 76, 60, 0.15)', color: '#c0392b', border: '1px solid rgba(231, 76, 60, 0.3)', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                        🔴 Difícil
+                    </button>
+                </div>
+
+                {/* Seletor de Conjunto */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                    <span style={{ fontSize: '0.75em', color: 'gray', fontWeight: 600 }}>Conjunto:</span>
+                    <input
+                        onPointerDown={e => e.stopPropagation()}
+                        value={conjunto}
+                        onChange={e => setConjunto(e.target.value)}
+                        placeholder="Nome do conjunto..."
+                        style={{ flex: 1, padding: '4px 8px', fontSize: '0.75em', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-color)' }}
+                    />
+                </div>
             </div>
+
+            {/* Ações Inferiores & Anki */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                    <span style={{ background: 'rgba(52, 73, 94, 0.1)', color: 'var(--secondary-color)', padding: '4px 8px', borderRadius: '8px', fontWeight: 700, fontSize: '0.7em', textTransform: 'uppercase' }}>
+                        {card.tipo || 'Vocabulário'}
+                    </span>
+                    {card.jlpt && (
+                        <span style={{ backgroundColor: 'rgba(230, 126, 34, 0.12)', color: 'var(--highlight-color)', padding: '4px 8px', borderRadius: '8px', fontWeight: 700, fontSize: '0.7em' }}>
+                            {card.jlpt}
+                        </span>
+                    )}
+                </div>
+
+                <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={() => setAnkiModalOpen(true)}
+                    style={{ padding: '6px 12px', fontSize: '0.75em', fontWeight: 'bold', background: '#8e44ad', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    title="Exportar para o Baralho Anki"
+                >
+                    🎴 Salvar no Anki
+                </button>
+            </div>
+
+            {/* Modal de Preview do Anki */}
+            {ankiModalOpen && (
+                <AnkiPreviewModal
+                    isOpen={ankiModalOpen}
+                    onClose={() => { setAnkiModalOpen(false); onClose(); }}
+                    cardInicial={{
+                        item: card.item,
+                        leitura: card.leitura || '',
+                        significado: significado || card.significado || '',
+                        categoria: card.tipo || 'Vocabulário',
+                        jlpt: card.jlpt || 'N5',
+                        exemplo_jp: card.fraseOriginal || card.exemplo_jp || '',
+                        exemplo_pt: card.exemplo_pt || ''
+                    }}
+                    modulo={conjunto || 'Vocabulario'}
+                />
+            )}
         </div>
     );
 }

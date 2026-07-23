@@ -37,10 +37,11 @@ export async function invokeAnkiConnect(
   return data.result;
 }
 
-export async function adicionarAoAnki(card: EnrichedCard): Promise<number> {
+export async function adicionarAoAnki(card: EnrichedCard, deckModulo: string = 'Vocabulario'): Promise<number> {
   try {
-    // a. Execute createDeck with name "DialoGo::Vocabulario"
-    await invokeAnkiConnect('createDeck', 6, { deck: 'DialoGo::Vocabulario' });
+    // a. Execute createDeck with name "DialoGo::Vocabulario" or other modules
+    const deckName = `DialoGo::${deckModulo}`;
+    await invokeAnkiConnect('createDeck', 6, { deck: deckName });
 
     // b. Execute modelNames and create model if "DialoGo Japones" doesn't exist
     const modelNames: string[] = await invokeAnkiConnect('modelNames', 6);
@@ -76,7 +77,7 @@ export async function adicionarAoAnki(card: EnrichedCard): Promise<number> {
     // c. Execute addNote mapping card fields to note fields
     const noteId: number = await invokeAnkiConnect('addNote', 6, {
       note: {
-        deckName: 'DialoGo::Vocabulario',
+        deckName: deckName,
         modelName: 'DialoGo Japones',
         fields: {
           Item: card.item ?? '',

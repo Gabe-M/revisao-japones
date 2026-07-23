@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useTermCard } from '../context/TermCardContext';
 import { X } from 'lucide-react';
 import AiLoader from '../dialogo/components/AiLoader';
+import AnkiPreviewModal from '../dialogo/components/AnkiPreviewModal';
+import { toast } from './ui/use-toast';
 
 export default function TermCardModal() {
   const { isOpen, termo, fraseContexto, posicao, tipo, closeCard } = useTermCard();
@@ -16,6 +18,11 @@ export default function TermCardModal() {
   const [selectedProvider, setSelectedProvider] = useState<'gemini' | 'openai' | 'groq' | 'pollinations'>(
     () => (localStorage.getItem('selected_provider') as any) || 'groq'
   );
+
+  // Status adaptativo, conjunto e modal Anki
+  const [status, setStatus] = useState<'aprendido' | 'aprendendo_medio' | 'aprendendo_dificil' | 'novo'>('novo');
+  const [conjunto, setConjunto] = useState('Geral');
+  const [ankiModalOpen, setAnkiModalOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('selected_provider', selectedProvider);
@@ -254,21 +261,23 @@ export default function TermCardModal() {
         left: `${adjustedPos.x}px`,
         top: `${adjustedPos.y}px`,
         zIndex: 99999,
-        background: 'var(--card-bg, rgba(30, 30, 30, 0.85))',
+        background: 'var(--card-bg, rgba(22, 22, 26, 0.95))',
         color: 'var(--text-color, #ffffff)',
         border: '1px solid var(--border-color, rgba(255, 255, 255, 0.15))',
-        borderRadius: '12px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        borderRadius: '16px',
+        boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5)',
         padding: '16px',
-        width: '320px',
-        display: 'flex',
+        width: '340px',
+        maxWidth: '92vw',
+        boxSizing: 'border-box',
+        display: ankiModalOpen ? 'none' : 'flex',
         flexDirection: 'column',
         gap: '12px',
         animation: 'ajudaSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)'
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)'
       }}
     >
       <style>
@@ -553,11 +562,160 @@ export default function TermCardModal() {
                     </div>
                   </div>
                 )}
+
+                {/* Seção de Status / Dificuldade & Conjunto & Anki */}
+                <div style={{
+                  marginTop: '8px',
+                  padding: '12px',
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  boxSizing: 'border-box'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78em', fontWeight: 'bold' }}>
+                    <span style={{ opacity: 0.8 }}>Classificação / Dificuldade:</span>
+                    <span style={{ fontSize: '0.9em', padding: '2px 8px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)' }}>
+                      {status === 'aprendido' ? '🟢 Aprendido' : status === 'aprendendo_dificil' ? '🔴 Difícil' : status === 'aprendendo_medio' ? '🟡 Médio' : '🆕 Nova'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatus('aprendido');
+                        toast({ title: '🟢 Marcado como Aprendido', description: `Palavra '${termo}' salva como aprendida.` });
+                      }}
+                      style={{
+                        padding: '7px 4px',
+                        fontSize: '0.75em',
+                        fontWeight: 'bold',
+                        background: status === 'aprendido' ? 'rgba(46, 204, 113, 0.3)' : 'rgba(46, 204, 113, 0.12)',
+                        color: '#2ecc71',
+                        border: status === 'aprendido' ? '1.5px solid #2ecc71' : '1px solid rgba(46, 204, 113, 0.3)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      🟢 Fácil
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatus('aprendendo_medio');
+                        toast({ title: '🟡 Marcado em Aprendizado (Médio)', description: `Palavra '${termo}' em reforço médio.` });
+                      }}
+                      style={{
+                        padding: '7px 4px',
+                        fontSize: '0.75em',
+                        fontWeight: 'bold',
+                        background: status === 'aprendendo_medio' ? 'rgba(241, 196, 15, 0.3)' : 'rgba(241, 196, 15, 0.12)',
+                        color: '#f39c12',
+                        border: status === 'aprendendo_medio' ? '1.5px solid #f39c12' : '1px solid rgba(241, 196, 15, 0.3)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      🟡 Médio
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStatus('aprendendo_dificil');
+                        toast({ title: '🔴 Marcado em Aprendizado (Difícil)', description: `Palavra '${termo}' priorizada para reforço.` });
+                      }}
+                      style={{
+                        padding: '7px 4px',
+                        fontSize: '0.75em',
+                        fontWeight: 'bold',
+                        background: status === 'aprendendo_dificil' ? 'rgba(231, 76, 60, 0.3)' : 'rgba(231, 76, 60, 0.12)',
+                        color: '#e74c3c',
+                        border: status === 'aprendendo_dificil' ? '1.5px solid #e74c3c' : '1px solid rgba(231, 76, 60, 0.3)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      🔴 Difícil
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', width: '100%', boxSizing: 'border-box' }}>
+                    <span style={{ fontSize: '0.75em', opacity: 0.8, fontWeight: 600, flexShrink: 0 }}>Conjunto:</span>
+                    <input
+                      value={conjunto}
+                      onChange={e => setConjunto(e.target.value)}
+                      placeholder="Nome do conjunto..."
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        height: '30px',
+                        padding: '4px 8px',
+                        fontSize: '0.75em',
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '6px',
+                        color: 'white',
+                        outline: 'none'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setAnkiModalOpen(true)}
+                      style={{
+                        height: '30px',
+                        padding: '0 10px',
+                        fontSize: '0.75em',
+                        fontWeight: 'bold',
+                        background: 'linear-gradient(135deg, #8e44ad, #9b59b6)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(142, 68, 173, 0.4)',
+                        transition: 'transform 0.15s'
+                      }}
+                      onMouseOver={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                      onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+                      title="Salvar no Baralho Anki"
+                    >
+                      🎴 Salvar Anki
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Modal de Preview do Anki */}
+      {ankiModalOpen && (
+        <AnkiPreviewModal
+          isOpen={ankiModalOpen}
+          onClose={() => { setAnkiModalOpen(false); closeCard(); }}
+          cardInicial={{
+            item: termo,
+            leitura: reading || explicacaoIA?.leitura || '',
+            significado: translation || explicacaoIA?.significado || '',
+            categoria: pos || explicacaoIA?.classe_gramatical || 'Vocabulário',
+            jlpt: 'N5',
+            exemplo_jp: fraseContexto || '',
+            exemplo_pt: ''
+          }}
+          modulo={conjunto || 'Vocabulario'}
+        />
+      )}
     </div>
   );
 }

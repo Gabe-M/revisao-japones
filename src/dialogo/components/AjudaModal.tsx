@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card';
 import { adicionarAoAnki } from '../services/ankiService';
 import { buscarExemploETradução } from '../utils/sentenceMining';
 import { toast } from '../../components/ui/use-toast';
+import AnkiPreviewModal from './AnkiPreviewModal';
 
 interface AjudaModalProps {
     isOpen: boolean;
@@ -45,6 +46,9 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, session
 
     // Modo ativo (qual seção de resultado mostrar)
     const [modoAtivo, setModoAtivo] = useState<ModoAtivo>(null);
+
+    // Anki Preview Modal
+    const [ankiModalState, setAnkiModalState] = useState<{ isOpen: boolean; card: any }>({ isOpen: false, card: {} });
 
     // Análise de prática (R1)
     const [analisePratica, setAnalisePratica] = useState<any>(null);
@@ -269,53 +273,25 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, session
         }
     };
 
-    const handleAdicionarAnki = async (itemStr: string) => {
+    const handleAdicionarAnki = (itemStr: string) => {
         if (!itemStr) return;
-        setAdicionandoAnkiMap(prev => ({ ...prev, [itemStr]: true }));
-        try {
-            const historico = context?.dialogoDados?.historico || context?.historico || [{ jp: mensagem }];
-            const { exemplo_jp, exemplo_pt } = buscarExemploETradução(historico, itemStr);
+        const historico = context?.dialogoDados?.historico || context?.historico || [{ jp: mensagem }];
+        const { exemplo_jp, exemplo_pt } = buscarExemploETradução(historico, itemStr);
 
-            const body: Record<string, any> = {
-                acao: 'enriquecer_card',
+        const vocabInfo = vocabulario.find((v: any) => v.item === itemStr) || vocabularioRelacionado.find((v: any) => v.item === itemStr);
+
+        setAnkiModalState({
+            isOpen: true,
+            card: {
                 item: itemStr,
+                leitura: vocabInfo?.leitura || '',
+                significado: vocabInfo?.significado || '',
+                categoria: vocabInfo?.tipo || 'Vocabulário',
+                jlpt: context?.jlpt || 'N5',
                 exemplo_jp: exemplo_jp || null,
-                exemplo_pt: exemplo_pt || null,
-                provider: context?.provider || 'groq'
-            };
-
-            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-            if (session?.access_token) {
-                headers['Authorization'] = `Bearer ${session.access_token}`;
+                exemplo_pt: exemplo_pt || null
             }
-
-            const response = await fetch('/api/dialogo', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(body)
-            });
-
-            if (!response.ok) {
-                throw new Error('Anki não está aberto ou AnkiConnect falhou');
-            }
-
-            const enrichedItem = await response.json();
-            await adicionarAoAnki(enrichedItem);
-
-            toast({
-                title: "Anki",
-                description: "Card adicionado ao Anki com sucesso!",
-                variant: "default"
-            });
-        } catch (err: any) {
-            console.error("Erro ao adicionar ao Anki:", err);
-            toast({
-                title: "Anki não está aberto ou AnkiConnect falhou",
-                variant: "destructive"
-            });
-        } finally {
-            setAdicionandoAnkiMap(prev => ({ ...prev, [itemStr]: false }));
-        }
+        });
     };
 
     const handleInserirVocabularioNaResposta = (item: string) => {
@@ -1004,6 +980,15 @@ export default function AjudaModal({ isOpen, onClose, mensagem, context, session
                     </div>
                 </div>
             </DialogContent>
+            {/* Modal de Preview do Anki */}
+            <AnkiPreviewModal
+                isOpen={ankiModalState.isOpen}
+                onClose={() => setAnkiModalState(prev => ({ ...prev, isOpen: false }))}
+                cardInicial={ankiModalState.card}
+                session={session}
+                provider={context?.provider || 'groq'}
+                modulo="Ajuda"
+            />
         </Dialog>
     );
 }

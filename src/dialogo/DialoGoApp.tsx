@@ -9,6 +9,17 @@ import { Toaster } from '../components/ui/toaster';
 
 export type DialogoMode = 'config' | 'guia' | 'traducao' | 'dialogo';
 
+export interface PersonagemConfig {
+    id?: string;
+    nome: string;
+    obra?: string;
+    avatar: string;
+    personalidade: string;
+    historia: string;
+    relacao: string;
+    tomVoz: string;
+}
+
 export interface DialogoContextData {
     tema: string;
     jlpt: string;
@@ -18,6 +29,7 @@ export interface DialogoContextData {
     sessionId?: string | null;
     baralhoDestino?: string;
     conjuntoDestino?: string;
+    personagem?: PersonagemConfig;
 
     traducaoDados?: {
         frase: any;
@@ -42,6 +54,14 @@ export default function DialoGoApp() {
         sessionId: null,
         baralhoDestino: '',
         conjuntoDestino: 'Geral',
+        personagem: {
+            nome: 'Kenji',
+            avatar: '☕',
+            personalidade: 'Amigável, casual e jovem, gosta de conversar de forma descontraída',
+            historia: 'Barista em um café moderno em Shibuya, adora música e cultura pop.',
+            relacao: 'Amigo casual de conversa',
+            tomVoz: 'Informal (Tameguchi/Gírias leves)'
+        },
 
         traducaoDados: null,
         dialogoDados: null
@@ -208,6 +228,7 @@ export default function DialoGoApp() {
                             srsFiltro: config.srsFiltro,
                             baralhoDestino: config.baralhoDestino,
                             conjuntoDestino: config.conjuntoDestino,
+                            personagem: config.personagem
                         }
                     })
                 });
@@ -231,6 +252,7 @@ export default function DialoGoApp() {
             sessionId: activeSessionId,
             baralhoDestino: config.baralhoDestino,
             conjuntoDestino: config.conjuntoDestino,
+            personagem: config.personagem || prev.personagem,
 
             traducaoDados: null,
             dialogoDados: null
